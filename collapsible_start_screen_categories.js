@@ -1,9 +1,10 @@
 (async function () {
   let aboutAction, styles, collapsed
-  const id = "collapsible_menu_categories"
-  const name = "Collapsible Menu Categories"
+  const id = "collapsible_start_screen_categories"
+  const name = "Collapsible Start Screen Categories"
   const icon = "chevron_right"
   const author = "Ewan Howell"
+  const about = "This plugin adds a small dropdown arrow next to each category on the start screen, allowing you to collapse each category and hide their respective formats."
   const links = {
     website: "https://ewanhowell.com/",
     discord: "https://discord.com/invite/pkRxtGw"
@@ -13,11 +14,11 @@
     title: name,
     icon,
     author,
-    description: "Add the ability to collapse the menu categories.",
-    about: "This plugin adds a small dropdown arrow next to each category on the start menu, allowing you to collapse each category and hide their respective formats.",
-    tags: ["Menu", "Start screen"],
+    description: "Add the ability to collapse the start screen categories.",
+    about,
+    tags: ["Start screen", "Menu", "Formats"],
     version: "1.0.0",
-    min_version: "4.4.0",
+    min_version: "4.4.1",
     variant: "both",
     oninstall: () => showAbout(true),
     onuninstall: () => localStorage.removeItem("format_category_collapsed"),
@@ -135,7 +136,7 @@
         ${banner ? `<div id="banner">This window can be reopened at any time from <strong>Help > About Plugins > ${name}</strong></div>` : ""}
         <div id="content">
           <h1 style="margin-top:-10px">${name}</h1>
-          <p style="padding-bottom:10px">This plugin adds a small dropdown arrow next to each category on the start menu, allowing you to collapse each category and hide their respective formats.</p>
+          <p style="padding-bottom:10px">${about}</p>
           <div class="socials">
             <a href="${links["website"]}" class="open-in-browser">
               <i class="icon material-icons" style="color:#33E38E">language</i>

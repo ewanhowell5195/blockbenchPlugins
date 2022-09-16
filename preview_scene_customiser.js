@@ -21,7 +21,7 @@
     about: "placeholder",
     tags: ["placeholder"],
     version: "1.0.0",
-    min_version: "4.3.0",
+    min_version: "4.4.0",
     variant: "both",
     oninstall: () => showAbout(true),
     onload() {
@@ -427,7 +427,7 @@
                 }).append(
                   E("i").addClass("icon fab fa-github").css("font-size", "22px"),
                   E("span").text("Submit your own").css("text-decoration", "underline")
-                ).on("click", e => openLink("github"))
+                )
               )
             }
           })
@@ -827,10 +827,6 @@
         savetype: "bbscene"
       })
     }
-  }
-  function openLink(type) {
-    if (Blockbench.isWeb || Blockbench.isMobile) window.open(links[type], "_blank").focus()
-    else shell.openExternal(links[type])
   }
   function addAbout() {
     let about = MenuBar.menus.help.structure.find(e => e.id === "about_plugins")
