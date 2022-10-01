@@ -22,10 +22,10 @@
       }
     })
   }
-  const imageObserver = new IntersectionObserver(function(entries, observer){
+  const imageObserver = new IntersectionObserver(function(entries, observer) {
     entries.forEach(function(entry) {
       if ("src" in entry.target.dataset) {
-        if(entry.isIntersecting){
+        if (entry.isIntersecting) {
           imageObserver.unobserve(entry.target)
           fetch(entry.target.dataset.src, {method: "HEAD"}).then(r => {
             entry.target.style.backgroundImage = `url("${r.status < 400 ? entry.target.dataset.src : imageNotFound}")`
@@ -65,9 +65,9 @@
               const query = evt.currentTarget.value.toLowerCase()
               $(evt.currentTarget).parent().next().find(".cem_template_model").each((i, e) => {
                 const label = $(e).children().eq(1)
-                if(~label.text().toLowerCase().indexOf(query)){
+                if (~label.text().toLowerCase().indexOf(query)) {
                   $(e).css("display", "")
-                }else{
+                } else {
                   $(e).css("display", "none")
                 }
               })
@@ -92,7 +92,7 @@
                   loadModel(selectedModel.attr("data-modelid"), selectedModel.attr("data-category"), $("#cem_template_texture_check").is(":checked"), data)
                 }
               })
-              if(f.description){
+              if (f.description) {
                 element.attr("title", f.description)
               } 
               imageObserver.observe(imageElement[0])
@@ -105,7 +105,7 @@
   }
   const loadEntities = entityData => {
     const entityCategories = {}
-    for (let category of entityData.categories){
+    for (let category of entityData.categories) {
       entityCategories[category.name] = {
         description: category.description,
         icon: category.icon,
@@ -193,7 +193,7 @@
       new Dialog(options).show()
     }
   }
-  function loadInterface(categoryID, data){
+  function loadInterface(categoryID, data) {
     entitySelector.show()
     if (!loaderShown) {
       loaderShown = true
@@ -201,7 +201,7 @@
       $("#cem_template_discord").on("click", evt => openLink("discord"))
       $("#cem_template_load_button").on("click", async evt => {
         const selectedModel = $(".cem_template_model.selected")
-        if(selectedModel.length === 0) return Blockbench.showQuickMessage("Please select a template model")
+        if (selectedModel.length === 0) return Blockbench.showQuickMessage("Please select a template model")
         const modelID = selectedModel.attr("data-modelid")
         await loadModel(modelID, selectedModel.attr("data-category"), $("#cem_template_texture_check").is(":checked"), data)
       })
@@ -234,7 +234,7 @@
       loaderShown = false
       entityCategories = loadEntities(entityData)
       generatorActions = []
-      for (const category of Object.values(entityData.categories)){
+      for (const category of Object.values(entityData.categories)) {
         generatorActions.push(
           new Action(category.name.toLowerCase().replace(/\s+/g, "_"), {
             name: `${category.name} Entities`,
@@ -465,7 +465,7 @@
   let specials = new Map()
   const parseCEMA = js => {
     try {
-      return Function(`"use strict";return (function(ctx){
+      return Function(`"use strict";return (function(ctx) {
         try {
           return (${js})
         } catch (err) {
@@ -1185,7 +1185,7 @@
       subtree: true
     })
     addAnimationToggles()
-    async function showDocumentation(){
+    async function showDocumentation() {
       if (!docShown) {
         let docData
         try {
@@ -1293,7 +1293,7 @@
         }).show()
         const doc = $("#cem_doc")
         const tabs = $("#cem_doc_tabs")
-        for (const tab of docData.tabs){
+        for (const tab of docData.tabs) {
           const name = tab.name.replace(/ /g, "_")
           tabs.append(E("div").attr("id", `cem_doc_tab_${tab.name.replace(/ /g, "-")}`).html(tab.name).on("click", evt => {
             $("#cem_doc_tabs>div").removeClass("selected")
@@ -1635,7 +1635,7 @@
         name: `Reload CEM Templates`,
         description: "Reload the CEM Template Loader models",
         icon: "sync",
-        click: async function(){
+        click: async function() {
           for (let action of generatorActions) if (typeof action.delete === "function") action.delete()
           MenuBar.removeAction("tools.cem_template_loader")
           loader.delete()
