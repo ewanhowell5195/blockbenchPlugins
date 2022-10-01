@@ -398,24 +398,30 @@
     },
     fmod: (x, y) => ((x % y) + y) % y,
     if: (...args) => {
-      if (args.length < 3 || args.length % 2 !== 1 || typeof args[0] !== "boolean") throw new Error
+      if (args.length < 3 || args.length % 2 !== 1 || typeof args[0] !== "boolean") throw Error
       for (let i = 0; i < args.length; i += 2) {
-        if (i === args.length - 1) return args[i]
-        else if (args[i]) return args[i+1]
+        if (i === args.length - 1) {
+          if (typeof args[i] === "boolean") throw Error("If statements cannot return a <strong>boolean</strong>")
+          return args[i]
+        }
+        else if (args[i]) {
+          if (typeof args[i+1] === "boolean") throw Error("If statements cannot return a <strong>boolean</strong>")
+          return args[i+1]
+        }
       }
     },
     between: (x, min, max) => x >= min && x <= max,
     equals: (x, y, epsilon) => Math.abs(x - y) <= epsilon,
     in: (x, ...vals) => vals.includes(x),
     print: (id, int, val) => {
-      if (!val) throw Error('Not enough arguments. <strong>print</strong> requires <strong>3</strong> arguments')
-      if (typeof val !== "number") throw Error('<strong>print</strong> can only print numbers, use <strong>printb</strong> instead')
+      if (!val) throw Error("Not enough arguments. <strong>print</strong> requires <strong>3</strong> arguments")
+      if (typeof val !== "number") throw Error("<strong>print</strong> can only print numbers, use <strong>printb</strong> instead")
       if (frameCount % int === 0) console.log(`CEM print(${id}) = ${val}`)
       return val
     },
     printb: (id, int, val) => {
-      if (!val) throw Error('Not enough arguments. <strong>printb</strong> requires <strong>3</strong> arguments')
-      if (typeof val !== "boolean") throw Error('<strong>printb</strong> can only print booleans, use <strong>print</strong> instead')
+      if (!val) throw Error("Not enough arguments. <strong>printb</strong> requires <strong>3</strong> arguments")
+      if (typeof val !== "boolean") throw Error("<strong>printb</strong> can only print booleans, use <strong>print</strong> instead")
       if (frameCount % int === 0) console.log(`CEM print(${id}) = ${val}`)
       return val
     },
@@ -479,9 +485,16 @@
     for (const bool of boolsMatch) boolMap.set(bool[0], bools.get(bool[0]) ?? enabledBooleans.has(bool[0]) ? true : false)
     const check = anim.match(/[^a-z0-9_,\+\-\*\/%!&\|>=<\(\)\[\]:\.\s]/gi)
     if (check) throw [`Unsupported character "<span style="font-weight:600">${check[0]}</span>" in animation "<span style="font-weight:600">${anim.replace(/</g, "&lt;")}</span>"`]
-    const check2 = anim.match(/[\)\]]\s*\(|=>|(?<!\bvarb?)\.(?![trs][xyz]\b|\d+)[a-z]+|[^a-z0-9_]\[|(?!==)(?<=[^=!><]|^)=|<<=|>>>=|>>=|[!=]==|\+\+|--/gi)
+    const check2 = anim.match(/[\)\]]\s*\(|=>|(?<!\b(?:varb|visible)?)\.(?![trs][xyz]\b|\d+)[a-z]+|[^a-z0-9_]\[|(?!==)(?<=[^=!><]|^)=|<<=|>>>=|>>=|[!=]==|\+\+|--/gi)
     if (check2) throw [`Invalid syntax "<span style="font-weight:600">${check2[0].replace(/</g, "&lt;")}</span>" in animation "<span style="font-weight:600">${anim.replace(/</g, "&lt;")}</span>"`]
-    const check3 = anim.match(/(?<=\()[^)]*,[^(]*(?=\))/g)?.join?.('')?.match?.(/,/g)?.length !== anim.match(/,/g)?.length
+    if (anim.match(/\(/g)?.length !== anim.match(/\)/g)?.length) throw [`Invalid syntax in animation "<span style="font-weight:600">${anim.replace(/</g, "&lt;")}</span>": Number of opening and closing brackets do not match`]
+    let s = anim, allArgs = ""
+    while (s.match(/(?<=\w\()[^()]*(?=\))/)) {
+      allArgs += s.match(/(?<=\w\()[^()]*(?=\))/g).join('')
+      s = s.replace(/\w\([^()]*\)/g, "")
+      while (s.match(/(?<!\w)\([^(),]*\)/)) s = s.replace(/(?<!\w)\([^(),]*\)/g, "")
+    }
+    const check3 = allArgs.match(/,/g)?.length !== anim.match(/,/g)?.length
     if (check3) throw [`Invalid syntax in animation "<span style="font-weight:600">${anim.replace(/</g, "&lt;")}</span>": Commas are not allowed outside of functions`]
     return anim
       .replace(/:[a-z_]([a-z0-9_]+)?/gi, m => `.children["${m.slice(1)}"]`)
@@ -667,7 +680,7 @@
           }
         },
         set(target, name, value, receiver) {
-          if (typeof value !== "number") throw Error('A <strong>var</strong> must be set to a number')
+          if (typeof value !== "number") throw Error("A <strong>var</strong> must be set to a number")
           return Reflect.set(target, name, value, receiver)
         }
       })
@@ -680,7 +693,7 @@
           }
         },
         set(target, name, value, receiver) {
-          if (typeof value !== "boolean") throw Error('A <strong>varb</strong> must be set to a boolean')
+          if (typeof value !== "boolean") throw Error("A <strong>varb</strong> must be set to a boolean")
           return Reflect.set(target, name, value, receiver)
         }
       })
@@ -691,7 +704,7 @@
       specialMap = new Map()
       for (const group of groups) for (const section of group.cem_animations) for (const [key, val] of Object.entries(section)) {
         const split = key.split(".")
-        if (split[0] === "render") continue
+        if (split[0] === "render" || split[1] === "visible_boxes") continue
         else if (split[0] === "var") {
           steps.push({
             type: "variable",
@@ -705,6 +718,15 @@
             key,
             raw: val,
             anim: `ctx[Symbol.for("varb")].${split[1]} = ${preprocessCEMA(val)}`
+          })
+        } else if (split[1] === "visible") {
+          const part = ["this", "part"].includes(split[0]) ? group : Group.all.find(e => e.name === split[0])
+          steps.push({
+            type: "visible",
+            part,
+            key,
+            raw: val,
+            anim: preprocessCEMA(val)
           })
         } else {
           const part = ["this", "part"].includes(split[0]) ? group : Group.all.find(e => e.name === split[0])
@@ -890,9 +912,9 @@
         for (const section of animations) for (const [key, val] of Object.entries(section)) {
           if (val.trim?.() === "") throw ["Animations cannot be empty", key, val]
           const split = key.split(".")
-          if (split[0] === "render") continue
+          if (split[0] === "render" || split[1] === "visible_boxes") continue
           if (split.length < 2 || split[1] === "") throw [`Missing transformation type in animation "<span style="font-weight:600">${key}</span>"`, key, val]
-          if (!["var", "varb"].includes(split[0])) {
+          if (!(["var", "varb"].includes(split[0]) || split[1] === "visible")) {
             if (split[1].length > 2) throw [`Invalid transformation type in animation "<span style="font-weight:600">${key}</span>"`, key, val]
             if (!["r", "t", "s"].includes(split[1][0])) throw [`Unknown transform type "<span style="font-weight:600">${split[1][0]}</span>"`, key, val]
             if (!split[1][1]) throw [`Missing axis in animation "<span style="font-weight:600">${key}<span>"`, key, val]
@@ -995,7 +1017,8 @@
               rz: part.mesh.rotation.z,
               sx: part.mesh.scale.x,
               sy: part.mesh.scale.y,
-              sz: part.mesh.scale.z
+              sz: part.mesh.scale.z,
+              visible: true
             }
           }
         }
@@ -1041,6 +1064,10 @@
             if (parsed === true || parsed === false) throw `Unable to play animation "<span style="font-weight:600">${step.raw.replace(/</g, "&lt;")}</span>" as it retuned a <strong>boolean</strong> instead of a <strong>number</strong>`
             step.part.mesh[step.mode][step.axis] = parsed * step.invert
             context[Symbol.for(step.part.name)][step.transform] = step.transform === "ty" ? (step.part.parent === "root") * 24 + (step.part.parent?.parent === "root") * -step.part.mesh.parent.position.y - step.part.mesh.position.y : step.transform === "tx" ? -((step.part.parent?.parent === "root") * step.part.mesh.parent.position.x + step.part.mesh.position.x) : step.transform === "tz" ? (step.part.parent?.parent === "root") * step.part.mesh.parent.position.z + step.part.mesh.position.z : invertions.has(step.transform) ? - step.part.mesh[step.mode][step.axis] : step.part.mesh[step.mode][step.axis]
+          } else if (step.type === "visible") {
+            if (typeof parsed !== "boolean") throw `Invalid animation for "<span style="font-weight:600">${step.key}</span>"<div style="padding-right:10px">:</div> <strong>visible</strong> must be set to a boolean`
+            step.part.mesh.visible = parsed
+            context[Symbol.for(step.part.name)].visible = parsed
           }
         }
       } catch (err) {
@@ -1051,6 +1078,7 @@
     stopAnimations = resetGroups => {
       Blockbench.removeListener("render_frame", playAnimations)
       if (resetGroups) for (const group of Group.all.filter(e => e.cemAnimationDisableRotation)) group.cemAnimationDisableRotation = false
+      for (const group of Group.all) group.mesh.visible = true
       Canvas.updateView({groups: Group.all})
       playButton.css("display", "flex")
       stopButton.css("display", "none")
@@ -1596,7 +1624,7 @@
     description: description + " Also includes an animation editor, so that you can create custom entity animations.",
     about: "CEM Template Loader can be used to load the vanilla entity models for Minecraft: Java Edition, so you can use them in OptiFine CEM, or as texturing templates.\n\nTo use this plugin, head to the **Tools** tab and select **CEM Template Loader**. From here, select the model that you would like to edit and load it.\n\nAfter editing your model, export it as an **OptiFine JEM** to the folder `assets/minecraft/optifine/cem`. If a texture is used in the model, make sure it saves with a valid file path.\n\n## Important\n\nWhen editing an entity model, you cannot rotate root groups (top level folders), or move the pivot points of root groups, as this can break your model. If you need to rotate a root group, use a subgroup. If you need to change a root group's pivot point, use CEM animations.\n\nCEM Template Loader also includes an animation editor, so that you can create custom entity animations.",
     tags: ["Minecraft: Java Edition", "OptiFine", "Templates"],
-    version: "6.5.1",
+    version: "6.6.0",
     min_version: "4.3.0",
     variant: "both",
     oninstall: () => showAbout(true),
