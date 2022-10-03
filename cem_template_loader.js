@@ -449,7 +449,8 @@
     limb_speed: [0, 0, 1, 0.01],
     head_yaw: [-90, 0, 90],
     head_pitch: [-90, 0, 90],
-    dimension: [-1, 0, 1]
+    dimension: [-1, 0, 1],
+    rule_index: [0, 1, 256]
   }
   const specialsObj = {
     limb_swing: [0, false],
