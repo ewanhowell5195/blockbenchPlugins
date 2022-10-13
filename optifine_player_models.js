@@ -6,7 +6,7 @@
   const author = "Ewan Howell"
   const links = {
     discord: "https://discord.com/invite/FcpnSjrP82",
-    ewan: "https://www.ewanhowell.com/",
+    ewan: "https://ewanhowell.com/",
     tutorial: "https://youtu.be/0rT-q95dpV0"
   }
   const groups = [

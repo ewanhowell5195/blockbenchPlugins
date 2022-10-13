@@ -273,7 +273,7 @@
                 <p class="format_description">${description}</p>
                 <p class="format_target"><b>Target</b> : <span>Minecraft: Java Edition with OptiFine</span> <span>Texturing Templates</span></p>
                 <content style="flex:1;margin:-22px 0 20px">
-                  <h3 class="markdown"><p>How to use:</p></h3>
+                  <h3 class="markdown"><strong>How to use:</strong></h3>
                   <p class="markdown">
                     <ul>
                       <li><p>Press <code>Load CEM Template</code> and select a model.</p></li>
@@ -281,33 +281,33 @@
                       <li><p>Export your model as an <code>OptiFine JEM</code> to <code>assets/minecraft/optifine/cem</code>, using the provided name.</p></li>
                     </ul>
                   </p>
-                  <h3 class="markdown"><p><strong>Do:</strong></p></h3>
+                  <h3 class="markdown"><strong>Do:</strong></h3>
                   <p class="markdown">
                     <ul>
                       <li><p>Edit any of the cubes that were loaded with the template, add your own cubes, and create your own subgroups.</p></li>
                     </ul>
                   </p>
-                  <h3 class="markdown"><p><strong>Do not:</strong></p></h3>
+                  <h3 class="markdown"><strong>Do not:</strong></h3>
                   <p class="markdown">
                     <ul>
                       <li><p>Edit any of the groups that were loaded with the template, add your own root groups, or remove any built in animations.</p></li>
                     </ul>
                   </p>
                 </content>
-                    <div class="socials">
-                      <a href="${links["website"]}" class="open-in-browser">
-                        <i class="icon material-icons" style="color:#33E38E">language</i>
-                        <label>By ${author}</label>
-                      </a>
-                      <a href="${links["discord"]}" class="open-in-browser">
-                        <i class="icon fab fa-discord" style="color:#727FFF"></i>
-                        <label>Discord Server</label>
-                      </a>
-                      <a href="${links["tutorial"]}" class="open-in-browser">
-                        <i class="icon fab fa-youtube" style="color:#FF4444"></i>
-                        <label>CEM Modelling Tutorial</label>
-                      </a>
-                    </div>
+                <div class="socials">
+                  <a href="${links["website"]}" class="open-in-browser">
+                    <i class="icon material-icons" style="color:#33E38E">language</i>
+                    <label>By ${author}</label>
+                  </a>
+                  <a href="${links["discord"]}" class="open-in-browser">
+                    <i class="icon fab fa-discord" style="color:#727FFF"></i>
+                    <label>Discord Server</label>
+                  </a>
+                  <a href="${links["tutorial"]}" class="open-in-browser">
+                    <i class="icon fab fa-youtube" style="color:#FF4444"></i>
+                    <label>CEM Modelling Tutorial</label>
+                  </a>
+                </div>
                 <div class="button_bar">
                   <button id="create_new_model_button" style="margin-top:20px;" @click="load()">
                     <i class="material-icons">${icon}</i>
@@ -1633,6 +1633,7 @@
     oninstall: () => showAbout(true),
     async onload() {
       addStyles()
+      addAbout()
       await setupPlugin("https://www.wynem.com/bot_assets/json/cem_template_models.json")
       reloadButton = new Action("cem_template_loader_reload", {
         name: `Reload CEM Templates`,
@@ -1660,21 +1661,6 @@
         const params = (new URL(location.href)).searchParams
         if (params.has("plugins") && params.get("plugins").split(",").includes("cem_template_loader") && params.has("model") && params.get("model") !== "") loadModel(params.get("model").toLowerCase(), null, params.has("texture"))
       }
-      let about = MenuBar.menus.help.structure.find(e => e.id === "about_plugins")
-      if (!about) {
-        about = new Action("about_plugins", {
-          name: "About Plugins...",
-          icon: "info",
-          children: []
-        })
-        MenuBar.addAction(about, "help")
-      }
-      aboutAction = new Action("about_cem_template_loader", {
-        name: "About CEM Template Loader...",
-        icon,
-        click: () => showAbout()
-      })
-      about.children.push(aboutAction)
     },
     onunload() {
       stopAnimations(true)

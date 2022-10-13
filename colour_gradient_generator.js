@@ -5,7 +5,7 @@
   const icon = "gradient"
   const author = "Ewan Howell"
   const links = {
-    website: "https://www.ewanhowell.com/",
+    website: "https://ewanhowell.com/",
     discord: "https://discord.com/invite/FcpnSjrP82"
   }
   Plugin.register(id, {
