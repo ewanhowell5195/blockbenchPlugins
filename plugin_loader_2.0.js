@@ -388,7 +388,7 @@
                   <i class="fa_big icon fa fa-file-code" title="Load a plugin by importing the source file" @click="BarItems.load_plugin.click()"></i>
                   <i class="material-icons" title="Load a plugin from a server by specifying the URL" @click="BarItems.load_plugin_from_url.click()">cloud_download</i>
                   <div class="spacer"></div>
-                  <button id="close" @click="Plugins.dialog2.close()">Close</button>
+                  <button id="close" @click="Plugins.dialog.close()">Close</button>
                 </div>
                 <div v-for="plugin in items" v-bind:plugin="plugin.id + '_details'" class="plugin-details" :class="{visible: detailsVisible === plugin.id}">
                   <div class="plugin-details-close" @click="detailsVisible = null">
