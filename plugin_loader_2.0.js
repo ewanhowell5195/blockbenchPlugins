@@ -423,10 +423,10 @@
                       <li class="plugin-tag-no-tags" @click="currentTag = 'No Tags'; detailsVisible = null">No Tags</li>
                     </ul>
                     <div class="spacer"></div>
-                    <a :href="'https://www.blockbench.net/plugins/' + plugin.id" title="View on the Blockbench website">
+                    <a v-if="!plugin.tags.includes('Local')" :href="'https://www.blockbench.net/plugins/' + plugin.id" title="View on the Blockbench website">
                       <i class="icon material-icons">language</i>
                     </a>
-                    <a :href="'https://github.com/JannisX11/blockbench-plugins/blob/master/plugins/' + plugin.id + '.js'">
+                    <a v-if="!plugin.tags.includes('Local')" :href="'https://github.com/JannisX11/blockbench-plugins/blob/master/plugins/' + plugin.id + '.js'">
                       <i class="icon fab fa-github"></i>
                     </a>
                   </div>
