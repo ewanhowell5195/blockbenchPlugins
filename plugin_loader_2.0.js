@@ -8,7 +8,7 @@
     about: "This plugin replaces the built in Blockbench Plugin Loader with a new and improved Plugin Loader.\n\n## Plugin Pages\nEach plugin now gets its own page where you can view all of its information, as well as install/uninstall/reload it.\n\n## Plugin Tabs\nAll of the tags used across the plugins are now shown as a list of tabs up the side of the Plugin Loader, allowing you to quickly and easily browse and filter by the tags.",
     tags: ["Plugins", "Blockbench"],
     version: "1.0.0",
-    min_version: "4.2.0",
+    min_version: "4.4.2",
     variant: "both",
     oninstall: () => Plugins.dialog.show(),
     onload() {
