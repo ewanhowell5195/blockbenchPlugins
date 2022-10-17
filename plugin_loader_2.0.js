@@ -1,28 +1,19 @@
-(async function () {
-  let aboutAction, oldDialog
-  const id = "plugin_loader_2.0"
-  const name = "Plugin Loader 2.0"
-  const icon = "extension"
-  const author = "Ewan Howell"
-  const links = {
-    website: "https://google.com/",
-    discord: "https://discord.com/"
-  }
-  Plugin.register(id, {
-    title: name,
-    icon,
-    author,
-    description: "placeholder",
-    about: "placeholder",
+(() => {
+  let oldDialog
+  Plugin.register("plugin_loader_2.0", {
+    title: "Plugin Loader 2.0",
+    icon: "extension",
+    author: "Ewan Howell",
+    description: "Replace the default Blockbench Plugin Loader with an improved and redesigned Plugin Loader.",
+    about: "This plugin replaces the built in Blockbench Plugin Loader with a new and improved Plugin Loader.\n\n## Plugin Pages\nEach plugin now gets its own page where you can view all of its information, as well as install/uninstall/reload it.\n\n## Plugin Tabs\nAll of the tags used across the plugins are now shown as a list of tabs up the side of the Plugin Loader, allowing you to quickly and easily browse and filter by the tags.",
     tags: ["Plugins", "Blockbench"],
     version: "1.0.0",
     min_version: "4.2.0",
     variant: "both",
-    oninstall: () => showAbout(true),
+    oninstall: () => Plugins.dialog.show(),
     onload() {
-      addAbout()
       oldDialog = Plugins.dialog
-      Plugins.dialog = new Dialog({
+      const dialog = new Dialog({
         id: "plugins",
         title: "dialog.plugins.title",
         buttons: [],
@@ -98,8 +89,16 @@
             dialog#plugins .plugin {
               background-color: var(--color-back);
               padding: 10px;
+              margin-right: 10px;
             }
-            dialog#plugins .plugin-name-container {
+            dialog#plugins .plugin:hover {
+              background-color: var(--color-selected);
+              color: var(--color-light);
+            }
+            dialog#plugins .plugin * {
+              cursor: pointer;
+            }
+            dialog#plugins .plugin-header {
               display: flex;
               gap: 10px;
               align-items: center;
@@ -107,6 +106,9 @@
             }
             dialog#plugins .plugin_icon {
               display: flex;
+            }
+            dialog#plugins .plugin:hover .plugin-version, dialog#plugins .plugin:hover .plugin-author {
+              color: var(--color-text);
             }
             dialog#plugins .plugin-version, dialog#plugins .plugin-author {
               color: var(--color-subtle_text);
@@ -117,12 +119,6 @@
             }
             dialog#plugins .plugin-list-tags {
               padding-top: 7px;
-            }
-            dialog#plugins .plugin-header {
-              display: flex;
-            }
-            dialog#plugins .plugin-header-left {
-              flex: 1;
             }
             dialog#plugins button {
               text-decoration: none;
@@ -281,7 +277,7 @@
         component: {
           data: {
             tab: "installed",
-            search_term: "",
+            searchTerm: "",
             items: Plugins.all,
             currentTag: "All",
             detailsVisible: null
@@ -295,8 +291,8 @@
               const tagCount = new Map(tags.map(t => [t, t === "All" ? Infinity : t === "No Tags" ? Plugins.all.filter(p => !p.tags?.length).length : t === "Deprecated" ? -Infinity : Plugins.all.filter(p => p.tags.includes(t)).length]))
               return tags.sort((a, b) => tagCount.get(b) - tagCount.get(a) + a.localeCompare(b) * 0.1)
             },
-            plugin_search() {
-              const name = this.search_term.toUpperCase()
+            pluginSearch() {
+              const name = this.searchTerm.toUpperCase()
               const tag = this.currentTag
               return this.items.filter(item => {
                 if (tag === "No Tags" && !item.tags?.length && (this.tab == "installed") == item.installed) return true
@@ -331,6 +327,14 @@
             switchTab(tab) {
               this.tab = tab
               if (!this.visibleTags.includes(this.currentTag)) this.currentTag = "All"
+            },
+            uninstall(plugin) {
+              plugin.uninstall()
+              Blockbench.showQuickMessage(`Sucessfully uninstalled the plugin ${plugin.name}`)
+            },
+            close: () => dialog.close(),
+            pluginClick(event, plugin) {
+              if (!event.target.classList.contains("tag")) this.detailsVisible = plugin
             }
           },
           template: `
@@ -353,44 +357,34 @@
                     <div :class="{open: tab === 'installed'}" @click="switchTab('installed')">${tl('dialog.plugins.installed')}</div>
                     <div :class="{open: tab === 'available'}" @click="switchTab('available')">${tl('dialog.plugins.available')}</div>
                   </div>
-                  <search-bar id="plugin_search_bar" v-model="search_term"></search-bar>
+                  <search-bar id="plugin_search_bar" v-model="searchTerm"></search-bar>
                 </div>
                 <ul id="plugin-list">
-                  <li v-for="plugin in plugin_search" v-bind:plugin="plugin.id" v-bind:class="{plugin: true, testing: plugin.fromFile}">
+                  <li v-for="plugin in pluginSearch" class="plugin" @click="pluginClick(event, plugin)">
                     <div class="plugin-header">
-                      <div class="plugin-header-left">
-                        <div class="plugin-name-container">
-                          <span class="icon_wrapper plugin_icon normal" v-html="getIconNode(plugin.icon || 'error_outline', plugin.icon ? plugin.color : 'var(--color-close)').outerHTML"></span>
-                          {{ plugin.title }}
-                          <span class="plugin-version">v{{ plugin.version }}</span>
-                        </div>
-                        <div class="plugin-author">By {{ plugin.author }}</div>
-                      </div>
-                      <div class="plugin-header-right">
-                        <button class="plugin-button" @click="detailsVisible = plugin.id">
-                          <span>Details</span>
-                          <i class="material-icons">arrow_forward</i>
-                        </button>
-                      </div>
+                      <span class="icon_wrapper plugin_icon normal" v-html="getIconNode(plugin.icon || 'error_outline', !plugin.icon ? 'var(--color-close)' : plugin.color ?? 'var(--color-text)').outerHTML"></span>
+                      {{ plugin.title }}
+                      <span class="plugin-version">v{{ plugin.version }}</span>
                     </div>
+                    <div class="plugin-author">By {{ plugin.author }}</div>
                     <div class="plugin-description">{{ plugin.description }}</div>
                     <ul v-if="plugin.tags?.length" class="plugin_tag_list plugin-tags plugin-list-tags">
-                      <li v-for="tag in plugin.tags" :class="getTagClass(tag)" :key="tag" @click="currentTag = tag; detailsVisible = null">{{tag}}</li>
+                      <li v-for="tag in plugin.tags" class="tag" :class="getTagClass(tag)" :key="tag" @click="currentTag = tag; detailsVisible = null">{{tag}}</li>
                     </ul>
                     <ul v-else class="plugin_tag_list plugin-tags plugin-list-tags">
-                      <li class="plugin-tag-no-tags" @click="currentTag = 'No Tags'; detailsVisible = null">No Tags</li>
+                      <li class="tag plugin-tag-no-tags" @click="currentTag = 'No Tags'; detailsVisible = null">No Tags</li>
                     </ul>
                   </li>
-                  <div class="no_plugin_message tl" v-if="plugin_search.length < 1 && tab === 'installed'">${tl('dialog.plugins.none_installed')}</div>
-                  <div class="no_plugin_message tl" v-if="plugin_search.length < 1 && tab === 'available'" id="plugin_available_empty">{{ tl(navigator.onLine ? 'dialog.plugins.none_available' : 'dialog.plugins.offline') }}</div>
+                  <div class="no_plugin_message tl" v-if="pluginSearch.length < 1 && tab === 'installed'">${tl('dialog.plugins.none_installed')}</div>
+                  <div class="no_plugin_message tl" v-if="pluginSearch.length < 1 && tab === 'available'" id="plugin_available_empty">{{ tl(navigator.onLine ? 'dialog.plugins.none_available' : 'dialog.plugins.offline') }}</div>
                 </ul>
                 <div id="button-row">
                   <i class="fa_big icon fa fa-file-code" title="Load a plugin by importing the source file" @click="BarItems.load_plugin.click()"></i>
                   <i class="material-icons" title="Load a plugin from a server by specifying the URL" @click="BarItems.load_plugin_from_url.click()">cloud_download</i>
                   <div class="spacer"></div>
-                  <button id="close" @click="Plugins.dialog.close()">Close</button>
+                  <button id="close" @click="close()">Close</button>
                 </div>
-                <div v-for="plugin in items" v-bind:plugin="plugin.id + '_details'" class="plugin-details" :class="{visible: detailsVisible === plugin.id}">
+                <div v-for="plugin in items" class="plugin-details" :class="{visible: detailsVisible === plugin}">
                   <div class="plugin-details-close" @click="detailsVisible = null">
                     <i class="material-icons">chevron_left</i>
                     Back
@@ -410,7 +404,7 @@
                       <i class="material-icons">refresh</i>
                       <span class="tl">${tl('dialog.plugins.reload')}</span>
                     </button>
-                    <button type="button" v-on:click="plugin.uninstall()" v-if="plugin.installed">
+                    <button type="button" v-on:click="uninstall(plugin)" v-if="plugin.installed">
                       <i class="material-icons">delete</i>
                       <span class="tl">${tl('dialog.plugins.uninstall')}</span>
                     </button>
@@ -446,81 +440,14 @@
           `
         }
       })
+      dialog.close = () => {
+        dialog.content_vue.detailsVisible = null
+        dialog.hide()
+      }
+      Plugins.dialog = dialog
     },
     onunload() {
       Plugins.dialog = oldDialog
-      aboutAction.delete()
-      MenuBar.removeAction(`help.about_plugins.about_${id.replace(".", "_")}`)
     }
   })
-  function addAbout() {
-    let about = MenuBar.menus.help.structure.find(e => e.id === "about_plugins")
-    if (!about) {
-      about = new Action("about_plugins", {
-        name: "About Plugins...",
-        icon: "info",
-        children: []
-      })
-      MenuBar.addAction(about, "help")
-    }
-    aboutAction = new Action(`about_${id.replace(".", "_")}`, {
-      name: `About ${name}...`,
-      icon,
-      click: () => showAbout()
-    })
-    about.children.push(aboutAction)
-  }
-  function showAbout(banner) {
-    const infoBox = new Dialog({
-      id: "about",
-      title: name,
-      width: 780,
-      buttons: [],
-      lines: [`
-        <style>
-          dialog#about .dialog_title {
-            padding-left: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          dialog#about .dialog_content {
-            text-align: left!important;
-            margin: 0!important;
-          }
-          dialog#about .socials {
-            padding: 0!important;
-          }
-          dialog#about #banner {
-            background-color: var(--color-accent);
-            color: var(--color-accent_text);
-            width: 100%;
-            padding: 0 8px
-          }
-          dialog#about #content {
-            margin: 24px;
-          }
-        </style>
-        ${banner ? `<div id="banner">This window can be reopened at any time from <strong>Help > About Plugins > ${name}</strong></div>` : ""}
-        <div id="content">
-          <h1 style="margin-top:-10px">${name}</h1>
-          <p>placeholder</p>
-          <div class="socials">
-            <a href="${links["website"]}" class="open-in-browser">
-              <i class="icon material-icons" style="color:#33E38E">language</i>
-              <label>By ${author}</label>
-            </a>
-            <a href="${links["discord"]}" class="open-in-browser">
-              <i class="icon fab fa-discord" style="color:#727FFF"></i>
-              <label>Discord Server</label>
-            </a>
-          </div>
-        </div>
-      `]
-    }).show()
-    $("dialog#about .dialog_title").html(`
-      <i class="icon material-icons">${icon}</i>
-      ${name}
-    `)
-  }
 })()
