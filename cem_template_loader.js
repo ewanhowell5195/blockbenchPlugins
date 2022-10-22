@@ -414,13 +414,13 @@
     equals: (x, y, epsilon) => Math.abs(x - y) <= epsilon,
     in: (x, ...vals) => vals.includes(x),
     print: (id, int, val) => {
-      if (!val) throw Error("Not enough arguments. <strong>print</strong> requires <strong>3</strong> arguments")
+      if (val === undefined) throw Error("Not enough arguments. <strong>print</strong> requires <strong>3</strong> arguments")
       if (typeof val !== "number") throw Error("<strong>print</strong> can only print numbers, use <strong>printb</strong> instead")
       if (frameCount % int === 0) console.log(`CEM print(${id}) = ${val}`)
       return val
     },
     printb: (id, int, val) => {
-      if (!val) throw Error("Not enough arguments. <strong>printb</strong> requires <strong>3</strong> arguments")
+      if (val === undefined) throw Error("Not enough arguments. <strong>printb</strong> requires <strong>3</strong> arguments")
       if (typeof val !== "boolean") throw Error("<strong>printb</strong> can only print booleans, use <strong>print</strong> instead")
       if (frameCount % int === 0) console.log(`CEM print(${id}) = ${val}`)
       return val
@@ -428,7 +428,7 @@
     smooth: (id, val) => {
       return val ?? id
     },
-    lerp: (a, b, c) => a * (1 - c) + b * c,
+    lerp: (a, b, c) => b * (1 - a) + c * a,
     frame_time: 0,
     move_forward: 0,
     move_strafing: 0
