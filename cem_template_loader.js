@@ -496,8 +496,8 @@
       s = s.replace(/\w\([^()]*\)/g, "")
       while (s.match(/(?<!\w)\([^(),]*\)/)) s = s.replace(/(?<!\w)\([^(),]*\)/g, "")
     }
-    const check3 = allArgs.match(/,/g)?.length !== anim.match(/,/g)?.length
-    if (check3) throw [`Invalid syntax in animation "<span style="font-weight:600">${anim.replace(/</g, "&lt;")}</span>": Commas are not allowed outside of functions`]
+    if (allArgs.match(/,/g)?.length !== anim.match(/,/g)?.length) throw [`Invalid syntax in animation "<span style="font-weight:600">${anim.replace(/</g, "&lt;")}</span>": Commas are not allowed outside of functions`] 
+    if (anim.match(/[$_\p{ID_Start}][$\u200c\u200d\p{ID_Continue}]+\.[$_\p{ID_Start}][$\u200c\u200d\p{ID_Continue}]+(\.|\()/u)) throw [`Invalid syntax in animation "<span style="font-weight:600">${anim.replace(/</g, "&lt;")}</span>"`]
     return anim
       .replace(/:[a-z_]([a-z0-9_]+)?/gi, m => `.children["${m.slice(1)}"]`)
       .replace(/(?<=[\s\n(+*\/%!&|=<>,-]|^)[a-z_]([a-z0-9_]+)?/gi, (m, g, o, s) => {
