@@ -193,7 +193,6 @@
                     reader.onload = e => {
                       if (!reader.result.startsWith("data:image/")) return this.error = "Invalid image"
                       addSplashArt(reader.result)
-                      dialog.close()
                     }
                     reader.onerror = e => this.error = e
                   },
@@ -204,7 +203,6 @@
                       const r = await fetch(url)
                       if (!r.headers.get("Content-Type")?.startsWith("image/")) return this.error = "URL is not an image"
                       addSplashArt(url)
-                    dialog.close()
                     } catch {
                       return this.error = "Unable to get URL"
                     }
@@ -217,7 +215,6 @@
                   },
                   importGalleryImage(image) {
                     addSplashArt(image)
-                    dialog.close()
                   },
                   setCurrentSplashArt(image) {
                     setSplashArt(image)
@@ -246,7 +243,7 @@
                   <div>
                     <div v-if="images.length" class="flex-center column">
                       <div id="splash-art-previews">
-                        <div v-for="image in images" class="splash-art-preview" :style="{ backgroundImage: 'url(' + image.image + ')'}">
+                        <div v-for="image in images" class="splash-art-preview" :style="{ backgroundImage: 'url(' + image.image + ')', imageRendering: image.imageRendering ?? 'smooth', backgroundSize: image.backgroundSize ?? 'cover', backgroundRepeat: image.backgroundRepeat ?? 'no-repeat'}">
                           <div class="button-bar">
                             <div title="Apply splash art" @click="setCurrentSplashArt(image.image)">
                               <svg viewBox="0 0 24 24"><path d="M19,19H5V5H15V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V11H19M7.91,10.08L6.5,11.5L11,16L21,6L19.59,4.58L11,13.17L7.91,10.08Z" /></svg>
@@ -343,34 +340,110 @@
       localStorage.removeItem("splash-art-randomisation-disabled")
     }
   })
-  async function addSplashArt(img) {
-    const transaction = db.result.transaction("images", "readwrite")
-    transaction.objectStore("images").put({image: img})
-    setSplashArt(img)
+  async function addSplashArt(image) {
+    const aspectRatios = [
+      "4:3",
+      "16:9",
+      "16:10",
+      "21:9",
+      "64:27"
+    ]
+    const imageRenderers = [
+      "Smooth",
+      "Pixelated"
+    ]
+    const backgroundSizes = [
+      "Auto",
+      "Contain",
+      "Cover"
+    ]
+    const backgroundRepeats = [
+      "Repeat",
+      "Repeat X",
+      "Repeat Y",
+      "No Repeat",
+      "Space",
+      "Round"
+    ]
+    const dialog = new Dialog({
+      id: "splash_art_settings",
+      title: "Splash art settings",
+      lines: [`
+        <style>
+          dialog#splash_art_settings li {
+            list-style: disc;
+            list-style-position: inside;
+          }
+        </style>
+        <h2>Examples of each setting:</h2>
+        <ul>
+          <li><a href="https://www.w3schools.com/cssref/playdemo.php?filename=playcss_aspect-ratio">Aspect Ratio</a></li>
+          <li><a href="https://www.w3schools.com/cssref/playdemo.php?filename=playcss_image-rendering">Image Rendering</a></li>
+          <li><a href="https://www.w3schools.com/cssref/playdemo.php?filename=playcss_background-size">Background Size</a></li>
+          <li><a href="https://www.w3schools.com/cssref/playdemo.php?filename=playcss_background-repeat">Background Repeat</a></li>
+        </ul>
+        <br>
+      `],
+      form: {
+        aspectRatio: {
+          label: "Aspect Ratio",
+          type: "select",
+          options: Object.fromEntries(aspectRatios.map((e, i) => [i, e])),
+          value: 4
+        },
+        imageRendering: {
+          label: "Image Rendering",
+          type: "select",
+          options: Object.fromEntries(imageRenderers.map((e, i) => [i, e]))
+        },
+        backgroundSize: {
+          label: "Background Size",
+          type: "select",
+          options: Object.fromEntries(backgroundSizes.map((e, i) => [i, e])),
+          value: 2
+        },
+        backgroundRepeat: {
+          label: "Background Repeat",
+          type: "select",
+          options: Object.fromEntries(backgroundRepeats.map((e, i) => [i, e])),
+          value: 3
+        }
+      },
+      onConfirm(data) {
+        const transaction = db.result.transaction("images", "readwrite")
+        transaction.objectStore("images").put({
+          image,
+          aspectRatio: aspectRatios[data.aspectRatio].replace(":", " / "),
+          imageRendering: imageRenderers[data.imageRendering].toLowerCase(),
+          backgroundSize: backgroundSizes[data.backgroundSize].toLowerCase(),
+          backgroundRepeat: backgroundRepeats[data.backgroundRepeat].toLowerCase().replace(" ", "-")
+        })
+        setSplashArt(image)
+      }
+    }).show()
   }
   async function setSplashArt(image) {
     splashArtStyles?.delete()
-    if (image) return splashArtStyles = Blockbench.addCSS(`
-      #splash_screen > .graphic {
-        background-image: url("${image}")!important;
-      }
-      #splash_screen > .graphic > p {
-        display: none;
-      }
-    `)
     const transaction = db.result.transaction("images", "readonly")
     const store = transaction.objectStore("images")
-    if (localStorage.getItem("splash-art-randomisation-disabled")) {
+    if (image) {
+      const get = store.get(image)
+      await new Promise(fulfil => get.onsuccess = () => {
+        image = get.result
+        fulfil()
+      })
+    }
+    if (!image && localStorage.getItem("splash-art-randomisation-disabled")) {
       const index = store.index("applied")
       const get = index.get(["true"])
       await new Promise(fulfil => get.onsuccess = () => {
-        if (get.result) image = get.result.image
+        image = get.result
         fulfil()
       })
       if (!image) {
         const get = store.getAll()
         await new Promise(fulfil => get.onsuccess = () => {
-          if (get.result.length) image = get.result[0].image
+          image = get.result?.[0]
           fulfil()
         })
       }
@@ -378,13 +451,20 @@
     if (!image) {
       const get = store.getAll()
       await new Promise(fulfil => get.onsuccess = () => {
-        if (get.result.length) image = get.result[Math.floor(Math.random() * get.result.length)].image
+        if (get.result.length) image = get.result[Math.floor(Math.random() * get.result.length)]
         fulfil()
       })
     }
-    if (image) splashArtStyles = Blockbench.addCSS(`
+    if (image) setBackgroundImage(image)
+  }
+  function setBackgroundImage(data) {
+    splashArtStyles = Blockbench.addCSS(`
       #splash_screen > .graphic {
-        background-image: url("${image}")!important;
+        background-image: url("${data.image}")!important;
+        aspect-ratio: ${data.aspectRatio ?? "64 / 27"}!important;
+        image-rendering: ${data.imageRendering ?? "smooth"}!important;
+        background-size: ${data.backgroundSize ?? "cover"}!important;
+        background-repeat: ${data.backgroundRepeat ?? "no-repeat"}!important;
       }
       #splash_screen > .graphic > p {
         display: none;
