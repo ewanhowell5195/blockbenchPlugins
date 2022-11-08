@@ -1,7 +1,7 @@
 (async function () {
   let styles, splashArtStyles, galleryImages
   const id = "splash_art_customiser"
-  const name = "Splash Art Customiser"
+  const title = "Splash Art Customiser"
   const E = s => $(document.createElement(s))
   const db = indexedDB.open("splash-art-customiser", 1)
   db.onupgradeneeded = () => {
@@ -10,14 +10,14 @@
   }
   await new Promise(fulfil => db.onsuccess = fulfil)
   Plugin.register(id, {
-    title: name,
+    title,
     icon: "palette",
     author: "Ewan Howell",
     description: "Customise the start screen's splash art, by adding your own!",
     about: "This plugin allows you to customise the start screen's splash art by adding your own! If you add multiple splash art images, you can set it to pick a random one every time your launch Blockbench.\n\n## How to use\nOn the top left corner of the splash art, you will find a gear icon. From here you can manage your custom splash arts.\n\n## Splash art types\n- URL - A splash art can be loaded from a URL (faster loading)\n- File - A splash art can be loaded from a file (slower loading)\n- Gallery - Pick an image from the [Blockbench Gallery](https://www.blockbench.net/gallery)\n\n## Supported file types\n- PNG\n- JPG/JPEG\n- GIF\n- WebP\n- SVG",
     tags: ["Splash art", "Start screen", "Blockbench"],
     version: "1.0.0",
-    min_version: "4.2.0",
+    min_version: "4.4.3",
     variant: "both",
     onload() {
       setSplashArt()
@@ -172,7 +172,7 @@
             if (!galleryImages) galleryImages = await fetch("https://api.github.com/repos/JannisX11/blockbench.net/contents/assets/gallery").then(e => e.json()).then(e => e.map(e => e.download_url)).catch(() => {})
             const dialog = new Dialog({
               id,
-              title: name,
+              title,
               buttons: [],
               component: {
                 data: {
