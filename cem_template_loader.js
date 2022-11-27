@@ -1222,10 +1222,10 @@
               #cem_doc {
                 margin: 16px;
               }
-              #cem_doc>div {
+              #cem_doc > div {
                 display: none;
               }
-              #cem_doc>div.selected {
+              #cem_doc > div.selected {
                 display: block;
               }
               #cem_doc * {
@@ -1234,7 +1234,7 @@
               #cem_doc h2 {
                 font-size: 25px;
               }
-              #cem_doc>div>:first-child {
+              #cem_doc > div > :first-child {
                 margin-top: -8px;
               }
               #cem_doc h2:not(:first-child) {
@@ -1267,13 +1267,13 @@
                 top: 0;
                 border-bottom: 4px solid var(--color-ui);
               }
-              #cem_doc_tabs>div {
+              #cem_doc_tabs > div {
                 padding: 4px 12px;
                 cursor: pointer;
                 border-top: 2px solid transparent;
                 background-color: var(--color-back);
               }
-              #cem_doc_tabs>div.selected {
+              #cem_doc_tabs > div.selected {
                 background-color: var(--color-ui);
                 border-top-color: var(--color-accent);
                 cursor: default;
@@ -1285,7 +1285,7 @@
                 list-style: inside;
                 font-family: var(--font-code);
               }
-              .cem_doc_tab_link {
+              .cem-doc-tab-link {
                 text-decoration: underline;
                 cursor: pointer;
                 color: var(--color-accent);
@@ -1338,8 +1338,8 @@
           $(`#cem_doc_page_${evt.target.textContent}`).addClass("selected")
           $("#cem_animation_documentation .dialog_content")[0].scrollTo(0, 0)
         })
-        if (Blockbench.isWeb) $(".cem_doc_display_desktop").css("display", "none")
-        else $(".cem_doc_display_web").css("display", "none")
+        if (Blockbench.isWeb) $(".cem-doc-display-desktop").css("display", "none")
+        else $(".cem-doc-display-web").css("display", "none")
         doc.append(
           E("hr"),
           E("p").html(`Documentation version:   <span style="font-family:var(--font-code)">v${docData.version}</span>\nUpdated to:   <span style="font-family:var(--font-code)">OptiFine ${docData.optifineVersion}</span>`)
@@ -1629,7 +1629,7 @@
     description: description + " Also includes an animation editor, so that you can create custom entity animations.",
     about: "CEM Template Loader can be used to load the vanilla entity models for Minecraft: Java Edition, so you can use them in OptiFine CEM, or as texturing templates.\n\nTo use this plugin, head to the **Tools** tab and select **CEM Template Loader**. From here, select the model that you would like to edit and load it.\n\nAfter editing your model, export it as an **OptiFine JEM** to the folder `assets/minecraft/optifine/cem`. If a texture is used in the model, make sure it saves with a valid file path.\n\n## Important\n\nWhen editing an entity model, you cannot rotate root groups (top level folders), or move the pivot points of root groups, as this can break your model. If you need to rotate a root group, use a subgroup. If you need to change a root group's pivot point, use CEM animations.\n\nCEM Template Loader also includes an animation editor, so that you can create custom entity animations.",
     tags: ["Minecraft: Java Edition", "OptiFine", "Templates"],
-    version: "6.6.5",
+    version: "6.6.6",
     min_version: "4.3.0",
     variant: "both",
     oninstall: () => showAbout(true),
