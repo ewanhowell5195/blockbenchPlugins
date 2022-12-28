@@ -2,11 +2,6 @@
   let styles, backupList
   const backupPath = app.getPath("userData") + osfs + "backups"
   const E = s => $(document.createElement(s))
-  const processSearch = () => $(".backup-item").each(function() {
-    const item = $(this)
-    if (!item.attr("data-name").includes($("#start_screen_view_menu > .search_bar > input").val())) item.addClass("backup-item-hidden")
-    else item.removeClass("backup-item-hidden")
-  })
   Plugin.register("backup_viewer", {
     title: "Backup Viewer",
     icon: "fa-archive",
@@ -129,7 +124,7 @@
         if (!m) continue
         const date = new Date(Date.parse(`20${m.year}/${m.month}/${m.day} ${m.hour}:${m.minute}`))
         backups.push({
-          name: m.name ?? "Untitled",
+          name: m.name ?? "untitled",
           path: backupPath + osfs + file,
           date
         })
@@ -141,7 +136,7 @@
       for (const backup of backups) {
         const item = E("li").addClass("backup-item").attr({
           title: backup.path,
-          "data-name": backup.name
+          "data-name": backup.name.toLowerCase()
         }).append(
           E("i").addClass("fa_big icon fa fa-archive"),
           E("h3").text(backup.name),
@@ -152,6 +147,7 @@
       }
       $("#start_screen_view_menu > .tool").first().on("click", gridView)
       $("#start_screen_view_menu > .tool").eq(1).on("click", listView)
+      processSearch()
     },
     onunload() {
       $("#start_screen_view_menu > .search_bar").off("click", processSearch)
@@ -164,6 +160,14 @@
       $(".backup-list-inactive").removeClass("backup-list-inactive")
     }
   })
+  function processSearch() {
+    const text = $("#start_screen_view_menu > .search_bar > input").val().toLowerCase()
+    $(".backup-item").each(function() {
+      const item = $(this)
+      if (!item.attr("data-name").includes(text)) item.addClass("backup-item-hidden")
+      else item.removeClass("backup-item-hidden")
+    })
+  }
   function gridView() {
     backupList.removeClass("backup-list-display-list")
     hideRecent()
