@@ -1,8 +1,5 @@
 (() => {
   let styles, backupList
-  const id = "backup_viewer"
-  const name = "Backup Viewer"
-  const icon = "fa-archive"
   const backupPath = app.getPath("userData") + osfs + "backups"
   const E = s => $(document.createElement(s))
   const processSearch = () => $(".backup-item").each(function() {
@@ -10,9 +7,9 @@
     if (!item.attr("data-name").includes($("#start_screen_view_menu > .search_bar > input").val())) item.addClass("backup-item-hidden")
     else item.removeClass("backup-item-hidden")
   })
-  Plugin.register(id, {
-    title: name,
-    icon,
+  Plugin.register("backup_viewer", {
+    title: "Backup Viewer",
+    icon: "fa-archive",
     author: "Ewan Howell",
     description: "View the project backups from within Blockbench",
     about: "Add a backup tab to the Blockbench start screen that allows you to view a list of the project backups from within Blockbench.",
