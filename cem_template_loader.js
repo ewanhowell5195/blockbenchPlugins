@@ -639,11 +639,12 @@
           autocomplete(text, position) {
             const before = text.substring(0, position)
             if (before.match(/"/g)?.length % 2 !== 1) return []
-            const beginning = text.substring(0, position).split(/[^a-zA-Z_.]\.*/g).last()
+            const beginning = text.substring(0, position).split(/[^a-zA-Z0-9_.]\.*/g).last()
+            console.log(beginning)
             if (reInValue.test(before)) {
               if (beginning.includes(".")) {
                 const [prefix, str] = beginning.split(".")
-                if (!prefix.match(/\d+/)) {
+                if (!prefix.match(/^\d+$/)) {
                   if (["var", "varb"].includes(prefix)) return []
                   return filterAndSortList(boneVars, str)
                 }
@@ -654,7 +655,7 @@
             }
             if (beginning.includes(".")) {
               const [prefix, str] = beginning.split(".")
-              if (!prefix.match(/\d+/)) {
+              if (!prefix.match(/^\d+$/)) {
                 if (["var", "varb"].includes(prefix)) return []
                 if (prefix === "render") return filterAndSortList(renderVars, str)
                 return filterAndSortList(boneVars, str)
