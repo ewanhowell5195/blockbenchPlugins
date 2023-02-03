@@ -1,4 +1,4 @@
-(async function () {
+(() => {
   let generatorActions, reloadButton, entitySelector, loaderShown, entityData, entityCategories, groupObserver, animationEditorPanel, animationControlPanel, context, boolMap, rangeMap, specialMap, styles, stopAnimations, updateSelection, docShown, documentation, editorKeybinds, tabChange, loader, aboutAction, editCheck, originalJEMFormat
   const id = "cem_template_loader"
   const name = "CEM Template Loader"
@@ -1502,7 +1502,7 @@
         border-left: 4px solid transparent;
         cursor: pointer
       }
-      #cem_template_sidebar li: hover {
+      #cem_template_sidebar li:hover {
         color: var(--color-light)
       }
       #cem_template_sidebar li.selected {
@@ -1539,7 +1539,7 @@
         border-color: var(--color-accent);
         background-color: var(--color-button)
       }
-      .cem_template_list > li.selected: hover {
+      .cem_template_list > li.selected:hover {
         background-color: var(--color-selected)
       }
       .cem_template_image {
