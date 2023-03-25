@@ -1,12 +1,11 @@
 (() => {
-  let styles, dialog, action, running, importDialog, exportDialog
+  let styles, dialog, action, running, importDialog, exportDialog, interval, timeout
   const id = "activity_tracker"
   const name = "Activity Tracker"
   const icon = "trending_up"
   const description = "Track how long you spend using Blockbench and working on each project."
   const activity = JSON.parse(localStorage.getItem(id) ?? '{ "clock": 0 }')
-  let pauseOnLostFocus = localStorage.getItem(`${id}_pause_lost_focus`) ?? "true"
-  let interval
+  let pauseOnLostFocus = localStorage.getItem(`${id}_pause_lost_focus`) ?? "0"
   Plugin.register(id, {
     title: name,
     icon,
@@ -139,15 +138,28 @@
         component: {
           data: {
             activity,
-            pauseOnLostFocus,
             importDialog,
-            exportDialog
+            exportDialog,
+            options: {
+              "0": "Immediately",
+              "10": "After 10 seconds",
+              "30": "After 30 seconds",
+              "60": "After 1 minute",
+              "300": "After 5 minutes",
+              "600": "After 10 minutes",
+              "1200": "After 20 minutes",
+              "1800": "After 30 minutes",
+              "2700": "After 45 minutes",
+              "3600": "After 1 hour",
+              "never": "Never"
+            },
+            option: pauseOnLostFocus
           },
           methods: {
             durationString,
-            check() {
-              pauseOnLostFocus = pauseOnLostFocus === "true" ? "false" : "true"
-              localStorage.setItem(`${id}_pause_lost_focus`, pauseOnLostFocus)
+            set(e) {
+              pauseOnLostFocus = e
+              localStorage.setItem(`${id}_pause_lost_focus`, e)
             }
           },
           template: `
@@ -179,10 +191,11 @@
                 </div>
               </div>
               <div class="tracker-line"></div>
-              <div class="tracker-row tracker-row-center">
+              <div id="pause-tracking-select-container" class="tracker-row tracker-row-center">
                 <p>Pause tracking when tabbed out:</p>
-                <input type="checkbox" :checked="pauseOnLostFocus === 'true'" @input="check">
+                <select-input v-model="option" :options="options" @input="set" />
               </div>
+              <div class="tracker-line"></div>
               <div class="tracker-row">
                 <button @click="importDialog.show()">Import time</button>
                 <button @click="exportDialog.show()">Export time</button>
@@ -235,6 +248,7 @@
     }, 0)
   }
   function focus() {
+    clearTimeout(timeout)
     if (running) return
     running = true
     interval = setInterval(() => {
@@ -244,9 +258,10 @@
     }, 1000)
   }
   function blur() {
-    if (pauseOnLostFocus === "true") {
+    if (pauseOnLostFocus === "never") return
+    timeout = setTimeout(() => {
       clearInterval(interval)
       running = false
-    }
+    }, parseInt(pauseOnLostFocus) * 1000)
   }
 })()
