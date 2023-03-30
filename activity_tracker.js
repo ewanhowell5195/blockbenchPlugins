@@ -1,6 +1,5 @@
 (() => {
-  let styles, dialog, action, running, importDialog, exportDialog, interval, timeout, notification
-  let state = "focus"
+  let styles, dialog, action, running, importDialog, exportDialog, interval, timeout, notification, state
   const id = "activity_tracker"
   const name = "Activity Tracker"
   const icon = "trending_up"
