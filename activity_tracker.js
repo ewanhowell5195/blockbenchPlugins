@@ -1,5 +1,6 @@
 (() => {
-  let styles, dialog, action, running, importDialog, exportDialog, interval, timeout
+  let styles, dialog, action, running, importDialog, exportDialog, interval, timeout, notification
+  let state = "focus"
   const id = "activity_tracker"
   const name = "Activity Tracker"
   const icon = "trending_up"
@@ -212,15 +213,17 @@
         click: () => dialog.show()
       })
       MenuBar.addAction(action, "tools")
-      app.on("browser-window-focus", focus)
-      app.on("browser-window-blur", blur)
+      window.addEventListener("focus", focus)
+      window.addEventListener("blur", blur)
+      document.addEventListener("visibilitychange", visibilityChange)
       Blockbench.on("select_project", selectProject)
       selectProject()
       focus()
     },
     onunload() {
-      app.off("browser-window-focus", focus)
-      app.off("browser-window-blur", blur)
+      window.removeEventListener("focus", focus)
+      window.removeEventListener("blur", blur)
+      document.addEventListener("visibilitychange", visibilityChange)
       Blockbench.removeListener("select_project", selectProject)
       blur()
       styles.delete()
@@ -247,8 +250,15 @@
       Project.activity_tracker_session ||= Project.activity_tracker
     }, 0)
   }
+  function visibilityChange() {
+    if (document.visibilityState === "hidden") blur()
+    else focus()
+  }
   function focus() {
+    if (state === "focus") return
+    state = "focus"
     clearTimeout(timeout)
+    notification?.delete()
     if (running) return
     running = true
     interval = setInterval(() => {
@@ -258,10 +268,16 @@
     }, 1000)
   }
   function blur() {
+    if (state === "blur") return
+    state = "blur"
     if (pauseOnLostFocus === "never") return
     timeout = setTimeout(() => {
       clearInterval(interval)
       running = false
+      notification = Blockbench.showToastNotification({
+        text: "Activity tracking paused. Tab back in to resume.",
+        icon
+      })
     }, parseInt(pauseOnLostFocus) * 1000)
   }
 })()
