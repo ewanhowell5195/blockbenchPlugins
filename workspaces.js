@@ -1,4 +1,5 @@
 (() => {
+  const path = require("node:path")
   let dialog, action, styles, newDialog, editDialog
   const id = "workspaces"
   const name = "Workspaces"
@@ -10,6 +11,9 @@
     projects: recent_projects,
     active: true
   })
+  const thumbnailDir = path.join(app.getPath("userData"), "thumbnails")
+  const thumbnailCache = path.join(app.getPath("userData"), "plugindata", id)
+  fs.mkdirSync(thumbnailCache, { recursive: true })
   Plugin.register(id, {
     title: name,
     icon,
@@ -55,6 +59,9 @@
           margin-top: 10px;
           justify-content: flex-end;
         }
+        .start_screen_format_page > #workspace-details {
+          display: none;
+        }
       `)
       newDialog = new Dialog({
         id: "new_workspace",
@@ -67,6 +74,8 @@
         },
         onConfirm(form) {
           if (!form.name) return
+          const m = form.name.match(/[\\/*?"<>|]/)
+          if (m) return Blockbench.showQuickMessage(`Unsupported character "${m}"`, 2000)
           if (workspaces.find(e => e.name === form.name)) return Blockbench.showQuickMessage("Workspace already exists", 2000)
           workspaces.push({
             name: form.name,
@@ -118,11 +127,23 @@
                     message = "Cleared recent projects"
                   }
                   if (form.name && form.name !== name) {
+                    const m = form.name.match(/[\\/*?"<>|]/)
+                    if (m) return Blockbench.showQuickMessage(`Unsupported character "${m}"`, 2000)
+                    if (workspaces.find(e => e.name === form.name)) return Blockbench.showQuickMessage("Workspace name already in use", 2000)
                     const workspace = workspaces.find(e => e.name === name)
                     workspace.name = form.name
                     if (workspace.active) $("#active-workspace").text(form.name)
                     if (message) message += " and updated workspace name"
                     else message = "Updated workspace name"
+                    const oldPath = path.join(thumbnailCache, name)
+                    const newPath = path.join(thumbnailCache, form.name)
+                    if (fs.existsSync(newPath)) {
+                      fs.rmSync(newPath, { recursive: true, force: true })
+                    }
+                    if (fs.existsSync(oldPath)) {
+                      fs.cpSync(oldPath, newPath, { recursive: true })
+                      fs.rmSync(oldPath, { recursive: true, force: true })
+                    }
                   }
                   if (message) {
                     localStorage.setItem("workspaces", JSON.stringify(workspaces))
@@ -137,6 +158,10 @@
                 if (workspaces.find(f => f.name === e.currentTarget.dataset.name).active) switchToWorkspace("Default")
                 workspaces.splice(workspaces.findIndex(i => i.name === e.currentTarget.dataset.name), 1)
                 localStorage.setItem("workspaces", JSON.stringify(workspaces))
+                const oldPath = path.join(thumbnailCache, e.currentTarget.dataset.name)
+                if (fs.existsSync(oldPath)) {
+                  fs.rmSync(oldPath, { recursive: true, force: true })
+                }
               }
             }
           },
@@ -191,6 +216,18 @@
     recent_projects.length = 0
     recent_projects.push(...active.projects)
     localStorage.setItem("workspaces", JSON.stringify(workspaces))
+    const oldPath = path.join(thumbnailCache, old.name)
+    const activePath = path.join(thumbnailCache, active.name)
+    if (fs.existsSync(oldPath)) {
+      fs.rmSync(oldPath, { recursive: true, force: true })
+    }
+    fs.cpSync(thumbnailDir, oldPath, { recursive: true })
+    fs.rmSync(thumbnailDir, { recursive: true, force: true })
+    if (fs.existsSync(activePath)) {
+      fs.cpSync(activePath, thumbnailDir, { recursive: true })
+    } else {
+      fs.mkdirSync(thumbnailDir)
+    }
     updateRecentProjects()
     StartScreen.vue.updateThumbnails()
     $("#active-workspace").text(active.name)
