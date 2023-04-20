@@ -191,7 +191,7 @@
         icon,
         click: () => dialog.show()
       })
-      $(".start_screen_right").append(
+      $("#start_files > .start_screen_right").append(
         E("div").attr("id", "workspace-details").append(
           E("i").addClass("material-icons").text(icon),
           E("div").attr("id", "active-workspace").text(workspaces.find(e => e.active).name)
