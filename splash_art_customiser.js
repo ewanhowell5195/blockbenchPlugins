@@ -1,5 +1,5 @@
 (async function () {
-  let styles, splashArtStyles, galleryImages, customSplash
+  let styles, splashArtStyles, galleryImages, customSplash, dialog, settingsDialog
   const id = "splash_art_customiser"
   const title = "Splash Art Customiser"
   const E = s => $(document.createElement(s))
@@ -172,7 +172,7 @@
             const get = transaction.objectStore("images").getAll()
             let images = await new Promise(fulfil => get.onsuccess = () => fulfil(get.result))
             if (!galleryImages) galleryImages = await fetch("https://api.github.com/repos/JannisX11/blockbench.net/contents/assets/gallery").then(e => e.json()).then(e => e.map(e => e.download_url)).catch(() => {})
-            const dialog = new Dialog({
+            dialog = new Dialog({
               id,
               title,
               buttons: [],
@@ -340,6 +340,8 @@
       splashArtStyles?.delete()
       $("#customise-splash-art").remove()
       customSplash.remove()
+      dialog?.close()
+      settingsDialog?.close()
     },
     onuninstall() {
       const transaction = db.result.transaction("images", "readwrite")
@@ -372,7 +374,8 @@
       "Space",
       "Round"
     ]
-    const dialog = new Dialog({
+    dialog?.close()
+    settingsDialog = new Dialog({
       id: "splash_art_settings",
       title: "Splash art settings",
       lines: [`
@@ -427,10 +430,10 @@
     }).show()
     const preview = $("dialog#splash_art_settings #splash-art-settings-preview")
     const updatePreview = () => preview.css({
-      aspectRatio: aspectRatios[parseInt(dialog.form.aspectRatio.bar.find("bb-select").attr("value"))].replace(":", " / "),
-      imageRendering: imageRenderers[parseInt(dialog.form.imageRendering.bar.find("bb-select").attr("value"))].toLowerCase(),
-      backgroundSize: backgroundSizes[parseInt(dialog.form.backgroundSize.bar.find("bb-select").attr("value"))].toLowerCase(),
-      backgroundRepeat: backgroundRepeats[parseInt(dialog.form.backgroundRepeat.bar.find("bb-select").attr("value"))].toLowerCase().replace(" ", "-")
+      aspectRatio: aspectRatios[parseInt(settingsDialog.form.aspectRatio.bar.find("bb-select").attr("value"))].replace(":", " / "),
+      imageRendering: imageRenderers[parseInt(settingsDialog.form.imageRendering.bar.find("bb-select").attr("value"))].toLowerCase(),
+      backgroundSize: backgroundSizes[parseInt(settingsDialog.form.backgroundSize.bar.find("bb-select").attr("value"))].toLowerCase(),
+      backgroundRepeat: backgroundRepeats[parseInt(settingsDialog.form.backgroundRepeat.bar.find("bb-select").attr("value"))].toLowerCase().replace(" ", "-")
     })
     updatePreview()
     const observer = new MutationObserver(updatePreview)
