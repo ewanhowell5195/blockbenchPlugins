@@ -942,18 +942,13 @@
     data.cubes = model.cubes
     return data
   }
-  async function getTexture(texture) {
-    let data
-    if (texture.startsWith("data:image/png;base64,")) data = texture
-    else {
-      data = await new Promise(async fulfil => {
-        const blob = new Blob([await fetch(texture).then(e => e.arrayBuffer())], {type: "image/png"})
-        const reader = new FileReader()
-        reader.onload = e => fulfil(e.target.result)
-        reader.readAsDataURL(blob)
-      }).catch(() => {})
-    }
-    return data
+  function getTexture(texture) {
+    if (texture.startsWith("data:image/png;base64,")) return texture
+    return new Promise(async fulfil => {
+      const reader = new FileReader()
+      reader.onload = e => fulfil(e.target.result)
+      reader.readAsDataURL(new Blob([await fetch(texture).then(e => e.arrayBuffer())], { type: "image/png" }))
+    }).catch(() => {})
   }
   function editPreviewScene(scene) {
     const model = getModel(scene.preview_models[0])
