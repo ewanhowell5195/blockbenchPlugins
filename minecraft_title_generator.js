@@ -22,8 +22,11 @@
         #work_screen:has(#panel_minecraft_title_render_panel:not(.hidden)) {
           grid-template-columns: 0px auto 0 !important;
         }
-        #panel_minecraft_title_render_panel >  .panel_handle {
-          display: none;
+        #panel_minecraft_title_render_panel > .panel_handle, #work_screen:has(#panel_minecraft_title_render_panel:not(.hidden)) > .resizer.vertical {
+          display: none !important;
+        }
+        #work_screen:has(#panel_minecraft_title_render_panel:not(.hidden)) > #center {
+          margin-bottom: calc(4px - var(--toolbar-height));
         }
         #minecraft-title-render-controls-container {
           position: absolute;
@@ -90,6 +93,22 @@
         category: "navigate",
         condition: {
           formats: [format.id]
+        },
+        hide_toolbars: true,
+        hide_status_bar: true,
+        onSelect() {
+          three_grid.visible = false
+          const pivot = Canvas.scene.getObjectByName("pivot_marker")
+          if (pivot) pivot.visible = false
+          setTimeout(selectHandler, 0)
+        },
+        onUnselect() {
+          three_grid.visible = true
+          const pivot = Canvas.scene.getObjectByName("pivot_marker")
+          if (pivot) pivot.visible = true
+          Canvas.scene.traverse(e => {
+            if (e.type === "Line") e.visible = true
+          })
         }
       })
       const data = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/textures.json").then(e => e.json()).catch(() => [])
@@ -141,14 +160,6 @@
             text: "Minecraft"
           },
           "_1": "_",
-          row: {
-            label: "Row",
-            type: "number",
-            value: 0,
-            min: -10,
-            max: 10,
-            description: "The vertical row that the text appears on"
-          },
           type: {
             label: "Text Type",
             type: "select",
@@ -159,7 +170,51 @@
             },
             description: "The type of text to add"
           },
+          row: {
+            label: "Row",
+            type: "number",
+            value: 0,
+            min: -10,
+            max: 10,
+            description: "The vertical row that the text appears on"
+          },
+          letterSpacing: {
+            label: "Letter Spacing",
+            type: "number",
+            value: 0,
+            min: -4,
+            max: 20,
+            description: "Space the characters apart with a gap between each one"
+          },
           "_2": "_",
+          scaleX: {
+            label: "Scale X",
+            type: "number",
+            value: 1,
+            min: 0.25,
+            max: 4,
+            step: 0.05,
+            description: "The scale to render the text at on the X axis"
+          },
+          scaleY: {
+            label: "Scale Y",
+            type: "number",
+            value: 1,
+            min: 0.25,
+            max: 4,
+            step: 0.05,
+            description: "The scale to render the text at on the Y axis"
+          },
+          scaleZ: {
+            label: "Scale Z",
+            type: "number",
+            value: 1,
+            min: 0.25,
+            max: 4,
+            step: 0.05,
+            description: "The scale to render the text at on the Z axis"
+          },
+          "_3": "_",
           texture: {
             label: "Texture",
             type: "select",
@@ -168,14 +223,14 @@
             description: "The texture for the text to use"
           },
           hue: {
-            label: "Hue rotation",
+            label: "Hue Rotation",
             type: "number",
             value: 0,
             min: 0,
             max: 359,
             description: "Hue rotation angle to apply to the texture"
           },
-          "_3": "_",
+          "_4": "_",
           color:  {
             label: "Colour",
             type: "color",
@@ -191,6 +246,17 @@
               color: "Colour"
             },
             description: "The blend method to use when applying the colour"
+          },
+          "_5": "_",
+          borderColourCheck: {
+            label: "Custom Border Colour",
+            type: "checkbox"
+          },
+          borderColour: {
+            label: "Border Colour",
+            type: "color",
+            value: "#000000",
+            description: "A colour to use for the text border"
           }
         },
         onConfirm(result) {
@@ -200,30 +266,43 @@
             colour: result.color,
             type: result.type,
             blend: result.blend,
-            hue: result.hue
+            hue: result.hue,
+            letterSpacing: result.letterSpacing,
+            scale: [result.scaleX, result.scaleY, result.scaleZ],
+            borderColourCheck: result.borderColourCheck,
+            borderColour: result.borderColour
           })
         }
       })
       globalThis.loadDebugMinecraftText = index => {
-        const str = Object.keys(characters).sort().join(" ").replace(/😩|😳/g, "").replace("a", "😳 a").replace("'", "😩'")
+        const str = Object.keys(characters).sort().join("").replace(/😩|😳/g, "").replace("a", "😳a").replace("'", "😩'")
         const colour = tinycolor("#fff")
+        const scale = [1, 1, 1]
         if (!isNaN(index)) addText(str, {
           texture: Object.keys(textures)[index],
           row: 0,
+          letterSpacing: 8,
           blend: "multiply",
-          colour
+          colour,
+          scale,
+          borderColourCheck: false
         })
         else for (const [i, texture] of Object.keys(textures).entries()) {
           addText(str, {
             texture: texture,
-            row: i,
+            row: Object.keys(textures).length - i - 1,
+            letterSpacing: 8,
             blend: "multiply",
-            colour
+            colour,
+            scale,
+            borderColourCheck: false
           })
         }
       }
+      Blockbench.on("update_selection", selectHandler)
     },
     onunload() {
+      Blockbench.removeListener("update_selection", selectHandler)
       format.delete()
       action.delete()
       mode.delete()
@@ -266,6 +345,19 @@
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.globalCompositeOperation = "destination-in"
     ctx.drawImage(img, 0, 0)
+    if (args.borderColourCheck) {
+      const m = canvas.width / 1000
+      const borderCanvas = document.createElement("canvas")
+      borderCanvas.width = 60 * m
+      borderCanvas.height = 22 * m
+      const border = borderCanvas.getContext("2d")
+      border.drawImage(img, 0, 266 * m, 60 * m, 22 * m, 0, 0, 60 * m, 22 * m)
+      border.globalCompositeOperation = "source-in"
+      border.fillStyle = args.borderColour.toHexString()
+      border.fillRect(0, 0, 60 * m, 22 * m)
+      ctx.globalCompositeOperation = "source-over"
+      ctx.drawImage(borderCanvas, 0, 266 * m)
+    }
     const texture = new Texture({ name: `${makeName(text)}.png` }).fromDataURL(canvas.toDataURL()).add()
     newTextures.push(texture)
     const words = text.split(" ")
@@ -276,6 +368,8 @@
         texture: texture.uuid,
         row: args.row,
         type: args.type,
+        letterSpacing: args.letterSpacing,
+        scale: args.scale,
         newCubes
       })
     } else {
@@ -285,9 +379,11 @@
           texture: texture.uuid,
           row: args.row,
           type: args.type,
+          letterSpacing: args.letterSpacing,
+          scale: args.scale,
           newCubes
         })
-        offset = newOffset + 8
+        offset = newOffset + (8 + args.letterSpacing) * args.scale[0]
       }
     }
     group.addTo().select()
@@ -375,13 +471,21 @@
         cube.to[1] += args.row * 48
         cube.from[1] += args.row * 48
       }
+      cube.to = cube.to.map((e, i) => e * args.scale[i])
+      cube.from = cube.from.map((e, i) => e * args.scale[i])
       cube.addTo(character).init()
       args.newCubes.push(cube)
     }
-    return [character, max - min]
+    return [character, max - min + args.letterSpacing * args.scale[0]]
   }
 
   function makeName(str) {
     return str.replace(/\s/g, "_").replace(/😳/g, "a").replace(/😩/g, "'")
+  }
+
+  function selectHandler() {
+    if (Mode.selected.id === "minecraft_title_render") Canvas.scene.traverseVisible(e => {
+      if (e.type === "Line") e.visible = false
+    })
   }
 })()
