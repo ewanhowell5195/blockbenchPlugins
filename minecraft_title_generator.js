@@ -3,7 +3,7 @@
   const textures = {
     Flat: "data:image/png;base64,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"
   }
-  let format, action, dialog, mode, panel, styles
+  let format, action, dialog, mode, panel, styles, preview, debug
   const id = "minecraft_title_generator"
   const name = "Minecraft Title Generator"
   const icon = "text_fields"
@@ -62,6 +62,15 @@
         #minecraft-title-button:hover {
           color: var(--color-light);
         }
+        .form_bar_minecraftTitleBorderColourCheck > input {
+          z-index: 1;
+        }
+        .form_bar_minecraftTitleBorderColour {
+          margin-top: -34px;
+        }
+        .form_bar_minecraftTitleBorderColour > .tool {
+          margin-left: 200px;
+        }
       `)
       let shadeState
       BarItems.toggle_shading.condition = () => Project.format.id !== format.id
@@ -119,9 +128,7 @@
         name: "Add Minecraft Title Text",
         icon,
         condition: () => Project.format === format,
-        click() {
-          dialog.show() 
-        }
+        click: () => dialog.show()
       })
       Toolbars.outliner.add(action, 0)
       panel = new Panel("minecraft_title_render_panel", {
@@ -131,7 +138,60 @@
         },
         component: {
           methods: {
-            render: () => Screencam.screenshotPreview(Preview.selected),
+            render() {
+              preview.renderer.render(
+                Canvas.scene,
+                preview.camera
+              )
+              let minX = Infinity
+              let maxX = -Infinity
+              let minY = Infinity
+              let maxY = -Infinity
+              Canvas.scene.traverseVisible(cube => {
+                if (cube.type === "cube") {
+                  for (let i = 0; i < 72; i += 3) {
+                    const vec = new THREE.Vector3(...cube.geometry.attributes.position.array.slice(i, i + 3))
+                      .applyMatrix4(cube.matrixWorld).project(Preview.selected.camera)
+                    const x = (vec.x + 1) / 2
+                    const y = (-vec.y + 1) / 2
+                    minX = Math.min(minX, x)
+                    maxX = Math.max(maxX, x)
+                    minY = Math.min(minY, y)
+                    maxY = Math.max(maxY, y)
+                  }
+                }
+              })
+              minX = Math.max(minX, 0)
+              maxX = Math.min(maxX, 1)
+              minY = Math.max(minY, 0)
+              maxY = Math.min(maxY, 1)
+              const aspect = (maxX - minX) / ((maxY - minY) * Preview.selected.height / Preview.selected.width)
+              let width, height
+              if (aspect > 1) {
+                width = 4096
+                height = 4096 / aspect
+              } else {
+                width = 4096 * aspect
+                height = 4096
+              }
+              preview.resize(width, height)
+              preview.camera.position.fromArray(Preview.selected.camera.position.toArray())
+              preview.controls.target.fromArray(Preview.selected.controls.target.toArray())
+              const fullWidth = width / (maxX - minX)
+              const fullHeight = height / (maxY - minY)
+              preview.camera.setViewOffset(fullWidth, fullHeight, minX * fullWidth, minY * fullHeight, width, height)
+              preview.render()
+              const img = new CanvasFrame(preview.canvas)
+              console.log(img.width)
+              img.autoCrop()
+              console.log(img.width)
+              const canvas = new CanvasFrame(img.width, img.height)
+              canvas.ctx.filter = "blur(0.75px)"
+              canvas.ctx.drawImage(img.canvas, 0, 0)
+              const out = new CanvasFrame(Math.floor(img.width / 2), Math.floor(img.height / 2))
+              out.ctx.drawImage(canvas.canvas, 0, 0, out.width, out.height)
+              Screencam.returnScreenshot(out.canvas.toDataURL())
+            },
             position: () => Preview.selected.loadAnglePreset({
               position: [0, -200, -300],
               target: [0, 0, 0]
@@ -144,12 +204,17 @@
                   <i class="material-icons icon">photo_camera</i>
                 </div>
                 <div id="minecraft-title-button" @click="position" title="Position camera">
-                  <i class="material-icons icon">center_focus_strong</i>
+                  <i class="material-icons icon">auto_mode</i>
                 </div>
               </div>
             </div>
           `
         }
+      })
+      preview = new Preview({
+        id: "minecraft_title_preview",
+        antialias: false,
+        offscreen: true
       })
       dialog = new Dialog({
         id,
@@ -248,15 +313,20 @@
             description: "The blend method to use when applying the colour"
           },
           "_5": "_",
-          borderColourCheck: {
+          minecraftTitleBorderColourCheck: {
             label: "Custom Border Colour",
-            type: "checkbox"
+            type: "checkbox",
+            description: "Customise the border colour of the text"
           },
-          borderColour: {
-            label: "Border Colour",
+          minecraftTitleBorderColour: {
             type: "color",
             value: "#000000",
-            description: "A colour to use for the text border"
+            condition: form => form.minecraftTitleBorderColourCheck
+          },
+          fadeToBorder: {
+            label: "Fade To Border Colour",
+            type: "checkbox",
+            description: "Fade the top and bottom faces of the text into the border colour"
           }
         },
         onConfirm(result) {
@@ -269,36 +339,88 @@
             hue: result.hue,
             letterSpacing: result.letterSpacing,
             scale: [result.scaleX, result.scaleY, result.scaleZ],
-            borderColourCheck: result.borderColourCheck,
-            borderColour: result.borderColour
+            borderColourCheck: result.minecraftTitleBorderColourCheck,
+            borderColour: result.minecraftTitleBorderColour,
+            fadeToBorder: result.fadeToBorder
           })
         }
       })
-      globalThis.loadDebugMinecraftText = index => {
-        const str = Object.keys(characters).sort().join("").replace(/😩|😳/g, "").replace("a", "😳a").replace("'", "😩'")
-        const colour = tinycolor("#fff")
-        const scale = [1, 1, 1]
-        if (!isNaN(index)) addText(str, {
-          texture: Object.keys(textures)[index],
-          row: 0,
-          letterSpacing: 8,
-          blend: "multiply",
-          colour,
-          scale,
-          borderColourCheck: false
-        })
-        else for (const [i, texture] of Object.keys(textures).entries()) {
-          addText(str, {
-            texture: texture,
-            row: Object.keys(textures).length - i - 1,
-            letterSpacing: 8,
-            blend: "multiply",
-            colour,
-            scale,
-            borderColourCheck: false
-          })
+      debugDialog = new Dialog({
+        id: `debug_${id}`,
+        title: "Load Debug Minecraft Title Text",
+        form: {
+          texture: {
+            label: "Texture",
+            type: "select",
+            default: "all",
+            options: Object.fromEntries([["all", "All"]].concat(Object.keys(textures).map(e => [e, e])))
+          },
+          compact: {
+            label: "Compact",
+            type: "checkbox",
+            value: true,
+            condition: form => form.texture !== "all"
+          }
+        },
+        onConfirm(result) {
+          const str = Object.keys(characters).sort().join("").replace(/😩|😳/g, "").replace("a", "😳a").replace("'", "😩'")
+          const colour = tinycolor("#fff")
+          const scale = [1, 1, 1]
+          if (result.texture === "all") for (const [i, texture] of Object.keys(textures).entries()) {
+            addText(str, {
+              texture: texture,
+              row: Object.keys(textures).length - i - 1,
+              letterSpacing: 8,
+              blend: "multiply",
+              colour,
+              scale,
+              borderColourCheck: false
+            })
+          } else {
+            if (result.compact) {
+              const parts = []
+              let part = ""
+              let x = 0
+              for (const char of str.replace(/,|;/g, "") + ",;") {
+                part += char
+                x++
+                if (x >= 10) {
+                  x = 0
+                  parts.push(part)
+                  part = ""
+                }
+              }
+              if (part) parts.push(part)
+              for (const [i, part] of parts.entries()) {
+                addText(part, {
+                  texture: result.texture,
+                  row: parts.length - i - 1,
+                  letterSpacing: 8,
+                  blend: "multiply",
+                  colour,
+                  scale,
+                  borderColourCheck: false
+                })
+              }
+            } else addText(str, {
+              texture: result.texture,
+              row: 0,
+              letterSpacing: 8,
+              blend: "multiply",
+              colour,
+              scale,
+              borderColourCheck: false
+            })
+          }
         }
-      }
+      })
+      debug = new Action("load_debug_minecraft_title_text", {
+        name: "Load Debug Minecraft Title Text",
+        icon,
+        condition: () => Project.format === format,
+        click: () => debugDialog.show()
+      })
+      MenuBar.addAction(debug, "help.developer.1")
       Blockbench.on("update_selection", selectHandler)
     },
     onunload() {
@@ -307,8 +429,11 @@
       action.delete()
       mode.delete()
       panel.delete()
-      dialog.close()
       styles.delete()
+      preview.delete()
+      debug.delete()
+      dialog.close()
+      debugDialog.close()
     }
   })
 
@@ -345,18 +470,32 @@
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.globalCompositeOperation = "destination-in"
     ctx.drawImage(img, 0, 0)
+    const m = canvas.width / 1000
     if (args.borderColourCheck) {
-      const m = canvas.width / 1000
-      const borderCanvas = document.createElement("canvas")
-      borderCanvas.width = 60 * m
-      borderCanvas.height = 22 * m
-      const border = borderCanvas.getContext("2d")
-      border.drawImage(img, 0, 266 * m, 60 * m, 22 * m, 0, 0, 60 * m, 22 * m)
-      border.globalCompositeOperation = "source-in"
-      border.fillStyle = args.borderColour.toHexString()
-      border.fillRect(0, 0, 60 * m, 22 * m)
-      ctx.globalCompositeOperation = "source-over"
-      ctx.drawImage(borderCanvas, 0, 266 * m)
+      ctx.globalCompositeOperation = "source-atop"
+      ctx.fillStyle = args.borderColour.toHexString()
+      ctx.fillRect(0, 266 * m, 60 * m, 22 * m)
+    }
+    if (args.fadeToBorder) {
+      ctx.globalCompositeOperation = "source-atop"
+      const border = ctx.getImageData(0, 266 * m, 1, 1).data
+      const gradient = ctx.createLinearGradient(0, 0, 0, 264 * m)
+      gradient.addColorStop(0, `rgb(${border[0]},${border[1]},${border[2]})`)
+      gradient.addColorStop(22 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(62 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(84 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
+      gradient.addColorStop(86 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(86.5 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
+      gradient.addColorStop(108 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(148 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(170 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
+      gradient.addColorStop(172 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(172.5 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
+      gradient.addColorStop(194 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(242 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(1, `rgb(${border[0]},${border[1]},${border[2]})`)
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, 1000 * m, 264 * m)
     }
     const texture = new Texture({ name: `${makeName(text)}.png` }).fromDataURL(canvas.toDataURL()).add()
     newTextures.push(texture)
