@@ -159,20 +159,20 @@
               maxX = Math.min(maxX, 1)
               minY = Math.max(minY, 0)
               maxY = Math.min(maxY, 1)
-              const aspect = (maxX - minX) / (44 * Preview.selected.height / Preview.selected.width)
+              const aspect = (maxX - minX) / ((maxY - minY) * Preview.selected.height / Preview.selected.width)
               let outWidth, outHeight
               if (aspect > 1) {
                 outWidth = 4096
                 outHeight = 4096 / aspect
               } else {
-                width = 4096 * aspect
+                outWidth = 4096 * aspect
                 outHeight = 4096
               }
               preview.resize(outWidth, outHeight)
               preview.camera.position.fromArray(Preview.selected.camera.position.toArray())
               preview.controls.target.fromArray(Preview.selected.controls.target.toArray())
               const fullWidth = outWidth / (maxX - minX)
-              const fullHeight = outHeight / 44
+              const fullHeight = outHeight / (maxY - minY)
               preview.camera.setViewOffset(fullWidth, fullHeight, minX * fullWidth, minY * fullHeight, outWidth, outHeight)
               preview.render()
               const img = new CanvasFrame(preview.canvas)
