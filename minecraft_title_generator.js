@@ -62,15 +62,6 @@
         #minecraft-title-button:hover {
           color: var(--color-light);
         }
-        .form_bar_minecraftTitlecustomBorder > input {
-          z-index: 1;
-        }
-        .form_bar_minecraftTitlecustomBorderColour {
-          margin-top: -34px;
-        }
-        .form_bar_minecraftTitlecustomBorderColour > .tool {
-          margin-left: 200px;
-        }
       `)
       let shadeState
       BarItems.toggle_shading.condition = () => Project.format.id !== format.id
@@ -442,7 +433,9 @@
             scaleZ: 1,
             material: null,
             renderer: null,
-            camera: null
+            camera: null,
+            updating: false,
+            update: false
           },
           mounted() {
             $(this.$refs.colour).spectrum({
@@ -478,6 +471,11 @@
             finish: () => dialog.onConfirm(),
             async updatePreview() {
               setTimeout(async () => {
+                if (this.updating) {
+                  this.update = true
+                  return
+                }
+                this.updating = true
                 const texture = await makeTexture(this.texture, {
                   three: true,
                   colour: this.colour,
@@ -490,6 +488,10 @@
                 this.material.map = texture
                 this.material.needsUpdate = true
                 this.renderer.render(this.scene, this.camera)
+                this.updating = false
+                if (this.update) {
+                  this.updatePreview()
+                }
               }, 0)
             }
           },
