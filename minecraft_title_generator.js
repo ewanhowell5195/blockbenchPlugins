@@ -62,13 +62,13 @@
         #minecraft-title-button:hover {
           color: var(--color-light);
         }
-        .form_bar_minecraftTitleBorderColourCheck > input {
+        .form_bar_minecraftTitlecustomBorder > input {
           z-index: 1;
         }
-        .form_bar_minecraftTitleBorderColour {
+        .form_bar_minecraftTitlecustomBorderColour {
           margin-top: -34px;
         }
-        .form_bar_minecraftTitleBorderColour > .tool {
+        .form_bar_minecraftTitlecustomBorderColour > .tool {
           margin-left: 200px;
         }
       `)
@@ -85,9 +85,11 @@
         rotate_cubes: true,
         uv_rotation: true,
         bone_rig: true,
-        onSetup() {
+        new() {
+          newProject(this)
           Project.texture_width = 1000
           Project.texture_height = 320
+          dialog.show()
         },
         onActivation() {
           shadeState = BarItems.toggle_shading.value
@@ -345,141 +347,385 @@
         offscreen: true
       })
       dialog = new Dialog({
-        id,
+        id: "new_minecraft_title_text",
         title: "Add Minecraft Title Text",
-        form: {
-          text: {
-            label: "Text",
-            text: "Minecraft"
-          },
-          "_1": "_",
-          type: {
-            label: "Text Type",
-            type: "select",
-            default: "top",
-            options: {
-              top: "Top",
-              bottom: "Bottom"
-            },
-            description: "The type of text to add"
-          },
-          row: {
-            label: "Row",
-            type: "number",
-            value: 0,
-            min: -10,
-            max: 10,
-            description: "The vertical row that the text appears on"
-          },
-          letterSpacing: {
-            label: "Letter Spacing",
-            type: "number",
-            value: 0,
-            min: -4,
-            max: 20,
-            description: "Space the characters apart with a gap between each one"
-          },
-          rowSpacing: {
-            label: "Row Spacing",
-            type: "number",
-            value: 0,
-            min: -4,
-            max: 20,
-            description: "Space the rows apart with a gap between each one"
-          },
-          "_2": "_",
-          scaleX: {
-            label: "Scale X",
-            type: "number",
-            value: 1,
-            min: 0.25,
-            max: 4,
-            step: 0.05,
-            description: "The scale to render the text at on the X axis"
-          },
-          scaleY: {
-            label: "Scale Y",
-            type: "number",
-            value: 1,
-            min: 0.25,
-            max: 4,
-            step: 0.05,
-            description: "The scale to render the text at on the Y axis"
-          },
-          scaleZ: {
-            label: "Scale Z",
-            type: "number",
-            value: 1,
-            min: 0.25,
-            max: 4,
-            step: 0.05,
-            description: "The scale to render the text at on the Z axis"
-          },
-          "_3": "_",
-          texture: {
-            label: "Texture",
-            type: "select",
-            default: Object.keys(textures)[1] ?? Object.keys(textures)[0],
-            options: Object.fromEntries(Object.keys(textures).map(e => [e, e])),
-            description: "The texture for the text to use"
-          },
-          hue: {
-            label: "Hue Rotation",
-            type: "number",
-            value: 0,
-            min: 0,
-            max: 359,
-            description: "Hue rotation angle to apply to the texture"
-          },
-          "_4": "_",
-          color:  {
-            label: "Colour",
-            type: "color",
-            value: "#FFFFFFFF",
-            description: "A colour to tint the texture"
-          },
-          blend: {
-            label: "Blend Method",
-            type: "select",
-            default: "multiply",
-            options: {
-              multiply: "Multiply",
-              color: "Colour"
-            },
-            description: "The blend method to use when applying the colour"
-          },
-          "_5": "_",
-          minecraftTitleBorderColourCheck: {
-            label: "Custom Border Colour",
-            type: "checkbox",
-            description: "Customise the border colour of the text"
-          },
-          minecraftTitleBorderColour: {
-            type: "color",
-            value: "#000000",
-            condition: form => form.minecraftTitleBorderColourCheck
-          },
-          fadeToBorder: {
-            label: "Fade To Border Colour",
-            type: "checkbox",
-            description: "Fade the top and bottom faces of the text into the border colour"
+        buttons: [],
+        lines: [`<style>
+          #new_minecraft_title_text .dialog_content {
+            margin: 0;
           }
+          #minecraft-title-tabs {
+            background-color: var(--color-frame);
+            display: flex;
+            gap: 2px;
+            padding: 4px 4px 0;
+            position: sticky;
+            top: 0;
+          }
+          #minecraft-title-tabs > div {
+            padding: 4px 12px;
+            cursor: pointer;
+            border-top: 2px solid transparent;
+            background-color: var(--color-back);
+          }
+          #minecraft-title-tabs > div.selected {
+            background-color: var(--color-ui);
+            border-top-color: var(--color-accent);
+            cursor: default;
+          }
+          .minecraft-title-contents {
+            display: none;
+            padding: 20px;
+          }
+          .minecraft-title-contents.visible {
+            display: flex;
+            flex-direction: column;
+          }
+          #minecraft-title-buttons {
+            display: flex;
+            padding: 20px;
+            gap: 10px;
+          }
+          .spacer {
+            flex: 1;
+          }
+          .minecraft-title-contents .slider-label, .minecraft-title-contents .checkbox-row div:first-child {
+            margin: 3px 10px 0 0;
+          }
+          .minecraft-title-contents .hidden + div {
+            display: none;
+          }
+          .minecraft-title-contents .checkbox-row {
+            display: flex;
+          }
+          #minecraft_title_generator canvas {
+            margin: -20px -20px 10px;
+            max-width: 540px;
+            height: 150px;
+            image-rendering: auto;
+          }
+        </style>`],
+        component: {
+          data: {
+            tab: 0,
+            text: "",
+            textType: "top",
+            textTypes: {
+              "top": 'Top - The "Minecraft" text',
+              "bottom": "Bottom - The update text",
+              "small": "Small - The edition text"
+            },
+            row: 0,
+            texture: Object.keys(textures)[1] ?? Object.keys(textures)[0],
+            textures: Object.fromEntries(Object.keys(textures).map(e => [e, e])),
+            hue: 0,
+            colour: "#ffffff",
+            blend: "multiply",
+            blends: {
+              multiply: "Multiply",
+              color: "Colour",
+              lighter: "Lighter",
+              screen: "Screen",
+              overlay: "Overlay",
+              "soft-light": "Soft Light",
+              hue: "Hue",
+              saturation: "Saturation"
+            },
+            customBorder: false,
+            customcustomBorderColour: "#000000",
+            fadeToBorder: false,
+            characterSpacing: 0,
+            rowSpacing: 0,
+            scaleX: 1,
+            scaleY: 1,
+            scaleZ: 1,
+            material: null,
+            renderer: null,
+            camera: null
+          },
+          mounted() {
+            $(this.$refs.colour).spectrum({
+              preferredFormat: "hex",
+              color: this.colour,
+              showAlpha: false,
+              showInput: true,
+              move: c => {
+                this.colour = c.toHexString()
+                this.updatePreview()
+              },
+              change: c => {
+                this.colour = c.toHexString()
+                this.updatePreview()
+              }
+            }),
+            $(this.$refs.customBorderColour).spectrum({
+              preferredFormat: "hex",
+              color: this.customBorderColour,
+              showAlpha: false,
+              showInput: true,
+              move: c => {
+                this.customBorderColour = c.toHexString()
+                this.updatePreview()
+              },
+              change: c => {
+                this.customBorderColour = c.toHexString()
+                this.updatePreview()
+              }
+            })
+          },
+          methods: {
+            finish: () => dialog.onConfirm(),
+            async updatePreview() {
+              setTimeout(async () => {
+                const texture = await makeTexture(this.texture, {
+                  three: true,
+                  colour: this.colour,
+                  blend: this.blend,
+                  hue: this.hue,
+                  customBorder: this.customBorder,
+                  customBorderColour: this.customBorderColour,
+                  fadeToBorder: this.fadeToBorder
+                })
+                this.material.map = texture
+                this.material.needsUpdate = true
+                this.renderer.render(this.scene, this.camera)
+              }, 0)
+            }
+          },
+          template: `
+            <div id="${id}">
+              <div id="minecraft-title-tabs">
+                <div @click="tab = 0" :class="{ selected: tab === 0 }">Text</div>
+                <div @click="tab = 1" :class="{ selected: tab === 1 }">Texture</div>
+                <div @click="tab = 2" :class="{ selected: tab === 2 }">Settings</div>
+              </div>
+              <div class="minecraft-title-contents" :class="{ visible: tab === 0 }">
+                <h2>Minecraft Title Text:</h2>
+                <p>The text you want to add to the scene</p>
+                <input id="minecraft-title-text-input" class="dark_bordered" v-model="text"/>
+                <br>
+                <h2>Text Type:</h2>
+                <p>The type of text to add</p>
+                <select-input v-model="textType" :options="textTypes" />
+                <br>
+                <h2>Text Row:</h2>
+                <p>The vertical row that the text will appear on</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="row" min="-10" max="10" step="1" />
+                  <input type="number" class="tool disp_text" v-model.number="row" step="1" />
+                </div>
+              </div>
+              <div class="minecraft-title-contents" :class="{ visible: tab === 1 }">
+                <canvas id="minecraft-title-preview" class="checkerboard" width="1080" height="300"></canvas>
+                <h2>Texture:</h2>
+                <p>The texture to apply to the text</p>
+                <select-input v-model="texture" :options="textures" @input="updatePreview" />
+                <br>
+                <h2>Hue Shift:</h2>
+                <p>Shift the hue of the chosen texture by the provided number of degrees</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="hue" min="0" max="359" step="1" @input="updatePreview" />
+                  <input type="number" class="tool disp_text" v-model.number="hue" step="1" @input="updatePreview" />
+                </div>
+                <br>
+                <h2>Colour:</h2>
+                <p>A colour to apply to the chosen texture</p>
+                <input ref="colour" />
+                <p>The blend method to use when applying the colour</p>
+                <select-input v-model="blend" :options="blends" @input="updatePreview" />
+                <br>
+                <h2>Border:</h2>
+                <div class="checkbox-row">
+                  <div>Use a custom colour for the text border:</div>
+                  <input type="checkbox" :checked="customBorder" v-model="customBorder" @input="updatePreview">
+                </div>
+                <input ref="customBorderColour" :class="{ 'hidden': !customBorder }" />
+                <div class="checkbox-row">
+                  <div>Fade the top and bottom of the text into the border colour:</div>
+                  <input type="checkbox" :checked="fadeToBorder" v-model="fadeToBorder" @input="updatePreview">
+                </div>
+              </div>
+              <div class="minecraft-title-contents" :class="{ visible: tab === 2 }">
+                <h2>Character Spacing:</h2>
+                <p>Add a space between each character</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="characterSpacing" min="0" max="20" step="1" />
+                  <input type="number" class="tool disp_text" v-model.number="characterSpacing" step="1" />
+                </div>
+                <br>
+                <h2>Row Spacing:</h2>
+                <p>Change the spacing between the vertical rows of text</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="rowSpacing" min="-4" max="20" step="1" />
+                  <input type="number" class="tool disp_text" v-model.number="rowSpacing" step="1" />
+                </div>
+                <br>
+                <h2>Text Scale:</h2>
+                <p>The scale to render the text</p>
+                <div class="bar slider_input_combo">
+                  <div class="slider-label">X</div>
+                  <input type="range" class="tool disp_range" v-model.number="scaleX" min="0.05" max="4" step="0.05" value="{{ scaleX }}" style="--color-thumb:var(--color-axis-x)" />
+                  <input type="number" class="tool disp_text" v-model.number="scaleX" step="1" />
+                </div>
+                <div class="bar slider_input_combo">
+                  <div class="slider-label">Y</div>
+                  <input type="range" class="tool disp_range" v-model.number="scaleY" min="0.05" max="4" step="0.05" value="{{ scaleY }}" style="--color-thumb:var(--color-axis-y)" />
+                  <input type="number" class="tool disp_text" v-model.number="scaleY" step="1" />
+                </div>
+                <div class="bar slider_input_combo">
+                  <div class="slider-label">Z</div>
+                  <input type="range" class="tool disp_range" v-model.number="scaleZ" min="0.05" max="4" step="0.05" value="{{ scaleZ }}" style="--color-thumb:var(--color-axis-z)" />
+                  <input type="number" class="tool disp_text" v-model.number="scaleZ" step="1" />
+                </div>
+              </div>
+              <div id="minecraft-title-buttons">
+                <button v-if="tab > 0" @click="tab--">Back</button>
+                <div class="spacer"></div>
+                <button v-if="tab < 2" @click="tab++">Next</button>
+                <button @click="finish">Finish</button>
+              </div>
+            </div>
+          `
         },
-        onConfirm(result) {
-          addText(result.text.replace(/A/g, "😳").replace(/(?<=\s|^)'/g, "😩").replace(/(?<=\s|^)"/g, "😩😩").replace(/"/g, "''").toLowerCase().trim(), {
-            texture: result.texture,
-            row: result.row,
-            colour: result.color,
-            type: result.type,
-            blend: result.blend,
-            hue: result.hue,
-            letterSpacing: result.letterSpacing,
-            rowSpacing: result.rowSpacing,
-            scale: [result.scaleX, result.scaleY, result.scaleZ],
-            borderColourCheck: result.minecraftTitleBorderColourCheck,
-            borderColour: result.minecraftTitleBorderColour,
-            fadeToBorder: result.fadeToBorder
+        onOpen() {
+          this.content_vue.tab = 0
+          this.content_vue.$el.querySelector("#minecraft-title-text-input").focus()
+        },
+        onConfirm() {
+          const text = this.content_vue.text.replace(/A/g, "😳").replace(/(?<=\s|^)'/g, "😩").replace(/(?<=\s|^)"/g, "😩😩").replace(/"/g, "''").toLowerCase().trim()
+          if (!text) {
+            this.content_vue.tab = 0
+            Blockbench.showQuickMessage("Please provide some text")
+            return false
+          }
+          dialog.close()
+          addText(text, {
+            type: this.content_vue.textType,
+            row: this.content_vue.row,
+            texture: this.content_vue.texture,
+            characterSpacing: this.content_vue.characterSpacing,
+            rowSpacing: this.content_vue.rowSpacing,
+            scale: [this.content_vue.scaleX, this.content_vue.scaleY, this.content_vue.scaleZ],
+            colour: this.content_vue.colour,
+            blend: this.content_vue.blend,
+            hue: this.content_vue.hue,
+            customBorder: this.content_vue.customBorder,
+            customBorderColour: this.content_vue.customBorderColour,
+            fadeToBorder: this.content_vue.fadeToBorder
           })
+        },
+        async onBuild() {
+          const canvas = dialog.content_vue.$el.querySelector("#minecraft-title-preview")
+          
+          this.content_vue.camera = new THREE.PerspectiveCamera(18, canvas.width / canvas.height, 1, 1000)
+          this.content_vue.camera.position.x = 0
+          this.content_vue.camera.position.y = -208
+          this.content_vue.camera.position.z = -300
+          this.content_vue.camera.lookAt(new THREE.Vector3(0, -8, 0))
+
+          this.content_vue.scene = new THREE.Scene()
+
+          const texture = await new Promise(async fulfil => new THREE.TextureLoader().load(await getTexture(Object.keys(textures)[1] ?? Object.keys(textures)[0]), fulfil))
+          texture.colorSpace = THREE.SRGBColorSpace
+          texture.magFilter = THREE.NearestFilter
+          this.content_vue.material = new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            alphaTest: 0.5
+          })
+          
+          const addText = (str, args) => {
+            let width = 0
+            const cubes = []
+            const group = new THREE.Group()
+            for (const char of str) {
+              let min = Infinity
+              let max = -Infinity
+              const character = new THREE.Group()
+              for (let cube of characters[char]) {
+                cube = JSON.parse(JSON.stringify(cube))
+                min = Math.min(min, cube.from[0], cube.to[0])
+                max = Math.max(max, cube.from[0], cube.to[0])
+
+                if (args.type === "bottom") {
+                  if (cube.to[2] > cube.from[2]) {
+                    cube.to[2] += 20
+                  } else {
+                    cube.from[2] += 20
+                  }
+                }
+
+                const geometry = new THREE.BoxGeometry(cube.to[0] - cube.from[0], cube.to[1] - cube.from[1], cube.to[2] - cube.from[2])
+                const mesh = new THREE.Mesh(geometry, this.content_vue.material)
+
+                mesh.position.fromArray([
+                  (cube.from[0] + cube.to[0]) / 2,
+                  (cube.from[1] + cube.to[1]) / 2,
+                  (cube.from[2] + cube.to[2]) / 2
+                ])
+
+                const indexes = {
+                  north: 40,
+                  east: 0,
+                  south: 32,
+                  west: 8,
+                  up: 16,
+                  down: 24
+                }
+
+                for (const key of Object.keys(indexes)) {
+                  const face = cube.faces[key]
+                  const i = indexes[key]
+                  if (face) {
+                    const uv = [
+                      [face[0] / 16, 1 - (face[1] / 16)],
+                      [face[2] / 16, 1 - (face[1] / 16)],
+                      [face[0] / 16, 1 - (face[3] / 16)],
+                      [face[2] / 16, 1 - (face[3] / 16)]
+                    ]
+                    mesh.geometry.attributes.uv.array.set(uv[0], i + 0)
+                    mesh.geometry.attributes.uv.array.set(uv[1], i + 2)
+                    mesh.geometry.attributes.uv.array.set(uv[2], i + 4)
+                    mesh.geometry.attributes.uv.array.set(uv[3], i + 6)
+                  } else {
+                    mesh.geometry.attributes.uv.array.set([1, 1], i + 0)
+                    mesh.geometry.attributes.uv.array.set([1, 1], i + 2)
+                    mesh.geometry.attributes.uv.array.set([1, 1], i + 4)
+                    mesh.geometry.attributes.uv.array.set([1, 1], i + 6)
+                  }
+                }
+                character.add(mesh)
+                cubes.push(mesh)
+              }
+              for (const cube of character.children) {
+                cube.position.x -= width + max
+              }
+              group.add(character)
+              width += max - min
+            }
+
+            for (const cube of cubes) {
+              cube.position.x += width / 2
+            }
+
+            if (args.type === "bottom") {
+              group.scale.setY(1.75)
+              group.rotation.fromArray([Math.degToRad(-90), 0, 0])
+              group.position.z += 100
+            }
+
+            this.content_vue.scene.add(group)
+          }
+
+          addText("example", {})
+          addText("text", { type: "bottom" })
+
+          this.content_vue.renderer = new THREE.WebGLRenderer({
+            alpha: true,
+            canvas,
+          })
+
+          this.content_vue.renderer.render(this.content_vue.scene, this.content_vue.camera)
         }
       })
       debugDialog = new Dialog({
@@ -501,18 +747,17 @@
         },
         onConfirm(result) {
           const str = Object.keys(characters).sort().join("").replace(/😩|😳/g, "").replace("a", "😳a").replace("'", "😩'")
-          const colour = tinycolor("#fff")
           const scale = [1, 1, 1]
           if (result.texture === "all") for (const [i, texture] of Object.keys(textures).entries()) {
             addText(str, {
               texture: texture,
               row: Object.keys(textures).length - i - 1,
-              letterSpacing: 8,
+              characterSpacing: 8,
               rowSpacing: 8,
               blend: "multiply",
-              colour,
+              colour: "#fff",
               scale,
-              borderColourCheck: false
+              customBorder: false
             })
           } else {
             if (result.compact) {
@@ -533,22 +778,22 @@
                 addText(part, {
                   texture: result.texture,
                   row: parts.length - i - 1,
-                  letterSpacing: 8,
+                  characterSpacing: 8,
                   rowSpacing: 8,
                   blend: "multiply",
-                  colour,
+                  colour: "#fff",
                   scale,
-                  borderColourCheck: false
+                  customBorder: false
                 })
               }
             } else addText(str, {
               texture: result.texture,
               row: 0,
-              letterSpacing: 8,
+              characterSpacing: 8,
               blend: "multiply",
-              colour,
+              colour: "#fff",
               scale,
-              borderColourCheck: false
+              customBorder: false
             })
           }
         }
@@ -595,48 +840,15 @@
       outliner: true,
       textures: newTextures
     })
-    const data = await getTexture(args.texture)
-    const img = (await new Promise(fulfill => new THREE.TextureLoader().load(data, fulfill, null, fulfill))).image
-    const canvas = document.createElement("canvas")
-    canvas.width = img.width
-    canvas.height = img.height
-    const ctx = canvas.getContext("2d")
-    ctx.filter =`hue-rotate(${args.hue}deg)`
-    ctx.drawImage(img, 0, 0)
-    ctx.filter ="hue-rotate(0deg)"
-    ctx.globalCompositeOperation = args.blend
-    ctx.fillStyle = args.colour.toHexString()
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.globalCompositeOperation = "destination-in"
-    ctx.drawImage(img, 0, 0)
-    const m = canvas.width / 1000
-    if (args.borderColourCheck) {
-      ctx.globalCompositeOperation = "source-atop"
-      ctx.fillStyle = args.borderColour.toHexString()
-      ctx.fillRect(0, 266 * m, 60 * m, 22 * m)
-    }
-    if (args.fadeToBorder) {
-      ctx.globalCompositeOperation = "source-atop"
-      const border = ctx.getImageData(0, 266 * m, 1, 1).data
-      const gradient = ctx.createLinearGradient(0, 0, 0, 264 * m)
-      gradient.addColorStop(0, `rgb(${border[0]},${border[1]},${border[2]})`)
-      gradient.addColorStop(22 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
-      gradient.addColorStop(62 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
-      gradient.addColorStop(84 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
-      gradient.addColorStop(86 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
-      gradient.addColorStop(86.5 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
-      gradient.addColorStop(108 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
-      gradient.addColorStop(148 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
-      gradient.addColorStop(170 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
-      gradient.addColorStop(172 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
-      gradient.addColorStop(172.5 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
-      gradient.addColorStop(194 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
-      gradient.addColorStop(242 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
-      gradient.addColorStop(1, `rgb(${border[0]},${border[1]},${border[2]})`)
-      ctx.fillStyle = gradient
-      ctx.fillRect(0, 0, 1000 * m, 264 * m)
-    }
-    const texture = new Texture({ name: `${makeName(text)}.png` }).fromDataURL(canvas.toDataURL()).add()
+    const texture = await makeTexture(args.texture, {
+      text,
+      hue: args.hue,
+      blend: args.blend,
+      colour: args.colour,
+      customBorder: args.customBorder,
+      customBorderColour: args.customBorderColour,
+      fadeToBorder: args.fadeToBorder
+    })
     newTextures.push(texture)
     const words = text.split(" ")
     let group
@@ -646,7 +858,7 @@
         texture: texture.uuid,
         row: args.row,
         type: args.type,
-        letterSpacing: args.letterSpacing,
+        characterSpacing: args.characterSpacing,
         rowSpacing: args.rowSpacing,
         scale: args.scale,
         newCubes
@@ -658,12 +870,12 @@
           texture: texture.uuid,
           row: args.row,
           type: args.type,
-          letterSpacing: args.letterSpacing,
+          characterSpacing: args.characterSpacing,
           rowSpacing: args.rowSpacing,
           scale: args.scale,
           newCubes
         })
-        offset = newOffset + (8 + args.letterSpacing) * args.scale[0]
+        offset = newOffset + (8 + args.characterSpacing) * args.scale[0]
       }
     }
     group.addTo().select()
@@ -688,6 +900,56 @@
     Undo.finishEdit("Add Minecraft title text")
     updateSelection()
 
+  }
+
+  async function makeTexture(texture, args) {
+    const img = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(texture), fulfill, null, fulfill))).image
+    const canvas = document.createElement("canvas")
+    canvas.width = img.width
+    canvas.height = img.height
+    const ctx = canvas.getContext("2d")
+    ctx.filter =`hue-rotate(${args.hue}deg)`
+    ctx.drawImage(img, 0, 0)
+    ctx.filter ="hue-rotate(0deg)"
+    ctx.globalCompositeOperation = args.blend
+    ctx.fillStyle = args.colour
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.globalCompositeOperation = "destination-in"
+    ctx.drawImage(img, 0, 0)
+    const m = canvas.width / 1000
+    if (args.customBorder) {
+      ctx.globalCompositeOperation = "source-atop"
+      ctx.fillStyle = args.customBorderColour
+      ctx.fillRect(0, 266 * m, 60 * m, 22 * m)
+    }
+    if (args.fadeToBorder) {
+      ctx.globalCompositeOperation = "source-atop"
+      const border = ctx.getImageData(0, 266 * m, 1, 1).data
+      const gradient = ctx.createLinearGradient(0, 0, 0, 264 * m)
+      gradient.addColorStop(0, `rgb(${border[0]},${border[1]},${border[2]})`)
+      gradient.addColorStop(22 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(62 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(84 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
+      gradient.addColorStop(86 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(86.5 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
+      gradient.addColorStop(108 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(148 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(170 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
+      gradient.addColorStop(172 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(172.5 / 264, `rgb(${border[0]},${border[1]},${border[2]})`)
+      gradient.addColorStop(194 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(242 / 264, `rgb(${border[0]},${border[1]},${border[2]},0)`)
+      gradient.addColorStop(1, `rgb(${border[0]},${border[1]},${border[2]})`)
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, 1000 * m, 264 * m)
+    }
+    if (args.three) {
+      const texture = await new Promise(fulfil => new THREE.TextureLoader().load(canvas.toDataURL(), fulfil))
+      texture.colorSpace = THREE.SRGBColorSpace
+      texture.magFilter = THREE.NearestFilter
+      return texture
+    }
+    return new Texture({ name: `${makeName(args.text)}.png` }).fromDataURL(canvas.toDataURL()).add()
   }
 
   function makeWord(text, offset, parent, args) {
@@ -756,7 +1018,7 @@
       cube.addTo(character).init()
       args.newCubes.push(cube)
     }
-    return [character, max - min + args.letterSpacing * args.scale[0]]
+    return [character, max - min + args.characterSpacing * args.scale[0]]
   }
 
   function makeName(str) {
