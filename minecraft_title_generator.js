@@ -85,6 +85,7 @@
         rotate_cubes: true,
         uv_rotation: true,
         bone_rig: true,
+        centered_grid: true,
         new() {
           newProject(this)
           Project.texture_width = 1000
@@ -167,7 +168,7 @@
               maxX = Math.min(maxX, 1)
               minY = Math.max(minY, 0)
               maxY = Math.min(maxY, 1)
-              const aspect = (maxX - minX) / ((maxY - minY) * Preview.selected.height / Preview.selected.width)
+              const aspect = (maxX - minX) / (44 * Preview.selected.height / Preview.selected.width)
               let outWidth, outHeight
               if (aspect > 1) {
                 outWidth = 4096
@@ -180,7 +181,7 @@
               preview.camera.position.fromArray(Preview.selected.camera.position.toArray())
               preview.controls.target.fromArray(Preview.selected.controls.target.toArray())
               const fullWidth = outWidth / (maxX - minX)
-              const fullHeight = outHeight / (maxY - minY)
+              const fullHeight = outHeight / 44
               preview.camera.setViewOffset(fullWidth, fullHeight, minX * fullWidth, minY * fullHeight, outWidth, outHeight)
               preview.render()
               const img = new CanvasFrame(preview.canvas)
@@ -711,7 +712,7 @@
             if (args.type === "bottom") {
               group.scale.setY(1.75)
               group.rotation.fromArray([Math.degToRad(-90), 0, 0])
-              group.position.z += 100
+              group.position.z += 103
             }
 
             this.content_vue.scene.add(group)
@@ -885,7 +886,7 @@
       min = Math.min(min, cube.from[0], cube.to[0])
       max = Math.max(max, cube.from[0], cube.to[0])
     }
-    const width = (max - min) / 2 + 8
+    const width = (max - min) / 2
     for (const cube of Cube.selected) {
       cube.from[0] += width
       cube.to[0] += width
@@ -965,8 +966,10 @@
   }
 
   function makeCharacter(char, offset, parent, args) {
-    let min = Infinity
-    let max = -Infinity
+    let minX = Infinity
+    let maxX = -Infinity
+    let minZ = Infinity
+    let maxZ = -Infinity
     const cubes = []
     for (const element of characters[char]) {
       if (!element.parsed) {
@@ -975,9 +978,18 @@
           element.faces[direction] = { uv }
         }
       }
-      min = Math.min(min, element.from[0], element.to[0])
-      max = Math.max(max, element.from[0], element.to[0])
       const cube = new Cube(element)
+      if (args.type === "small") {
+        if (cube.to[2] > cube.from[2]) {
+          cube.to[2] -= 12
+        } else {
+          cube.from[2] -= 12
+        }
+      }
+      minX = Math.min(minX, cube.from[0], cube.to[0])
+      maxX = Math.max(maxX, cube.from[0], cube.to[0])
+      minZ = Math.min(minZ, cube.from[2], cube.to[2])
+      maxZ = Math.max(maxZ, cube.from[2], cube.to[2])
       cube.autouv = 0
       for (const key in cube.faces) {
         const readFace = element.faces[key]
@@ -997,28 +1009,45 @@
     const character = new Group(makeName(char))
     character.addTo(parent).init()
     for (const cube of cubes) {
-      cube.to[0] -= offset + max
-      cube.from[0] -= offset + max
+      cube.to[0] -= offset + maxX
+      cube.from[0] -= offset + maxX
+      cube.to[2] -= minZ
+      cube.from[2] -= minZ
       if (args.type === "bottom") {
         cube.to[1] *= 1.75
         cube.from[1] *= 1.75
-        cube.to[1] -= args.row * 84 + 86 + args.rowSpacing * args.row
-        cube.from[1] -= args.row * 84 + 86 + args.rowSpacing * args.row
+        cube.to[1] -= args.row * (44 * 1.75 + 4) + args.rowSpacing * args.row + 44 * 1.75 + 18
+        cube.from[1] -= args.row * (44 * 1.75 + 4) + args.rowSpacing * args.row + 44 * 1.75 + 18
+        cube.to[2] -= 5
+        cube.from[2] -= 5
         if (cube.to[2] > cube.from[2]) {
           cube.to[2] += 20
         } else {
           cube.from[2] += 20
         }
+      } else if (args.type === "small") {
+        cube.to[2] -= (maxZ - minZ)
+        cube.from[2] -= (maxZ - minZ)
+        cube.to[0] *= 0.38
+        cube.from[0] *= 0.38
+        cube.to[1] *= 0.33
+        cube.from[1] *= 0.33
+        cube.to[2] *= 0.38
+        cube.from[2] *= 0.38
+        cube.to[1] -= args.row * (44 * 0.33) + args.rowSpacing * args.row + 44 * 0.33
+        cube.from[1] -= args.row * (44 * 0.33) + args.rowSpacing * args.row + 44 * 0.33
       } else {
-        cube.to[1] += args.row * 48 + args.rowSpacing * args.row
-        cube.from[1] += args.row * 48 + args.rowSpacing * args.row
+        cube.to[2] -= (maxZ - minZ) / 2
+        cube.from[2] -= (maxZ - minZ) / 2
+        cube.to[1] += args.row * (44 + 4) + args.rowSpacing * args.row
+        cube.from[1] += args.row * (44 + 4) + args.rowSpacing * args.row
       }
       cube.to = cube.to.map((e, i) => e * args.scale[i])
       cube.from = cube.from.map((e, i) => e * args.scale[i])
       cube.addTo(character).init()
       args.newCubes.push(cube)
     }
-    return [character, max - min + args.characterSpacing * args.scale[0]]
+    return [character, maxX - minX + args.characterSpacing * args.scale[0]]
   }
 
   function makeName(str) {
