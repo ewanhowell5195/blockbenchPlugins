@@ -114,9 +114,9 @@
           })
         }
       })
-      const data = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/textures.json").then(e => e.json()).catch(() => [])
+      const data = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures.json").then(e => e.json()).catch(() => [])
       for (const texture of data) {
-        textures[texture.name] = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/textures/${texture.id}.png`
+        textures[texture.name] = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures/${texture.id}.png`
       }
       action = new Action("minecraft_title_add_text", {
         name: "Add Minecraft Title Text",
@@ -720,7 +720,7 @@
             this.content_vue.scene.add(group)
           }
 
-          addText("example", {})
+          addText("ex😳mple", {})
           addText("text", { type: "bottom" })
 
           this.content_vue.renderer = new THREE.WebGLRenderer({
