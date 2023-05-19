@@ -9,12 +9,12 @@
           texture: "data:image/png;base64,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"
         }
       },
-      height: 44,
       ends: [
         [0, 22, 62, 84],
         [86, 108, 148, 170],
         [172, 194, 242, 264]
       ],
+      height: 44,
       border: 266
     }
   }
@@ -442,14 +442,10 @@
           }
           #minecraft-title-list {
             display: flex;
-            flex-direction: column;
             max-height: 234px;
             flex-wrap: wrap;
             gap: 10px;
             overflow-x: auto;
-          }
-          #minecraft-title-list.small {
-            flex-direction: row;
           }
           .minecraft-title-item {
             display: flex;
@@ -459,18 +455,21 @@
             background-color: var(--color-back);
             align-items: center;
             cursor: pointer;
+            flex: 1;
           }
           .minecraft-title-item:hover {
             background-color: var(--color-button);
           }
           .minecraft-title-item > img {
-            width: 128px;
-            height: 64px;
+            height: 50px;
             display: flex;
             object-fit: contain;
           }
           .minecraft-title-item > div {
             text-align: center;
+            flex: 1;
+            display: flex;
+            align-items: center;
           }
           .minecraft-title-item.selected {
             outline: 2px solid var(--color-accent);
@@ -748,7 +747,7 @@
                 <br>
                 <h2>Font:</h2>
                 <p>The font to use for the text</p>
-                <div id="minecraft-title-list" class="small">
+                <div id="minecraft-title-list">
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="font = id; updateFont()" :class="{ selected: font === id }">
                     <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + id + '/thumbnails/flat.png'">
                     <div>{{ data.name }}</div>
