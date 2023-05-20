@@ -58,6 +58,13 @@
           box-shadow: 0 5px 10px #0006;
           display: flex;
           gap: 10px;
+          align-items: center;
+          flex-direction: column;
+        }
+        .minecraft-title-render-controls-row {
+          display: flex;
+          gap: 20px;
+          align-items: center;
         }
         #minecraft-title-render-button {
           background-color: var(--color-close);
@@ -70,12 +77,44 @@
         #minecraft-title-render-button:hover {
           filter: brightness(1.25) hue-rotate(5deg);
         }
-        #minecraft-title-button {
-          cursor: pointer;
-          margin-top: 9px;
+        #minecraft-title-render-button.disabled {
+          background-color: var(--color-button);
+          cursor: not-allowed;
         }
-        #minecraft-title-button:hover {
+        minecraft-title-render-button.disabled:hover {
+          filter: initial;
+        }
+        .minecraft-title-button {
+          cursor: pointer;
+          border-radius: 4px;
+        }
+        .minecraft-title-button:hover {
           color: var(--color-light);
+        }
+        .minecraft-title-button:hover > svg {
+          fill: var(--color-light);
+        }
+        .minecraft-title-button.selected {
+          background-color: var(--color-accent);
+          color: var(--color-accent_text);
+        }
+        .minecraft-title-button.selected > svg {
+          fill: var(--color-accent_text);
+        }
+        #resolutions {
+          display: flex;
+          background-color: var(--color-button);
+          padding: 4px;
+        }
+        .resolution {
+          width: 32px;
+          height: 32px;
+        }
+        .resolution > i {
+          font-size: 32px;
+        }
+        .resolution > svg {
+          fill: var(--color-text);
         }
       `)
       let shadeState
@@ -157,102 +196,165 @@
         component: {
           methods: {
             render() {
-              preview.renderer.render(
-                Canvas.scene,
-                preview.camera
-              )
-              let minX = Infinity
-              let maxX = -Infinity
-              let minY = Infinity
-              let maxY = -Infinity
-              Canvas.scene.traverseVisible(cube => {
-                if (cube.type === "cube") {
-                  for (let i = 0; i < 72; i += 3) {
-                    const vec = new THREE.Vector3(...cube.geometry.attributes.position.array.slice(i, i + 3))
-                      .applyMatrix4(cube.matrixWorld).project(Preview.selected.camera)
-                    const x = (vec.x + 1) / 2
-                    const y = (-vec.y + 1) / 2
-                    minX = Math.min(minX, x)
-                    maxX = Math.max(maxX, x)
-                    minY = Math.min(minY, y)
-                    maxY = Math.max(maxY, y)
+              if (this.rendering) return
+              this.rendering = true
+              setTimeout(() => {
+                preview.renderer.render(
+                  Canvas.scene,
+                  preview.camera
+                )
+                let minX = Infinity
+                let maxX = -Infinity
+                let minY = Infinity
+                let maxY = -Infinity
+                Canvas.scene.traverseVisible(cube => {
+                  if (cube.type === "cube") {
+                    for (let i = 0; i < 72; i += 3) {
+                      const vec = new THREE.Vector3(...cube.geometry.attributes.position.array.slice(i, i + 3))
+                        .applyMatrix4(cube.matrixWorld).project(Preview.selected.camera)
+                      const x = (vec.x + 1) / 2
+                      const y = (-vec.y + 1) / 2
+                      minX = Math.min(minX, x)
+                      maxX = Math.max(maxX, x)
+                      minY = Math.min(minY, y)
+                      maxY = Math.max(maxY, y)
+                    }
                   }
+                })
+                minX = Math.max(minX, 0)
+                maxX = Math.min(maxX, 1)
+                minY = Math.max(minY, 0)
+                maxY = Math.min(maxY, 1)
+                const aspect = (maxX - minX) / ((maxY - minY) * Preview.selected.height / Preview.selected.width)
+                let outWidth, outHeight
+                const resolution = this.antialias ? Math.min(this.resolution * 2, 4096) : this.resolution
+                if (aspect > 1) {
+                  outWidth = resolution
+                  outHeight = resolution / aspect
+                } else {
+                  outWidth = resolution * aspect
+                  outHeight = resolution
                 }
-              })
-              minX = Math.max(minX, 0)
-              maxX = Math.min(maxX, 1)
-              minY = Math.max(minY, 0)
-              maxY = Math.min(maxY, 1)
-              const aspect = (maxX - minX) / ((maxY - minY) * Preview.selected.height / Preview.selected.width)
-              let outWidth, outHeight
-              if (aspect > 1) {
-                outWidth = 4096
-                outHeight = 4096 / aspect
-              } else {
-                outWidth = 4096 * aspect
-                outHeight = 4096
-              }
-              preview.resize(outWidth, outHeight)
-              preview.camera.position.fromArray(Preview.selected.camera.position.toArray())
-              preview.controls.target.fromArray(Preview.selected.controls.target.toArray())
-              const fullWidth = outWidth / (maxX - minX)
-              const fullHeight = outHeight / (maxY - minY)
-              preview.camera.setViewOffset(fullWidth, fullHeight, minX * fullWidth, minY * fullHeight, outWidth, outHeight)
-              preview.render()
-              const img = new CanvasFrame(preview.canvas)
-              img.autoCrop()
-              const imageData = img.ctx.getImageData(0, 0, img.width, img.height)
-              const data = imageData.data
-              const length = data.length
-              const width = img.width
-              const height = img.height
-              const width1 = width - 1
-              const height1 = height - 1
-              for (let i = length - 4; i >= 0; i -= 4) {
-                const x = i / 4 % img.width
-                const y = Math.floor(i / (4 * height))
-                if (data[i + 3] === 0) {
-                  if (
-                    (x === 0 || data[i - 1] !== 0) &&
-                    (x === width1 || data[i + 7] !== 0) &&
-                    (y === 0 || data[i - width * 4 + 3] !== 0) &&
-                    (y === height1 || data[i + width * 4 + 3] !== 0)
+                preview.resize(outWidth, outHeight)
+                preview.camera.position.fromArray(Preview.selected.camera.position.toArray())
+                preview.controls.target.fromArray(Preview.selected.controls.target.toArray())
+                const fullWidth = outWidth / (maxX - minX)
+                const fullHeight = outHeight / (maxY - minY)
+                preview.camera.setViewOffset(fullWidth, fullHeight, minX * fullWidth, minY * fullHeight, outWidth, outHeight)
+                preview.render()
+                const img = new CanvasFrame(preview.canvas)
+                img.autoCrop()
+                const imageData = img.ctx.getImageData(0, 0, img.width, img.height)
+                const data = imageData.data
+                const length = data.length
+                const width = img.width
+                const height = img.height
+                const width1 = width - 1
+                const height1 = height - 1
+                for (let i = length - 4; i >= 0; i -= 4) {
+                  const x = i / 4 % img.width
+                  const y = Math.floor(i / (4 * height))
+                  if (data[i + 3] === 0) {
+                    if (
+                      (x === 0 || data[i - 1] !== 0) &&
+                      (x === width1 || data[i + 7] !== 0) &&
+                      (y === 0 || data[i - width * 4 + 3] !== 0) &&
+                      (y === height1 || data[i + width * 4 + 3] !== 0)
+                    ) {
+                      let count = 0
+                      let sr, sg, sb, sa
+                      sr = sg = sb = sa = 0
+                      if (x !== 0) {
+                        count++
+                        sr += data[i - 4]
+                        sg += data[i - 3]
+                        sb += data[i - 2]
+                        sa += data[i - 1]
+                      }
+                      if (x !== width1) {
+                        count++
+                        sr += data[i + 4]
+                        sg += data[i + 5]
+                        sb += data[i + 6]
+                        sa += data[i + 7]
+                      }
+                      if (y !== 0) {
+                        count++
+                        sr += data[i - width * 4]
+                        sg += data[i - width * 4 + 1]
+                        sb += data[i - width * 4 + 2]
+                        sa += data[i - width * 4 + 3]
+                      }
+                      if (y !== height1) {
+                        count++
+                        sr += data[i + width * 4]
+                        sg += data[i + width * 4 + 1]
+                        sb += data[i + width * 4 + 2]
+                        sa += data[i + width * 4 + 3]
+                      }
+                      data[i] = sr / count
+                      data[i + 1] = sg / count
+                      data[i + 2] = sb / count
+                      data[i + 3] = sa / count
+                    } else {
+                      const store = []
+                      const queue = [i]
+                      while (store.length < 6 && queue.length !== 0) {
+                        const j = queue.shift()
+                        store.push(j)
+                        const x = j / 4 % img.width
+                        if (x !== 0 && data[j - 1] === 0 && !store.includes(j - 4)) queue.push(j - 4)
+                        if (x !== width1 && data[j + 7] === 0 && !store.includes(j + 4)) queue.push(j + 4)
+                        if (Math.floor(j / (4 * height)) !== 0 && data[j - width * 4 + 3] === 0 && !store.includes(j - width * 4)) queue.push(j - width * 4)
+                      }
+                      if (store.length >= 6) continue
+                      for (const j of store) {
+                        const x = j / 4 % img.width
+                        const y = Math.floor(j / (4 * height))
+                        let count = 0
+                        let sr, sg, sb, sa
+                        sr = sg = sb = sa = 0
+                        if (x !== 0 && data[j - 1] !== 0) {
+                          count++
+                          sr += data[j - 4]
+                          sg += data[j - 3]
+                          sb += data[j - 2]
+                          sa += data[j - 1]
+                        }
+                        if (x !== width1 && data[j + 7] !== 0) {
+                          count++
+                          sr += data[j + 4]
+                          sg += data[j + 5]
+                          sb += data[j + 6]
+                          sa += data[j + 7]
+                        }
+                        if (y !== 0 && data[j - width * 4 + 3] !== 0) {
+                          count++
+                          sr += data[j - width * 4]
+                          sg += data[j - width * 4 + 1]
+                          sb += data[j - width * 4 + 2]
+                          sa += data[j - width * 4 + 3]
+                        }
+                        if (y !== height1 && data[j + width * 4 + 3] !== 0) {
+                          count++
+                          sr += data[j + width * 4]
+                          sg += data[j + width * 4 + 1]
+                          sb += data[j + width * 4 + 2]
+                          sa += data[j + width * 4 + 3]
+                        }
+                        data[j] = sr / count
+                        data[j + 1] = sg / count
+                        data[j + 2] = sb / count
+                        data[j + 3] = sa / count
+                      }
+                    } 
+                  } else if (
+                    (x === 0 || data[i - 1] === 0) &&
+                    (x === width1 || data[i + 7] === 0) &&
+                    (y === 0 || data[i - width * 4 + 3] === 0) &&
+                    (y === height1 || data[i + width * 4 + 3] === 0)
                   ) {
-                    let count = 0
-                    let sr, sg, sb, sa
-                    sr = sg = sb = sa = 0
-                    if (x !== 0) {
-                      count++
-                      sr += data[i - 4]
-                      sg += data[i - 3]
-                      sb += data[i - 2]
-                      sa += data[i - 1]
-                    }
-                    if (x !== width1) {
-                      count++
-                      sr += data[i + 4]
-                      sg += data[i + 5]
-                      sb += data[i + 6]
-                      sa += data[i + 7]
-                    }
-                    if (y !== 0) {
-                      count++
-                      sr += data[i - width * 4]
-                      sg += data[i - width * 4 + 1]
-                      sb += data[i - width * 4 + 2]
-                      sa += data[i - width * 4 + 3]
-                    }
-                    if (y !== height1) {
-                      count++
-                      sr += data[i + width * 4]
-                      sg += data[i + width * 4 + 1]
-                      sb += data[i + width * 4 + 2]
-                      sa += data[i + width * 4 + 3]
-                    }
-                    data[i] = sr / count
-                    data[i + 1] = sg / count
-                    data[i + 2] = sb / count
-                    data[i + 3] = sa / count
+                    data[i + 3] = 0
                   } else {
                     const store = []
                     const queue = [i]
@@ -260,97 +362,96 @@
                       const j = queue.shift()
                       store.push(j)
                       const x = j / 4 % img.width
-                      if (x !== 0 && data[j - 1] === 0 && !store.includes(j - 4)) queue.push(j - 4)
-                      if (x !== width1 && data[j + 7] === 0 && !store.includes(j + 4)) queue.push(j + 4)
-                      if (Math.floor(j / (4 * height)) !== 0 && data[j - width * 4 + 3] === 0 && !store.includes(j - width * 4)) queue.push(j - width * 4)
+                      if (x !== 0 && data[j - 1] !== 0 && !store.includes(j - 4)) queue.push(j - 4)
+                      if (x !== width1 && data[j + 7] !== 0 && !store.includes(j + 4)) queue.push(j + 4)
+                      if (Math.floor(j / (4 * height)) !== 0 && data[j - width * 4 + 3] !== 0 && !store.includes(j - width * 4)) queue.push(j - width * 4)
                     }
                     if (store.length >= 6) continue
                     for (const j of store) {
-                      const x = j / 4 % img.width
-                      const y = Math.floor(j / (4 * height))
-                      let count = 0
-                      let sr, sg, sb, sa
-                      sr = sg = sb = sa = 0
-                      if (x !== 0 && data[j - 1] !== 0) {
-                        count++
-                        sr += data[j - 4]
-                        sg += data[j - 3]
-                        sb += data[j - 2]
-                        sa += data[j - 1]
-                      }
-                      if (x !== width1 && data[j + 7] !== 0) {
-                        count++
-                        sr += data[j + 4]
-                        sg += data[j + 5]
-                        sb += data[j + 6]
-                        sa += data[j + 7]
-                      }
-                      if (y !== 0 && data[j - width * 4 + 3] !== 0) {
-                        count++
-                        sr += data[j - width * 4]
-                        sg += data[j - width * 4 + 1]
-                        sb += data[j - width * 4 + 2]
-                        sa += data[j - width * 4 + 3]
-                      }
-                      if (y !== height1 && data[j + width * 4 + 3] !== 0) {
-                        count++
-                        sr += data[j + width * 4]
-                        sg += data[j + width * 4 + 1]
-                        sb += data[j + width * 4 + 2]
-                        sa += data[j + width * 4 + 3]
-                      }
-                      data[j] = sr / count
-                      data[j + 1] = sg / count
-                      data[j + 2] = sb / count
-                      data[j + 3] = sa / count
+                      data[j + 3] = 0
                     }
-                  } 
-                } else if (
-                  (x === 0 || data[i - 1] === 0) &&
-                  (x === width1 || data[i + 7] === 0) &&
-                  (y === 0 || data[i - width * 4 + 3] === 0) &&
-                  (y === height1 || data[i + width * 4 + 3] === 0)
-                ) {
-                  data[i + 3] = 0
-                } else {
-                  const store = []
-                  const queue = [i]
-                  while (store.length < 6 && queue.length !== 0) {
-                    const j = queue.shift()
-                    store.push(j)
-                    const x = j / 4 % img.width
-                    if (x !== 0 && data[j - 1] !== 0 && !store.includes(j - 4)) queue.push(j - 4)
-                    if (x !== width1 && data[j + 7] !== 0 && !store.includes(j + 4)) queue.push(j + 4)
-                    if (Math.floor(j / (4 * height)) !== 0 && data[j - width * 4 + 3] !== 0 && !store.includes(j - width * 4)) queue.push(j - width * 4)
-                  }
-                  if (store.length >= 6) continue
-                  for (const j of store) {
-                    data[j + 3] = 0
                   }
                 }
-              }
-              img.ctx.putImageData(imageData, 0, 0)
-              img.autoCrop()
-              const canvas = new CanvasFrame(img.width, img.height)
-              canvas.ctx.filter = "blur(0.75px)"
-              canvas.ctx.drawImage(img.canvas, 0, 0)
-              const out = new CanvasFrame(Math.floor(img.width / 2), Math.floor(img.height / 2))
-              out.ctx.drawImage(canvas.canvas, 0, 0, out.width, out.height)
-              Screencam.returnScreenshot(out.canvas.toDataURL())
+                img.ctx.putImageData(imageData, 0, 0)
+                img.autoCrop()
+                let out
+                if (this.antialias) {
+                  const canvas = new CanvasFrame(img.width, img.height)
+                  canvas.ctx.filter = "blur(0.75px)"
+                  canvas.ctx.drawImage(img.canvas, 0, 0)
+                  out = new CanvasFrame(Math.floor(img.width / 2), Math.floor(img.height / 2))
+                  out.ctx.drawImage(canvas.canvas, 0, 0, out.width, out.height)
+                } else {
+                  out = img
+                }
+                Screencam.returnScreenshot(out.canvas.toDataURL())
+                this.rendering = false
+              }, 10)
             },
             position: () => Preview.selected.loadAnglePreset({
               position: [0, -200, -300],
               target: [0, 0, 0]
-            })
+            }),
+            custom() {
+              const dialog = new Dialog({
+                id: "custom_resolution",
+                title: "Custom Resolution",
+                form: {
+                  resolution: {
+                    label: "Resolution",
+                    type: "number",
+                    value: this.resolution,
+                    min: 1,
+                    max: 4096
+                  },
+                  info: {
+                    type: "info",
+                    text: "The resolution determins the width or height of the render, depending on which one is larger. The chosen resolution may not exactly match the render size"
+                  },
+                  info2: {
+                    type: "info",
+                    text: "If antialiasing is enabled, the render size is capped at 2048 pixels"
+                  }
+                },
+                onConfirm: result => this.resolution = this.antialias ? Math.min(result.resolution, 2048) : result.resolution
+              }).show()
+            }
+          },
+          data: {
+            resolution: 1024,
+            antialias: true,
+            rendering: false
           },
           template: `
             <div id="minecraft-title-render-controls-container">
               <div id="minecraft-title-render-controls">
-                <div id="minecraft-title-render-button" @click="render" title="Render Minecraft title">
+                <div id="minecraft-title-render-button" @click="render" title="Render Minecraft title" :class="{ disabled: rendering }">
                   <i class="material-icons icon">photo_camera</i>
                 </div>
-                <div id="minecraft-title-button" @click="position" title="Position camera">
-                  <i class="material-icons icon">auto_mode</i>
+                <div class="minecraft-title-render-controls-row">
+                  <i style="margin-left:10px;" class="material-icons icon minecraft-title-button" title="Position camera" @click="position">auto_mode</i>
+                  <div id="resolutions">
+                    <div class="resolution minecraft-title-button" @click="resolution = 480" :class="{ selected: resolution === 480 }" title="Around 480 pixels">
+                      <i class="material-icons icon">sd</i>
+                    </div>
+                    <div class="resolution minecraft-title-button" @click="resolution = 720" :class="{ selected: resolution === 720 }" title="Around 720 pixels">
+                      <i class="material-icons icon">hd</i>
+                    </div>
+                    <div class="resolution minecraft-title-button" @click="resolution = 1024" :class="{ selected: resolution === 1024 }" title="Around 1024 pixels">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" xmlns:v="https://vecta.io/nano"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2M8.808 15h-1.5v-2h-2v2h-1.5V9h1.5v2.5h2V9h1.5v6m.948-6h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4V9m1.5 4.5h2v-3h-2zm8.937-2.25v1.5h-1.5v1.5h-1.5v-1.5h-1.5v-1.5h1.5v-1.5h1.5v1.5"/></svg>
+                    </div>
+                    <div class="resolution minecraft-title-button" @click="resolution = 2048" :class="{ selected: resolution === 2048 }" title="Around 2048 pixels">
+                      <i class="material-icons icon">2k</i>
+                    </div>
+                    <div v-if="!antialias" class="resolution minecraft-title-button" @click="resolution = 4096" :class="{ selected: resolution === 4096 }" title="Around 4096 pixels">
+                      <i class="material-icons icon">4k</i>
+                    </div>
+                    <div class="resolution minecraft-title-button" @click="custom" :class="{ selected: ![480, 720, 1024, 2048, 4096].includes(resolution) }" title="Custom size" style="display:flex;align-items:center;justify-content:center;">
+                      <i style="font-size:24px;margin-left:-3px;" class="material-icons icon">tag</i>
+                    </div>
+                  </div>
+                  <div style="margin-right:-20px;">Antialiasing:</div>
+                  <input type="checkbox" :checked="antialias" v-model="antialias" @input="if (resolution > 2048) resolution = 2048">
                 </div>
               </div>
             </div>
@@ -390,6 +491,8 @@
             cursor: pointer;
             border-top: 2px solid transparent;
             background-color: var(--color-back);
+            flex: 1;
+            text-align: center;
           }
           #minecraft-title-tabs > div.selected {
             background-color: var(--color-ui);
@@ -418,8 +521,11 @@
           .spacer {
             flex: 1;
           }
-          .minecraft-title-contents .slider-label, .minecraft-title-contents .checkbox-row div:first-child {
+          .minecraft-title-contents .slider-label {
             margin: 3px 10px 0 0;
+          }
+          .minecraft-title-contents .checkbox-row div {
+            margin: 3px 0 0 5px;
           }
           .minecraft-title-contents .hidden + div {
             display: none;
@@ -430,15 +536,22 @@
           #minecraft_title_generator {
             padding-bottom: 72px;
           }
-          #minecraft_title_generator canvas {
+          #minecraft-title-preview-container {
             margin: -20px -20px 10px;
-            max-width: 540px;
-            height: 150px;
-            image-rendering: auto;
             position: sticky;
             top: 38px;
             z-index: 1;
             cursor: pointer;
+          }
+          #minecraft-title-preview {
+            max-width: 540px;
+            height: 150px;
+            image-rendering: auto;
+          }
+          #minecraft-title-preview-container > i {
+            position: absolute;
+            bottom: 17px;
+            right: 7px;
           }
           #minecraft-title-list {
             display: flex;
@@ -723,9 +836,9 @@
               }, 0)
             },
             expandCanvas(e) {
-              const canvas = new CanvasFrame(e.currentTarget.width, e.currentTarget.height)
+              const canvas = new CanvasFrame(this.canvas.width, this.canvas.height)
               canvas.canvas.classList.add("checkerboard")
-              canvas.ctx.drawImage(e.currentTarget, 0, 0)
+              canvas.ctx.drawImage(this.canvas, 0, 0)
               const overlay = document.createElement("div")
               overlay.id = "minecraft-title-expanded-preview"
               overlay.append(canvas.canvas)
@@ -766,7 +879,10 @@
                 </div>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 1 }">
-                <canvas id="minecraft-title-preview" class="checkerboard" width="1080" height="300" @click="expandCanvas"></canvas>
+                <div id="minecraft-title-preview-container" @click="expandCanvas">
+                  <canvas id="minecraft-title-preview" class="checkerboard" width="1080" height="300"></canvas>
+                  <i class="material-icons icon">open_in_full</i>
+                </div>
                 <h2>Texture:</h2>
                 <p>The texture to apply to the text</p>
                 <div id="minecraft-title-list">
@@ -791,13 +907,13 @@
                 <br>
                 <h2>Border:</h2>
                 <div class="checkbox-row">
-                  <div>Use a custom colour for the text border:</div>
                   <input type="checkbox" :checked="customBorder" v-model="customBorder" @input="updatePreview">
+                  <div>Use a custom colour for the text border:</div>
                 </div>
                 <input ref="customBorderColour" :class="{ 'hidden': !customBorder }" />
                 <div class="checkbox-row">
-                  <div>Fade the top and bottom of the text into the border colour:</div>
                   <input type="checkbox" :checked="fadeToBorder" v-model="fadeToBorder" @input="updatePreview">
+                  <div>Fade the top and bottom of the text into the border colour:</div>
                 </div>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 2 }">
@@ -816,7 +932,7 @@
                 </div>
                 <br>
                 <h2>Text Scale:</h2>
-                <p>The scale to render the text</p>
+                <p>The scale to render the text<br>For advanced scaling, use <strong>Transform > Scale</strong> after adding the text</p>
                 <div class="bar slider_input_combo">
                   <div class="slider-label">X</div>
                   <input type="range" class="tool disp_range" v-model.number="scaleX" min="0.05" max="4" step="0.05" value="{{ scaleX }}" style="--color-thumb:var(--color-axis-x)" />
