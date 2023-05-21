@@ -198,6 +198,12 @@
             render() {
               if (this.rendering) return
               this.rendering = true
+              const dialog = new Dialog({
+                id: "minecraft_title_rendering",
+                title: "Rendering...",
+                buttons: [],
+                lines: [`<h1 style="text-align:center;">Rendering...</h1>`]
+              }).show()
               setTimeout(() => {
                 preview.renderer.render(
                   Canvas.scene,
@@ -221,6 +227,12 @@
                     }
                   }
                 })
+                if (minX === Infinity) {
+                  dialog.close()
+                  Blockbench.showQuickMessage("Nothing in frame")
+                  this.rendering = false
+                  return
+                }
                 minX = Math.max(minX, 0)
                 maxX = Math.min(maxX, 1)
                 minY = Math.max(minY, 0)
@@ -384,6 +396,7 @@
                 } else {
                   out = img
                 }
+                dialog.close()
                 Screencam.returnScreenshot(out.canvas.toDataURL())
                 this.rendering = false
               }, 10)
