@@ -868,13 +868,67 @@
                   cube.position.x += width / 2
                 }
 
+                if (fonts[this.font].autoBorder) {
+                  let minX = Infinity
+                  let minY = Infinity
+                  let minZ = Infinity
+                  let maxX = -Infinity
+                  let maxY = -Infinity
+                  let maxZ = -Infinity
+
+                  for (const cube of cubes) {
+                    const from = [
+                      cube.position.x - cube.geometry.parameters.width / 2,
+                      cube.position.y - cube.geometry.parameters.height / 2,
+                      cube.position.z - cube.geometry.parameters.depth / 2
+                    ]
+                    const to = [
+                      from[0] + cube.geometry.parameters.width,
+                      from[1] + cube.geometry.parameters.height,
+                      from[2] + cube.geometry.parameters.depth
+                    ]
+                    minX = Math.min(minX, from[0], to[0])
+                    minY = Math.min(minY, from[1], to[1])
+                    minZ = Math.min(minZ, from[2], to[2])
+                    maxX = Math.max(maxX, from[0], to[0])
+                    maxY = Math.max(maxY, from[1], to[1])
+                    maxZ = Math.max(maxZ, from[2], to[2])
+                  }
+                  
+                  const geometry = new THREE.BoxGeometry(minX - maxX - 4, minY - maxY - 4, minZ - maxZ - 4)
+                  const mesh = new THREE.Mesh(geometry, this.material)
+
+                  mesh.position.fromArray([
+                    (maxX + minX) / 2,
+                    (maxY + minY) / 2,
+                    (maxZ + minZ) / 2
+                  ])
+
+                  const indexes = [40, 0, 32, 8, 16, 24]
+
+                  for (const i of indexes) {
+                    const uv = [
+                      [0, 1 - fonts[this.font].border / 320],
+                      [1 / 1000, 1 - fonts[this.font].border / 320],
+                      [0, 1 - (fonts[this.font].border + 1) / 320],
+                      [1 / 1000, 1 - (fonts[this.font].border + 1) / 320]
+                    ]
+                    mesh.geometry.attributes.uv.array.set(uv[0], i + 0)
+                    mesh.geometry.attributes.uv.array.set(uv[1], i + 2)
+                    mesh.geometry.attributes.uv.array.set(uv[2], i + 4)
+                    mesh.geometry.attributes.uv.array.set(uv[3], i + 6)
+                  }
+
+                  group.add(mesh)
+                }
+
                 if (args.type === "bottom") {
                   group.scale.setX(0.75)
                   group.scale.setY(1.6)
                   group.scale.setZ(0.75)
                   group.rotation.fromArray([Math.degToRad(-90), 0, 0])
-                  group.position.z += 93
-                  group.position.y -= 2
+                  group.position.z += fonts[this.font].height + 49
+                  group.position.y -= 25 - fonts[this.font].ends[0][1]
                 }
 
                 this.scene.add(group)
@@ -1293,7 +1347,7 @@
       max = Math.max(max, cube.from[0], cube.to[0])
     }
     let width = (max - min) / 2
-    if (fonts[args.font].autoBorder) width -= 2
+    if (fonts[args.font].autoBorder) width -= 2 * args.scale.reduce((a, e) => a + e, 0) / 3 * (args.type === "bottom" ? 0.75 : args.type === "small" ? 0.38 : 1)
     for (const cube of Cube.selected) {
       cube.from[0] += width
       cube.to[0] += width
@@ -1307,7 +1361,6 @@
     })
     Undo.finishEdit("Add Minecraft title text")
     updateSelection()
-
   }
 
   async function makeTexture(font, texture, args) {
@@ -1386,9 +1439,10 @@
         maxY = Math.max(maxY, cube.from[1], cube.to[1])
         maxZ = Math.max(maxZ, cube.from[2], cube.to[2])
       }
+      const size = 2 * args.scale.reduce((a, e) => a + e, 0) / 3 * (args.type === "bottom" ? 0.75 : args.type === "small" ? 0.38 : 1)
       const border = new Cube({
-        from: [maxX + 2, maxY + 2, maxZ + 2],
-        to: [minX - 2, minY - 2, minZ - 2]
+        from: [maxX + size, maxY + size, maxZ + size],
+        to: [minX - size, minY - size, minZ - size]
       })
       const uv = [0, fonts[args.font].border, 1, fonts[args.font].border + 1]
       for (const face of Object.values(border.faces)) {
@@ -1475,10 +1529,6 @@
         cube.from[2] *= 0.38
         cube.to[1] -= args.row * (heightOffset * 0.38) + args.rowSpacing * args.row + heightOffset * 0.38
         cube.from[1] -= args.row * (heightOffset * 0.38) + args.rowSpacing * args.row + heightOffset * 0.38
-        if (fonts[args.font].autoBorder) {
-          cube.to[1] -= 2
-          cube.from[1] -= 2
-        }
       } else {
         cube.to[2] -= (maxZ - minZ) / 2
         cube.from[2] -= (maxZ - minZ) / 2
