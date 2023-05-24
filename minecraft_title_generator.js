@@ -660,6 +660,26 @@
           #minecraft_title_generator .sp-preview {
             flex: 1;
           }
+          #minecraft_title_generator .form_inline_select {
+            margin: 10px 0;
+          }
+          #minecraft_title_generator .form_inline_select > li {
+            flex: 1;
+          }
+          #minecraft-title-file > canvas {
+            max-width: 500px;
+            max-height: 160px;
+            object-fit: contain;
+          }
+          #minecraft-title-file {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            cursor: pointer;
+          }
+          #minecraft-title-file.hidden {
+            display: none;
+          }
         </style>`],
         component: {
           data: {
@@ -698,15 +718,12 @@
             scaleX: 1,
             scaleY: 1,
             scaleZ: 1,
-            canvas: null,
-            material: null,
-            renderer: null,
-            camera: null,
             updating: false,
             update: false,
             terminators: false,
             customEdge: false,
-            customEdgeColour: "#000000"
+            customEdgeColour: "#000000",
+            textureSource: "premade"
           },
           mounted() {
             $(this.$refs.colour).spectrum({
@@ -772,7 +789,8 @@
                 customBorderColour: this.customBorderColour,
                 fadeToBorder: this.fadeToBorder,
                 customEdge: this.customEdge,
-                customEdgeColour: this.customEdgeColour
+                customEdgeColour: this.customEdgeColour,
+                customTexture: this.textureSource === "file" ? this.customTexture : undefined
               })
 
               this.material = new THREE.MeshBasicMaterial({
@@ -894,7 +912,7 @@
                     maxY = Math.max(maxY, from[1], to[1])
                     maxZ = Math.max(maxZ, from[2], to[2])
                   }
-                  
+
                   const geometry = new THREE.BoxGeometry(minX - maxX - 4, minY - maxY - 4, minZ - maxZ - 4)
                   const mesh = new THREE.Mesh(geometry, this.material)
 
@@ -945,7 +963,6 @@
                 addText("text", { type: "bottom" })
               }
 
-
               this.renderer = new THREE.WebGLRenderer({
                 alpha: true,
                 canvas: this.canvas,
@@ -970,7 +987,8 @@
                   customBorderColour: this.customBorderColour,
                   fadeToBorder: this.fadeToBorder,
                   customEdge: this.customEdge,
-                  customEdgeColour: this.customEdgeColour
+                  customEdgeColour: this.customEdgeColour,
+                  customTexture: this.textureSource === "file" ? this.customTexture : undefined
                 })
                 this.material.map = texture
                 this.material.needsUpdate = true
@@ -991,6 +1009,46 @@
               overlay.append(canvas.canvas)
               overlay.addEventListener("click", e => overlay.remove())
               document.body.append(overlay)
+            },
+            async selectFile() {
+              let texture
+              try {
+                if (isApp) {
+                  const file = electron.dialog.showOpenDialogSync({
+                    filters: [{
+                      name: "PNG Texture",
+                      extensions: ["png"]
+                    }]
+                  })
+                  if (!file) return
+                  texture = await new Promise(fulfill => new THREE.TextureLoader().load(file[0], fulfill, null, fulfill))
+                } else {
+                  const input = document.createElement("input")
+                  let file
+                  input.type = "file"
+                  input.accept = ".png"
+                  await new Promise(fulfil => {
+                    input.onchange = () => {
+                      file = Array.from(input.files)
+                      fulfil()
+                    }
+                    input.click()
+                  })
+                  const data = await new Promise(fulfil => {
+                    const fr = new FileReader()
+                    fr.onload = () => fulfil(fr.result)
+                    fr.readAsDataURL(file[0])
+                  })
+                  texture = await new Promise(fulfill => new THREE.TextureLoader().load(data, fulfill, null, fulfill))
+                }
+              } catch {
+                return Blockbench.showQuickMessage("Unable to load texture")
+              }
+              this.customFileCanvas.width = texture.image.width
+              this.customFileCanvas.height = texture.image.height
+              this.customFileCanvas.getContext("2d").drawImage(texture.image, 0, 0, this.customFileCanvas.width, this.customFileCanvas.height)
+              this.customTexture = this.customFileCanvas.toDataURL()
+              this.makePreview()
             }
           },
           template: `
@@ -1014,7 +1072,7 @@
                 <p>The font to use for the text</p>
                 <div id="minecraft-title-list" class="small">
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="font = id; updateFont()" :class="{ selected: font === id }">
-                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + id + '/thumbnails/flat.png'">
+                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + id + '/thumbnails/flat.png'" />
                     <div>{{ data.name }}</div>
                     <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
                   </div>
@@ -1034,12 +1092,21 @@
               <div class="minecraft-title-contents" :class="{ visible: tab === 1 }">
                 <h2>Texture</h2>
                 <p>The texture to apply to the text</p>
-                <div id="minecraft-title-list">
-                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(textures)" @click="texture = id; updatePreview()" :class="{ selected: texture === id }">
-                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + font + '/thumbnails/' + id + '.png'">
+                <ul class="form_inline_select">
+                  <li @click="textureSource = 'premade'; updatePreview()" :class="{ selected: textureSource === 'premade' }">Pre-made</li>
+                  <li @click="textureSource = 'generator'; updatePreview()" :class="{ selected: textureSource === 'generator' }">Generator</li>
+                  <li @click="textureSource = 'file'; updatePreview()" :class="{ selected: textureSource === 'file' }">File</li>
+                </ul>
+                <div v-if="textureSource === 'premade'" id="minecraft-title-list">
+                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(textures)" v-if="fonts[font].textures[id]" @click="texture = id; updatePreview()" :class="{ selected: texture === id }">
+                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                     <div>{{ data.name }}</div>
                     <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
                   </div>
+                </div>
+                <div :class="{ hidden: textureSource !== 'file' }" id="minecraft-title-file" @click="selectFile">
+                  <canvas class="checkerboard" width="500" height="160" />
+                  <button>Select File</button>
                 </div>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 2 }">
@@ -1149,12 +1216,15 @@
             fadeToBorder: this.content_vue.fadeToBorder,
             terminators: this.content_vue.terminators,
             customEdge: this.content_vue.customEdge,
-            customEdgeColour: this.content_vue.customEdgeColour
+            customEdgeColour: this.content_vue.customEdgeColour,
+            customTexture: this.content_vue.textureSource === "file" ? this.content_vue.customTexture : undefined
           })
         },
         async onBuild() {
           this.content_vue.canvas = dialog.content_vue.$el.querySelector("#minecraft-title-preview")
-          
+          this.content_vue.customFileCanvas = dialog.content_vue.$el.querySelector("#minecraft-title-file > canvas")
+          this.content_vue.customFileCanvas.getContext("2d").globalCompositeOperation = "copy"
+
           this.content_vue.camera = new THREE.PerspectiveCamera(18, this.content_vue.canvas.width / this.content_vue.canvas.height, 1, 1000)
           this.content_vue.camera.position.x = 0
           this.content_vue.camera.position.y = -170
@@ -1298,7 +1368,8 @@
       customBorderColour: args.customBorderColour,
       fadeToBorder: args.fadeToBorder,
       customEdge: args.customEdge,
-      customEdgeColour: args.customEdgeColour
+      customEdgeColour: args.customEdgeColour,
+      customTexture: args.customTexture
     })
     await getFontCharacters(args.font)
     if ((args.terminators || fonts[args.font].forcedTerminators) && fonts[args.font].terminatorSpace) {
@@ -1347,7 +1418,7 @@
       max = Math.max(max, cube.from[0], cube.to[0])
     }
     let width = (max - min) / 2
-    if (fonts[args.font].autoBorder) width -= 2 * args.scale.reduce((a, e) => a + e, 0) / 3 * (args.type === "bottom" ? 0.75 : args.type === "small" ? 0.38 : 1)
+    if (fonts[args.font].autoBorder) width -= 2 * (args.scale[0] + args.scale[1]) / 2 * (args.type === "bottom" ? 0.75 : args.type === "small" ? 0.38 : 1)
     for (const cube of Cube.selected) {
       cube.from[0] += width
       cube.to[0] += width
@@ -1364,7 +1435,7 @@
   }
 
   async function makeTexture(font, texture, args) {
-    const img = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(font, texture), fulfill, null, fulfill))).image
+    const img = (await new Promise(async fulfill => new THREE.TextureLoader().load(args.customTexture ?? await getTexture(font, texture), fulfill, null, fulfill))).image
     const canvas = document.createElement("canvas")
     canvas.width = img.width
     canvas.height = img.height
@@ -1439,7 +1510,7 @@
         maxY = Math.max(maxY, cube.from[1], cube.to[1])
         maxZ = Math.max(maxZ, cube.from[2], cube.to[2])
       }
-      const size = 2 * args.scale.reduce((a, e) => a + e, 0) / 3 * (args.type === "bottom" ? 0.75 : args.type === "small" ? 0.38 : 1)
+      const size = 2 * (args.scale[0] + args.scale[1]) / 2 * (args.type === "bottom" ? 0.75 : args.type === "small" ? 0.38 : 1)
       const border = new Cube({
         from: [maxX + size, maxY + size, maxZ + size],
         to: [minX - size, minY - size, minZ - size]
