@@ -187,6 +187,8 @@
         click: () => dialog.show()
       })
       Toolbars.outliner.add(action, 0)
+      MenuBar.menus.edit.addAction(action, 4)
+      Interface.Panels.outliner.menu.addAction(action, 0)
       panel = new Panel("minecraft_title_render_panel", {
         name: "Render Controls",
         condition: {
@@ -405,7 +407,7 @@
               target: [0, 0, 0]
             }),
             custom() {
-              const dialog = new Dialog({
+              new Dialog({
                 id: "custom_resolution",
                 title: "Custom Resolution",
                 form: {
@@ -418,7 +420,7 @@
                   },
                   info: {
                     type: "info",
-                    text: "The resolution determins the width or height of the render, depending on which one is larger. The chosen resolution may not exactly match the render size"
+                    text: "The resolution determines the width or height of the render, depending on which one is larger. The chosen resolution may not exactly match the render size"
                   },
                   info2: {
                     type: "info",
@@ -484,7 +486,7 @@
             overflow: hidden;
           }
           #new_minecraft_title_text > .dialog_handle, #new_minecraft_title_text > .dialog_close_button {
-            z-index: 2;
+            z-index: 3;
           }
           #new_minecraft_title_text .dialog_content {
             margin: 0;
@@ -496,7 +498,7 @@
             padding: 4px 4px 0;
             position: sticky;
             top: 0;
-            z-index: 1;
+            z-index: 3;
           }
           #minecraft-title-tabs > div {
             padding: 4px 12px;
@@ -514,10 +516,10 @@
           .minecraft-title-contents {
             display: none;
             padding: 20px;
-          }
-          .minecraft-title-contents.visible {
-            display: flex;
             flex-direction: column;
+          }
+          #minecraft_title_generator .visible {
+            display: flex!important;
           }
           #minecraft-title-buttons {
             display: flex;
@@ -527,7 +529,7 @@
             bottom: 0;
             left: 0;
             right: 8px;
-            z-index: 1;
+            z-index: 2;
             background-color: var(--color-ui);
           }
           .spacer {
@@ -540,7 +542,7 @@
             margin: 3px 0 0 5px;
           }
           .minecraft-title-contents .hidden + div {
-            display: none;
+            display: none !important;
           }
           .minecraft-title-contents .checkbox-row {
             display: flex;
@@ -549,11 +551,12 @@
             padding-bottom: 72px;
           }
           #minecraft-title-preview-container {
-            margin: -20px -20px 10px;
+            margin-bottom: -10px;
             position: sticky;
             top: 38px;
-            z-index: 1;
+            z-index: 2;
             cursor: pointer;
+            display: none;
           }
           #minecraft-title-preview {
             max-width: 540px;
@@ -562,15 +565,18 @@
           }
           #minecraft-title-preview-container > i {
             position: absolute;
-            bottom: 17px;
+            bottom: 7px;
             right: 7px;
           }
           #minecraft-title-list {
             display: flex;
-            max-height: 234px;
+            max-height: 384px;
             flex-wrap: wrap;
             gap: 10px;
             overflow-x: hidden;
+          }
+          #minecraft-title-list.small {
+            max-height: 118px;
           }
           .minecraft-title-item {
             display: flex;
@@ -623,8 +629,13 @@
             position: absolute;
             background-color: var(--color-dark);
             padding: 4px;
-            margin-left: 4px;
+            margin: 0 0 0 4px;
             font-size: 0.8em;
+            pointer-events: none;
+          }
+          .minecraft-title-item:nth-child(3n) > .minecraft-title-item-author:hover::after {
+            margin: 0 4px 0 0;
+            transform: translateX(calc(-100% - 22px));
           }
           #minecraft-title-expanded-preview {
             position: absolute;
@@ -641,6 +652,13 @@
             box-shadow: 0 10px 10px #0004;
             max-width: calc(100vw - 40px);
             max-height: calc(100vh - 40px);
+          }
+          #minecraft_title_generator .sp-replacer {
+            display: flex;
+            margin-bottom: 10px;
+          }
+          #minecraft_title_generator .sp-preview {
+            flex: 1;
           }
         </style>`],
         component: {
@@ -669,7 +687,8 @@
               overlay: "Overlay",
               "soft-light": "Soft Light",
               hue: "Hue",
-              saturation: "Saturation"
+              saturation: "Saturation",
+              difference: "Difference"
             },
             customBorder: false,
             customBorderColour: "#000000",
@@ -685,7 +704,9 @@
             camera: null,
             updating: false,
             update: false,
-            terminators: false
+            terminators: false,
+            customEdge: false,
+            customEdgeColour: "#000000"
           },
           mounted() {
             $(this.$refs.colour).spectrum({
@@ -715,6 +736,20 @@
                 this.customBorderColour = c.toHexString()
                 this.updatePreview()
               }
+            }),
+            $(this.$refs.customEdgeColour).spectrum({
+              preferredFormat: "hex",
+              color: this.customEdgeColour,
+              showAlpha: false,
+              showInput: true,
+              move: c => {
+                this.customEdgeColour = c.toHexString()
+                this.updatePreview()
+              },
+              change: c => {
+                this.customEdgeColour = c.toHexString()
+                this.updatePreview()
+              }
             })
           },
           methods: {
@@ -735,7 +770,9 @@
                 hue: this.hue,
                 customBorder: this.customBorder,
                 customBorderColour: this.customBorderColour,
-                fadeToBorder: this.fadeToBorder
+                fadeToBorder: this.fadeToBorder,
+                customEdge: this.customEdge,
+                customEdgeColour: this.customEdgeColour
               })
 
               this.material = new THREE.MeshBasicMaterial({
@@ -832,21 +869,21 @@
                 }
 
                 if (args.type === "bottom") {
-                  group.scale.setX(0.8)
-                  group.scale.setY(1.48)
-                  group.scale.setZ(0.8)
+                  group.scale.setX(0.75)
+                  group.scale.setY(1.6)
+                  group.scale.setZ(0.75)
                   group.rotation.fromArray([Math.degToRad(-90), 0, 0])
-                  group.position.z += 90
-                  group.position.y -= 3
+                  group.position.z += 93
+                  group.position.y -= 2
                 }
 
                 this.scene.add(group)
               }
 
-              if (this.terminators && fonts[this.font].terminatorSpace) {
+              if ((this.terminators || fonts[this.font].forcedTerminators) && fonts[this.font].terminatorSpace) {
                 addText("┫ ex😳mple ┣", {})
                 addText("┫ text ┣", { type: "bottom" })
-              } else if (this.terminators) {
+              } else if (this.terminators || fonts[this.font].forcedTerminators) {
                 addText("┫ex😳mple┣", {})
                 addText("┫text┣", { type: "bottom" })
               } else {
@@ -877,7 +914,9 @@
                   hue: this.hue,
                   customBorder: this.customBorder,
                   customBorderColour: this.customBorderColour,
-                  fadeToBorder: this.fadeToBorder
+                  fadeToBorder: this.fadeToBorder,
+                  customEdge: this.customEdge,
+                  customEdgeColour: this.customEdgeColour
                 })
                 this.material.map = texture
                 this.material.needsUpdate = true
@@ -905,16 +944,21 @@
               <div id="minecraft-title-tabs">
                 <div @click="tab = 0" :class="{ selected: tab === 0 }">Text</div>
                 <div @click="tab = 1" :class="{ selected: tab === 1 }">Texture</div>
-                <div @click="tab = 2" :class="{ selected: tab === 2 }">Settings</div>
+                <div @click="tab = 2" :class="{ selected: tab === 2 }">Texture Options</div>
+                <div @click="tab = 3" :class="{ selected: tab === 3 }">Settings</div>
+              </div>
+              <div id="minecraft-title-preview-container" @click="expandCanvas" :class="{ visible: [1, 2].includes(tab) }">
+                <canvas id="minecraft-title-preview" class="checkerboard" width="1080" height="300"></canvas>
+                <i class="material-icons icon">open_in_full</i>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 0 }">
-                <h2>Minecraft Title Text:</h2>
+                <h2>Minecraft Title Text</h2>
                 <p>The text you want to add to the scene</p>
                 <input id="minecraft-title-text-input" class="dark_bordered" v-model="text"/>
                 <br>
-                <h2>Font:</h2>
+                <h2>Font</h2>
                 <p>The font to use for the text</p>
-                <div id="minecraft-title-list">
+                <div id="minecraft-title-list" class="small">
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="font = id; updateFont()" :class="{ selected: font === id }">
                     <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + id + '/thumbnails/flat.png'">
                     <div>{{ data.name }}</div>
@@ -922,30 +966,19 @@
                   </div>
                 </div>
                 <br>
-                <h2>Text Type:</h2>
+                <h2>Text Type</h2>
                 <p>The type of text to add</p>
                 <select-input v-model="textType" :options="textTypes" />
                 <br>
-                <h2>Text Row:</h2>
+                <h2>Text Row</h2>
                 <p>The vertical row that the text will appear on</p>
                 <div class="bar slider_input_combo">
                   <input type="range" class="tool disp_range" v-model.number="row" min="-10" max="10" step="1" />
                   <input type="number" class="tool disp_text" v-model.number="row" step="1" />
                 </div>
-                <br>
-                <h2>Line Terminators:</h2>
-                <p>Special characters that appear at the start and end of the text</p>
-                <div class="checkbox-row">
-                  <input type="checkbox" :checked="terminators" v-model="terminators" @input="makePreview">
-                  <div>Enable line terminators:</div>
-                </div>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 1 }">
-                <div id="minecraft-title-preview-container" @click="expandCanvas">
-                  <canvas id="minecraft-title-preview" class="checkerboard" width="1080" height="300"></canvas>
-                  <i class="material-icons icon">open_in_full</i>
-                </div>
-                <h2>Texture:</h2>
+                <h2>Texture</h2>
                 <p>The texture to apply to the text</p>
                 <div id="minecraft-title-list">
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(textures)" @click="texture = id; updatePreview()" :class="{ selected: texture === id }">
@@ -954,47 +987,60 @@
                     <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
                   </div>
                 </div>
-                <br>
-                <h2>Hue Shift:</h2>
+              </div>
+              <div class="minecraft-title-contents" :class="{ visible: tab === 2 }">
+                <h2>Hue Shift</h2>
                 <p>Shift the hue of the chosen texture by the provided number of degrees</p>
                 <div class="bar slider_input_combo">
                   <input type="range" class="tool disp_range" v-model.number="hue" min="0" max="359" step="1" @input="updatePreview" />
                   <input type="number" class="tool disp_text" v-model.number="hue" step="1" @input="updatePreview" />
                 </div>
                 <br>
-                <h2>Colour:</h2>
+                <h2>Colour</h2>
                 <p>A colour to apply to the chosen texture</p>
                 <input ref="colour" />
                 <p>The blend method to use when applying the colour</p>
                 <select-input v-model="blend" :options="blends" @input="updatePreview" />
                 <br>
-                <h2>Border:</h2>
+                <h2>Border</h2>
                 <div class="checkbox-row">
                   <input type="checkbox" :checked="customBorder" v-model="customBorder" @input="updatePreview">
-                  <div>Use a custom colour for the text border:</div>
+                  <div>Use a custom colour for the text border</div>
                 </div>
                 <input ref="customBorderColour" :class="{ 'hidden': !customBorder }" />
                 <div class="checkbox-row">
                   <input type="checkbox" :checked="fadeToBorder" v-model="fadeToBorder" @input="updatePreview">
-                  <div>Fade the top and bottom of the text into the border colour:</div>
+                  <div>Fade the top and bottom of the text into the border colour</div>
                 </div>
+                <br>
+                <h2>Edges</h2>
+                <div class="checkbox-row">
+                  <input type="checkbox" :checked="customEdge" v-model="customEdge" @input="updatePreview">
+                  <div>Use a custom colour for the top and bottom faces</div>
+                </div>
+                <input ref="customEdgeColour" :class="{ 'hidden': !customEdge }" />
+                <div v-if="!fonts[font].forcedTerminators" class="checkbox-row">
+                  <input type="checkbox" :checked="terminators" v-model="terminators" @input="makePreview">
+                  <div>Enable line terminators</div>
+                </div>
+                <p v-if="!fonts[font].forcedTerminators">Line terminators are special characters that appear at the start and end of the text</p>
               </div>
-              <div class="minecraft-title-contents" :class="{ visible: tab === 2 }">
-                <h2>Character Spacing:</h2>
+              <div class="minecraft-title-contents" :class="{ visible: tab === 3 }">
+                <h2>Character Spacing</h2>
                 <p>Add a space between each character</p>
                 <div class="bar slider_input_combo">
                   <input type="range" class="tool disp_range" v-model.number="characterSpacing" min="0" max="20" step="1" />
                   <input type="number" class="tool disp_text" v-model.number="characterSpacing" step="1" />
                 </div>
                 <br>
-                <h2>Row Spacing:</h2>
+                <h2>Row Spacing</h2>
                 <p>Change the spacing between the vertical rows of text</p>
                 <div class="bar slider_input_combo">
                   <input type="range" class="tool disp_range" v-model.number="rowSpacing" min="-4" max="20" step="1" />
                   <input type="number" class="tool disp_text" v-model.number="rowSpacing" step="1" />
                 </div>
                 <br>
-                <h2>Text Scale:</h2>
+                <h2>Text Scale</h2>
                 <p>The scale to render the text<br>For advanced scaling, use <strong>Transform > Scale</strong> after adding the text</p>
                 <div class="bar slider_input_combo">
                   <div class="slider-label">X</div>
@@ -1015,7 +1061,7 @@
               <div id="minecraft-title-buttons">
                 <button v-if="tab > 0" @click="tab--">Back</button>
                 <div class="spacer"></div>
-                <button v-if="tab < 2" @click="tab++">Next</button>
+                <button v-if="tab < 3" @click="tab++">Next</button>
                 <button @click="finish">Finish</button>
               </div>
             </div>
@@ -1047,7 +1093,9 @@
             customBorder: this.content_vue.customBorder,
             customBorderColour: this.content_vue.customBorderColour,
             fadeToBorder: this.content_vue.fadeToBorder,
-            terminators: this.content_vue.terminators
+            terminators: this.content_vue.terminators,
+            customEdge: this.content_vue.customEdge,
+            customEdgeColour: this.content_vue.customEdgeColour
           })
         },
         async onBuild() {
@@ -1055,9 +1103,9 @@
           
           this.content_vue.camera = new THREE.PerspectiveCamera(18, this.content_vue.canvas.width / this.content_vue.canvas.height, 1, 1000)
           this.content_vue.camera.position.x = 0
-          this.content_vue.camera.position.y = -178
+          this.content_vue.camera.position.y = -170
           this.content_vue.camera.position.z = -320
-          this.content_vue.camera.lookAt(new THREE.Vector3(0, -8, 0))
+          this.content_vue.camera.lookAt(new THREE.Vector3(0, 0, 0))
 
           this.content_vue.scene = new THREE.Scene()
 
@@ -1194,16 +1242,20 @@
       colour: args.colour,
       customBorder: args.customBorder,
       customBorderColour: args.customBorderColour,
-      fadeToBorder: args.fadeToBorder
+      fadeToBorder: args.fadeToBorder,
+      customEdge: args.customEdge,
+      customEdgeColour: args.customEdgeColour
     })
     await getFontCharacters(args.font)
-    if (args.terminators && fonts[args.font].terminatorSpace) {
+    if ((args.terminators || fonts[args.font].forcedTerminators) && fonts[args.font].terminatorSpace) {
       text = `┫ ${text} ┣`
-    } else if (args.terminators) {
+    } else if (args.terminators || fonts[args.font].forcedTerminators) {
       text = `┫${text}┣`
     }
     newTextures.push(texture)
-    const words = text.split(" ")
+    let words
+    if (fonts[args.font].characters[" "]) words = [text]
+    else words = text.split(" ")
     let group
     let offset = 0
     if (words.length === 1) {
@@ -1240,7 +1292,8 @@
       min = Math.min(min, cube.from[0], cube.to[0])
       max = Math.max(max, cube.from[0], cube.to[0])
     }
-    const width = (max - min) / 2
+    let width = (max - min) / 2
+    if (fonts[args.font].autoBorder) width -= 2
     for (const cube of Cube.selected) {
       cube.from[0] += width
       cube.to[0] += width
@@ -1277,6 +1330,14 @@
       ctx.fillStyle = args.customBorderColour
       ctx.fillRect(0, fonts[font].border * m, canvas.width, canvas.height - fonts[font].border * m)
     }
+    if (args.customEdge) {
+      ctx.globalCompositeOperation = "source-atop"
+      ctx.fillStyle = args.customEdgeColour
+      for (const row of fonts[font].ends) {
+        ctx.fillRect(0, row[0] * m, canvas.width, (row[1] - row[0]) * m)
+        ctx.fillRect(0, row[2] * m, canvas.width, (row[3] - row[2]) * m)
+      }
+    }
     if (args.fadeToBorder) {
       ctx.globalCompositeOperation = "source-atop"
       const height = fonts[font].ends[fonts[font].ends.length - 1][3]
@@ -1308,6 +1369,34 @@
         const [character, width] = makeCharacter(char, offset, word, args)
         offset += width
       }
+    }
+    if (fonts[args.font].autoBorder) {
+      offset += 4
+      let minX = Infinity
+      let minY = Infinity
+      let minZ = Infinity
+      let maxX = -Infinity
+      let maxY = -Infinity
+      let maxZ = -Infinity
+      for (const group of word.children) for (const cube of group.children) {
+        minX = Math.min(minX, cube.from[0], cube.to[0])
+        minY = Math.min(minY, cube.from[1], cube.to[1])
+        minZ = Math.min(minZ, cube.from[2], cube.to[2])
+        maxX = Math.max(maxX, cube.from[0], cube.to[0])
+        maxY = Math.max(maxY, cube.from[1], cube.to[1])
+        maxZ = Math.max(maxZ, cube.from[2], cube.to[2])
+      }
+      const border = new Cube({
+        from: [maxX + 2, maxY + 2, maxZ + 2],
+        to: [minX - 2, minY - 2, minZ - 2]
+      })
+      const uv = [0, fonts[args.font].border, 1, fonts[args.font].border + 1]
+      for (const face of Object.values(border.faces)) {
+        face.texture = args.texture
+        face.uv = uv
+      }
+      border.addTo(word).init()
+      args.newCubes.push(border)
     }
     return [word, offset]
   }
@@ -1362,12 +1451,12 @@
       cube.to[2] -= minZ
       cube.from[2] -= minZ
       if (args.type === "bottom") {
-        cube.to[1] *= 1.8
-        cube.from[1] *= 1.8
-        cube.to[1] -= args.row * (heightOffset * 1.85 + 4) + args.rowSpacing * args.row + heightOffset * 1.85 + 18
-        cube.from[1] -= args.row * (heightOffset * 1.85 + 4) + args.rowSpacing * args.row + heightOffset * 1.85 + 18
-        cube.to = cube.to.map(e => e * 0.8)
-        cube.from = cube.from.map(e => e * 0.8)
+        cube.to[1] *= 2
+        cube.from[1] *= 2
+        cube.to[1] -= args.row * (heightOffset * 2 + 4) + args.rowSpacing * args.row + heightOffset * 2 + 18
+        cube.from[1] -= args.row * (heightOffset * 2 + 4) + args.rowSpacing * args.row + heightOffset * 2 + 18
+        cube.to = cube.to.map(e => e * 0.75)
+        cube.from = cube.from.map(e => e * 0.75)
         cube.to[2] -= 8
         cube.from[2] -= 8
         if (cube.to[2] > cube.from[2]) {
@@ -1386,6 +1475,10 @@
         cube.from[2] *= 0.38
         cube.to[1] -= args.row * (heightOffset * 0.38) + args.rowSpacing * args.row + heightOffset * 0.38
         cube.from[1] -= args.row * (heightOffset * 0.38) + args.rowSpacing * args.row + heightOffset * 0.38
+        if (fonts[args.font].autoBorder) {
+          cube.to[1] -= 2
+          cube.from[1] -= 2
+        }
       } else {
         cube.to[2] -= (maxZ - minZ) / 2
         cube.from[2] -= (maxZ - minZ) / 2
