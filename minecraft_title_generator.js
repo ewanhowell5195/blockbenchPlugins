@@ -9,6 +9,11 @@
           texture: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA+gAAAFABAMAAADdXUt9AAAAD1BMVEUAAAAAAABUVFSwsLD///9xh7SGAAAAAXRSTlMAQObYZgAABt5JREFUeF7s0bEJwDAQA0DtlP13S2WCcGHyaVKcKgv8hbhclXlNJrdJ15Xzp6dU6/dg1Pcde91Wne8q67jnr+R1fooOHTp06NChQ4cOHTp06NChQ4cOHTp06NChQ4cOHTp06NChQ4cOHTp06NChQ4d+s2+HKQgDQQyFB/BgAr3/maSAhDBCmFaXqi+ANNLWWb9/C1vzbJbj9dirqrw+k29SaU3Xg0lOryNPbC0/pxhUcwMd9BDQQQcd9HH9IDroVlRBB90COuigg37fP6tu0zUEuFzPowvX0V1iUuNorvchdH8i/ZnXRwcddNBBBx105bvRTTTsj6xB39l38p9GBx100O97uf0xOuiK1wA338VQMro0ha409PFPd3RVy5vQ22uU/lWaSAEddNBBBx30bQvoqqvRlRl61Rl0ZY6uhCHDW1VBBx100OcRy/+hg75qR+41xISn06ol9LwKXfT7Mrp7nURvTC8r6KCDDjrooLvFRdFV5+hVF0HXMH3IReiggw466KCDrhysow2BeJMyP+yQBxseJoybLCp2ldFH5zHeiw466KCDDjroVevQQa/6cXTQQQcddNAf7NFBCsAgDATAvKX/f2RpSRGpJHiV2YuGiAYn9nO9+dZfmenLiHV3PJSpHmoOFddnNXdytzNY/wdPxrbqzsV64KhvLUfInI0OHTp06NChQ4cOHTp06NChQ4cOHTp06NChQ4cOHTp06NChQ4cOHTp06NChQ4cuInKzd8c4AAIhEAD//2s7dLNylZUZG7MhQMI84Nbn2aNSsSbUqA9jrIn9ry17Ze3IL+qna62/ydMz7TXnvPaOferHxIghOekX6NChQ4cOHTp06NChQ4cOHTp06NChQ4cOHTp06NChQ4cOHTp06NChQ4cOHTp06Bd7d5CDMAhEYbiH8/5ncmNC4Mk8MpSC8Z+NEgbo9HNh0Ibw2E1zjnUJmUGmurN59Q7O+jok6AlGaEXSJyVKhiTfd5xWkWnfNGt9GhJ/hg466KCDDvqwQwF/Eh10RdLGmeiggw66kq5ABx10mc8fid0oB4lBaa4pVrFZ32P4IkcWEB/h6SD27pxHl9qqz1Tva1zJ3owOOuigm2VXoIMO+uXwtIaF6CUeRPdFGHRpz6ArgwJqz0nooIMOui9kKTrooPv9Eh05vpvjNnakbFlu0CNW8sq9ARG69pqdkwn0YFZx2I8OOuigayHnoIMO+nVl0H3yq4kH0N2MwwO+G2TRo4wa4Xx00EEHXdd4BB100N1NlZAMndn9J2LzDy4ePR/ZzZnsFeQ3Z0AHHfR8ZH9wuRMddNBBrxCUKiqifplH1x5B+kV00EEHPbjvOXTQQd/0AGNFnticWfywgxObRr/zYYdc7EcHHXTQ/cqggw466KCDDjrooIP+Zu+OcQCEYRgA9v+vZqtCTJQd3UQb5CJ6D/DQx74W5mft/hqoybWOf0jnKRmZ36zz5ZqGZXtEOf8rGn/fv/E97TLnlGXd3FGd/gYdOnTo0KFDhw4dOnTo0KFDhw4dOnTo0KFDhw4dOnTo0KFDhw4dOnTo0KFDhw79Ye8OjQCAQSAI0n/VaMigEIjs6ndXwMd3gOHwvT+1l/W7QXRER3RER3RER3RER3RER3RE3xMd0REd0REd0REd0e+JnuzYIQ5DMQxEwRyu9z9Ti1zpLwnsuvNIHBA0xMrZmF6fZo5OU4Iu6IIOfaZV7IKuVN6BLuh4r9DjkaALuqALuqD/StAf1zgFXdAFvTSLHHToexJ06NChF37OCLqgC7o2oQs6z1v0CTr0/qCPLnTo0KELuqALemfQBb0+6NlAt6ELuhJ17L8luhUOuqALemXQI+jQBf0Pgv5mj45RAABhIAj6lvz/kQoiqF26BGaaK67c0RWxnInH9W//j+iIjuiIjuiIjuiIjuiIjuiIjuhZoiM6oiM6oiM6olcl+my/XnIjhoEYiJI3IO9/2SAtjO0Y+WxjTT0I7d4XDEH6rwAAbSu1cjO7+ykdalzXbdzlteqxUP8ZfWwYnejpEf1PeXZ0RPEZfWTCq0vmyLfoei7ErdSrqCu6+zNth+iOXFeNt4xO9KhXceuu8o3rLo0kH+tjIco30XNEdyPd73Q9Gur0KutMY6+P1LFbdKJrZW5avTo73TE62l+jZ6J7q+joneTmeLqljqf7ztGJ7l6it86sW0cnetu4a7rtl+jx86MjTk+qz+hytaJr4z+dJ5vndDWWI6mz7hqd6GOip23VSN41OtFnpm06tIYkZ7vo8FSN4wmuDq8hacM7Hb1GP6hDUsdu0YmuVmd0yU2OuHUXSW+Vm+h6MwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4ANvaFZ1et5fRwAAAABJRU5ErkJggg=="
         }
       },
+      faces: [
+        [22, 62],
+        [108, 148],
+        [194, 194, 234, 242]
+      ],
       ends: [
         [0, 22, 62, 84],
         [86, 108, 148, 170],
@@ -169,10 +174,11 @@
           })
         }
       })
-      const textureData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures.json").then(e => e.json()).catch(() => [])
-      for (const texture of textureData) {
-        fonts["minecraft-ten"].textures[texture.id] = texture
-        fonts["minecraft-ten"].textures[texture.id].texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures/${texture.id}.png`
+      const textureData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures.json").then(e => e.json()).catch(() => ({ textures: {}, overlays: {} }))
+      for (const [id, texture] of Object.entries(textureData.textures)) {
+        texture.name ??= id
+        fonts["minecraft-ten"].textures[id] = texture
+        fonts["minecraft-ten"].textures[id].texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures/${id}.png`
       }
       const fontData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts.json").then(e => e.json()).catch(() => [])
       for (const font of fontData) {
@@ -541,7 +547,7 @@
           .minecraft-title-contents .checkbox-row div {
             margin: 3px 0 0 5px;
           }
-          .minecraft-title-contents .hidden + div {
+          .minecraft-title-contents input.hidden + div {
             display: none !important;
           }
           .minecraft-title-contents .checkbox-row {
@@ -568,14 +574,14 @@
             bottom: 7px;
             right: 7px;
           }
-          #minecraft-title-list {
+          .minecraft-title-list {
             display: flex;
             max-height: 384px;
             flex-wrap: wrap;
             gap: 10px;
             overflow-x: hidden;
           }
-          #minecraft-title-list.small {
+          .minecraft-title-list.small {
             max-height: 118px;
           }
           .minecraft-title-item {
@@ -677,8 +683,35 @@
             gap: 10px;
             cursor: pointer;
           }
-          #minecraft-title-file.hidden {
+          #custom-gradient {
+            display: flex;
+            gap: 5px;
+          }
+          #gradient-preview {
+            flex: 1;
+            height: 160px;
+          }
+          #minecraft-title-file.hidden, #custom-gradient.hidden {
             display: none;
+          }
+          #gradient-colours {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+          }
+          #gradient-colours > div {
+            display: flex;
+            gap: 5px;
+            justify-content: flex-end;
+          }
+          #gradient-colours .sp-replacer {
+            margin-bottom: 0;
+          }
+          #gradient-colours input.disabled + div {
+            opacity: 0.5;
+            filter: grayscale(1);
+            pointer-events: none;
+            cursor: not-allowed;
           }
         </style>`],
         component: {
@@ -723,7 +756,11 @@
             terminators: false,
             customEdge: false,
             customEdgeColour: "#000000",
-            textureSource: "premade"
+            textureSource: "premade",
+            gradientColour0: "#ff0000",
+            gradientColour1: "#00ff00",
+            gradientColour2: "#0000ff",
+            middleColour: false
           },
           mounted() {
             $(this.$refs.colour).spectrum({
@@ -767,6 +804,48 @@
                 this.customEdgeColour = c.toHexString()
                 this.updatePreview()
               }
+            }),
+            $(this.$refs.gradientColour0).spectrum({
+              preferredFormat: "hex",
+              color: this.gradientColour0,
+              showAlpha: false,
+              showInput: true,
+              move: c => {
+                this.gradientColour0 = c.toHexString()
+                this.updatePreview()
+              },
+              change: c => {
+                this.gradientColour0 = c.toHexString()
+                this.updatePreview()
+              }
+            }),
+            $(this.$refs.gradientColour1).spectrum({
+              preferredFormat: "hex",
+              color: this.gradientColour1,
+              showAlpha: false,
+              showInput: true,
+              move: c => {
+                this.gradientColour1 = c.toHexString()
+                this.updatePreview()
+              },
+              change: c => {
+                this.gradientColour1 = c.toHexString()
+                this.updatePreview()
+              }
+            }),
+            $(this.$refs.gradientColour2).spectrum({
+              preferredFormat: "hex",
+              color: this.gradientColour2,
+              showAlpha: false,
+              showInput: true,
+              move: c => {
+                this.gradientColour2 = c.toHexString()
+                this.updatePreview()
+              },
+              change: c => {
+                this.gradientColour2 = c.toHexString()
+                this.updatePreview()
+              }
             })
           },
           methods: {
@@ -780,7 +859,7 @@
             async makePreview() {
               this.scene.remove(...this.scene.children)
 
-              const texture = await makeTexture(this.font, this.texture, {
+              const texture = await makeTexture(this.font, this.textureSource === "gradient" ? "flat" : this.texture, {
                 three: true,
                 colour: this.colour,
                 blend: this.blend,
@@ -790,7 +869,10 @@
                 fadeToBorder: this.fadeToBorder,
                 customEdge: this.customEdge,
                 customEdgeColour: this.customEdgeColour,
-                customTexture: this.textureSource === "file" ? this.customTexture : undefined
+                customTexture: this.textureSource === "file" ? this.customTexture : undefined,
+                gradientColour0: this.textureSource === "gradient" ? this.gradientColour0 : undefined,
+                gradientColour1: this.textureSource === "gradient" && this.middleColour ? this.gradientColour1 : undefined,
+                gradientColour2: this.textureSource === "gradient" ? this.gradientColour2 : undefined
               })
 
               this.material = new THREE.MeshBasicMaterial({
@@ -978,7 +1060,7 @@
                   return
                 }
                 this.updating = true
-                const texture = await makeTexture(this.font, this.texture, {
+                const texture = await makeTexture(this.font, this.textureSource === "gradient" ? "flat" : this.texture, {
                   three: true,
                   colour: this.colour,
                   blend: this.blend,
@@ -988,7 +1070,10 @@
                   fadeToBorder: this.fadeToBorder,
                   customEdge: this.customEdge,
                   customEdgeColour: this.customEdgeColour,
-                  customTexture: this.textureSource === "file" ? this.customTexture : undefined
+                  customTexture: this.textureSource === "file" ? this.customTexture : undefined,
+                  gradientColour0: this.textureSource === "gradient" ? this.gradientColour0 : undefined,
+                  gradientColour1: this.textureSource === "gradient" && this.middleColour ? this.gradientColour1 : undefined,
+                  gradientColour2: this.textureSource === "gradient" ? this.gradientColour2 : undefined
                 })
                 this.material.map = texture
                 this.material.needsUpdate = true
@@ -1070,7 +1155,7 @@
                 <br>
                 <h2>Font</h2>
                 <p>The font to use for the text</p>
-                <div id="minecraft-title-list" class="small">
+                <div class="minecraft-title-list small">
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="font = id; updateFont()" :class="{ selected: font === id }">
                     <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + id + '/thumbnails/flat.png'" />
                     <div>{{ data.name }}</div>
@@ -1094,14 +1179,29 @@
                 <p>The texture to apply to the text</p>
                 <ul class="form_inline_select">
                   <li @click="textureSource = 'premade'; updatePreview()" :class="{ selected: textureSource === 'premade' }">Pre-made</li>
-                  <li @click="textureSource = 'generator'; updatePreview()" :class="{ selected: textureSource === 'generator' }">Generator</li>
+                  <li @click="textureSource = 'gradient'; updatePreview()" :class="{ selected: textureSource === 'gradient' }">Gradient</li>
                   <li @click="textureSource = 'file'; updatePreview()" :class="{ selected: textureSource === 'file' }">File</li>
                 </ul>
-                <div v-if="textureSource === 'premade'" id="minecraft-title-list">
+                <div v-if="textureSource === 'premade'" class="minecraft-title-list">
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(textures)" v-if="fonts[font].textures[id]" @click="texture = id; updatePreview()" :class="{ selected: texture === id }">
                     <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                     <div>{{ data.name }}</div>
                     <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                  </div>
+                </div>
+                <div :class="{ hidden: textureSource !== 'gradient' }" id="custom-gradient">
+                  <div id="gradient-preview" :style="{ background: middleColour ? 'linear-gradient(' + gradientColour0 + ',' + gradientColour1 + ',' + gradientColour2 + ')' : 'linear-gradient(' + gradientColour0 + ',' + gradientColour2 + ')' }"></div>
+                  <div id="gradient-colours">
+                    <div>
+                      <input ref="gradientColour0" />
+                    </div>
+                    <div>
+                      <input type="checkbox" :checked="middleColour" v-model="middleColour" @input="updatePreview">
+                      <input ref="gradientColour1" :class="{ disabled: !middleColour }" />
+                    </div>
+                    <div>
+                      <input ref="gradientColour2" />
+                    </div>
                   </div>
                 </div>
                 <div :class="{ hidden: textureSource !== 'file' }" id="minecraft-title-file" @click="selectFile">
@@ -1128,7 +1228,7 @@
                   <input type="checkbox" :checked="customBorder" v-model="customBorder" @input="updatePreview">
                   <div>Use a custom colour for the text border</div>
                 </div>
-                <input ref="customBorderColour" :class="{ 'hidden': !customBorder }" />
+                <input ref="customBorderColour" :class="{ hidden: !customBorder }" />
                 <div class="checkbox-row">
                   <input type="checkbox" :checked="fadeToBorder" v-model="fadeToBorder" @input="updatePreview">
                   <div>Fade the top and bottom of the text into the border colour</div>
@@ -1139,7 +1239,7 @@
                   <input type="checkbox" :checked="customEdge" v-model="customEdge" @input="updatePreview">
                   <div>Use a custom colour for the top and bottom faces</div>
                 </div>
-                <input ref="customEdgeColour" :class="{ 'hidden': !customEdge }" />
+                <input ref="customEdgeColour" :class="{ hidden: !customEdge }" />
                 <div v-if="!fonts[font].forcedTerminators" class="checkbox-row">
                   <input type="checkbox" :checked="terminators" v-model="terminators" @input="makePreview">
                   <div>Enable line terminators</div>
@@ -1204,7 +1304,7 @@
             font: this.content_vue.font,
             type: this.content_vue.textType,
             row: this.content_vue.row,
-            texture: this.content_vue.texture,
+            texture: this.content_vue.textureSource === "gradient" ? "flat" : this.content_vue.texture,
             characterSpacing: this.content_vue.characterSpacing,
             rowSpacing: this.content_vue.rowSpacing,
             scale: [this.content_vue.scaleX, this.content_vue.scaleY, this.content_vue.scaleZ],
@@ -1217,7 +1317,10 @@
             terminators: this.content_vue.terminators,
             customEdge: this.content_vue.customEdge,
             customEdgeColour: this.content_vue.customEdgeColour,
-            customTexture: this.content_vue.textureSource === "file" ? this.content_vue.customTexture : undefined
+            customTexture: this.content_vue.textureSource === "file" ? this.content_vue.customTexture : undefined,
+            gradientColour0: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour0 : undefined,
+            gradientColour1: this.content_vue.textureSource === "gradient" && this.content_vue.middleColour ? this.content_vue.gradientColour1 : undefined,
+            gradientColour2: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour2 : undefined
           })
         },
         async onBuild() {
@@ -1340,14 +1443,14 @@
     }
   })
 
-  async function getTexture(font, texture) {
-    if (fonts[font].textures[texture].texture.startsWith("data:image/png;base64,")) return fonts[font].textures[texture].texture
+  async function getTexture(font, texture, direct) {
+    if (!direct && fonts[font].textures[texture].texture.startsWith("data:image/png;base64,")) return fonts[font].textures[texture].texture
     const data = await new Promise(async fulfil => {
       const reader = new FileReader()
       reader.onload = e => fulfil(e.target.result)
-      reader.readAsDataURL(new Blob([await fetch(fonts[font].textures[texture].texture).then(e => e.arrayBuffer())], { type: "image/png" }))
+      reader.readAsDataURL(new Blob([await fetch(direct ?? fonts[font].textures[texture].texture).then(e => e.arrayBuffer())], { type: "image/png" }))
     }).catch(() => {})
-    fonts[font].textures[texture].texture = data
+    if (!direct) fonts[font].textures[texture].texture = data
     return data
   }
 
@@ -1369,7 +1472,10 @@
       fadeToBorder: args.fadeToBorder,
       customEdge: args.customEdge,
       customEdgeColour: args.customEdgeColour,
-      customTexture: args.customTexture
+      customTexture: args.customTexture,
+      gradientColour0: args.gradientColour0,
+      gradientColour1: args.gradientColour1,
+      gradientColour2: args.gradientColour2
     })
     await getFontCharacters(args.font)
     if ((args.terminators || fonts[args.font].forcedTerminators) && fonts[args.font].terminatorSpace) {
@@ -1439,16 +1545,54 @@
     const canvas = document.createElement("canvas")
     canvas.width = img.width
     canvas.height = img.height
+    const m = canvas.width / 1000
     const ctx = canvas.getContext("2d")
-    ctx.filter =`hue-rotate(${args.hue}deg)`
     ctx.drawImage(img, 0, 0)
+    if (args.gradientColour0) {
+      ctx.globalCompositeOperation = "source-atop"
+      const height = fonts[font].ends[fonts[font].ends.length - 1][3]
+      const gradient = ctx.createLinearGradient(0, 0, 0, height * m)
+      gradient.addColorStop(0, "transparent")
+      for (let i = 0; i < fonts[font].faces.length; i++) {
+        const face = fonts[font].faces[i]
+        const end = fonts[font].ends[i]
+        gradient.addColorStop(end[0] / height, args.gradientColour0)
+        if (face.length === 2) {
+          gradient.addColorStop(face[0] / height, args.gradientColour0)
+          if (args.gradientColour1) gradient.addColorStop((face[0] + face[1]) / 2 / height, args.gradientColour1)
+          gradient.addColorStop(face[1] / height, args.gradientColour2)
+        } else {
+          gradient.addColorStop(face[0] / height, args.gradientColour0)
+          gradient.addColorStop(face[1] / height, args.gradientColour0)
+          if (args.gradientColour1) gradient.addColorStop((face[1] + face[2]) / 2 / height, args.gradientColour1)
+          gradient.addColorStop(face[2] / height, args.gradientColour2)
+          gradient.addColorStop(face[3] / height, args.gradientColour2)
+        }
+        gradient.addColorStop(end[3] / height, args.gradientColour2)
+      }
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, canvas.width * m, height * m)
+      ctx.fillStyle = "#0006"
+      for (const end of fonts[font].ends) {
+        ctx.fillRect(0, end[0] * m, canvas.width, end[1] * m - end[0] * m)
+        ctx.fillRect(0, end[2] * m, canvas.width, end[3] * m - end[2] * m)
+      }
+      if (fonts[font].overlay) {
+        if (typeof fonts[font].overlay === "boolean") {
+          fonts[font].overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(null, null, `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/textures/overlay.png`), fulfill, null, fulfill))).image
+        }
+        ctx.drawImage(fonts[font].overlay, 0, 0)
+      }
+    }
+    ctx.globalCompositeOperation = "copy"
+    ctx.filter =`hue-rotate(${args.hue}deg)`
+    ctx.drawImage(canvas, 0, 0)
     ctx.filter ="hue-rotate(0deg)"
     ctx.globalCompositeOperation = args.blend
     ctx.fillStyle = args.colour
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.globalCompositeOperation = "destination-in"
     ctx.drawImage(img, 0, 0)
-    const m = canvas.width / 1000
     if (args.customBorder) {
       ctx.globalCompositeOperation = "source-atop"
       ctx.fillStyle = args.customBorderColour
@@ -1624,13 +1768,14 @@
     })
   }
 
-  async function getFontTextures(id) {
-    if (typeof fonts[id].textures === "object") return
-    fonts[id].textures = {}
-    const data = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${id}/textures.json`).then(e => e.json()).catch(() => [])
-    for (const texture of data) {
-      fonts[id].textures[texture.id] = texture
-      fonts[id].textures[texture.id].texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${id}/textures/${texture.id}.png`
+  async function getFontTextures(font) {
+    if (typeof fonts[font].textures === "object") return
+    fonts[font].textures = {}
+    const data = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/textures.json`).then(e => e.json())
+    for (const [id, texture] of Object.entries(data.textures)) {
+      texture.name ??= id
+      fonts[font].textures[id] = texture
+      fonts[font].textures[id].texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/textures/${id}.png`
     }
   }
 
