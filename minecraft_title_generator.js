@@ -9,6 +9,9 @@
           texture: "data:image/png;base64,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"
         }
       },
+      overlays: {
+        none: { name: "None" }
+      },
       faces: [
         [22, 62],
         [108, 148],
@@ -176,9 +179,14 @@
       })
       const textureData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures.json").then(e => e.json()).catch(() => ({ textures: {}, overlays: {} }))
       for (const [id, texture] of Object.entries(textureData.textures)) {
-        texture.name ??= id
+        texture.name ??= titleCase(id)
+        texture.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures/${id}.png`
         fonts["minecraft-ten"].textures[id] = texture
-        fonts["minecraft-ten"].textures[id].texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures/${id}.png`
+      }
+      for (const [id, overlay] of Object.entries(textureData.overlays)) {
+        overlay.name ??= titleCase(id)
+        overlay.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/overlays/${id}.png`
+        fonts["minecraft-ten"].overlays[id] = overlay
       }
       const fontData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts.json").then(e => e.json()).catch(() => [])
       for (const font of fontData) {
@@ -729,6 +737,8 @@
             row: 0,
             texture: Object.keys(fonts["minecraft-ten"].textures)[1] ?? Object.keys(fonts["minecraft-ten"].textures)[0],
             textures: fonts["minecraft-ten"].textures,
+            overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
+            overlays: fonts["minecraft-ten"].overlays,
             hue: 0,
             colour: "#ffffff",
             blend: "multiply",
@@ -741,7 +751,8 @@
               "soft-light": "Soft Light",
               hue: "Hue",
               saturation: "Saturation",
-              difference: "Difference"
+              difference: "Difference",
+              "source-over": "Source Over"
             },
             customBorder: false,
             customBorderColour: "#000000",
@@ -760,7 +771,10 @@
             gradientColour0: "#ff0000",
             gradientColour1: "#00ff00",
             gradientColour2: "#0000ff",
-            middleColour: false
+            middleColour: false,
+            overlayColour: "#ffffff",
+            overlayBlend: "overlay",
+            overlayColourBlend: "multiply"
           },
           mounted() {
             $(this.$refs.colour).spectrum({
@@ -846,6 +860,20 @@
                 this.gradientColour2 = c.toHexString()
                 this.updatePreview()
               }
+            }),
+            $(this.$refs.overlayColour).spectrum({
+              preferredFormat: "hex",
+              color: this.overlayColour,
+              showAlpha: false,
+              showInput: true,
+              move: c => {
+                this.overlayColour = c.toHexString()
+                this.updatePreview()
+              },
+              change: c => {
+                this.overlayColour = c.toHexString()
+                this.updatePreview()
+              }
             })
           },
           methods: {
@@ -854,6 +882,8 @@
               await getFontTextures(this.font)
               this.textures = fonts[this.font].textures
               this.texture = Object.keys(fonts[this.font].textures)[1] ?? Object.keys(fonts[this.font].textures)[0]
+              this.overlays = fonts[this.font].overlays
+              this.overlay = Object.keys(fonts[this.font].overlays)[0]
               this.makePreview()
             },
             async makePreview() {
@@ -872,7 +902,11 @@
                 customTexture: this.textureSource === "file" ? this.customTexture : undefined,
                 gradientColour0: this.textureSource === "gradient" ? this.gradientColour0 : undefined,
                 gradientColour1: this.textureSource === "gradient" && this.middleColour ? this.gradientColour1 : undefined,
-                gradientColour2: this.textureSource === "gradient" ? this.gradientColour2 : undefined
+                gradientColour2: this.textureSource === "gradient" ? this.gradientColour2 : undefined,
+                overlay: this.overlay,
+                overlayBlend: this.overlayBlend,
+                overlayColourBlend: this.overlayColourBlend,
+                overlayColour: this.overlayColour
               })
 
               this.material = new THREE.MeshBasicMaterial({
@@ -1073,7 +1107,11 @@
                   customTexture: this.textureSource === "file" ? this.customTexture : undefined,
                   gradientColour0: this.textureSource === "gradient" ? this.gradientColour0 : undefined,
                   gradientColour1: this.textureSource === "gradient" && this.middleColour ? this.gradientColour1 : undefined,
-                  gradientColour2: this.textureSource === "gradient" ? this.gradientColour2 : undefined
+                  gradientColour2: this.textureSource === "gradient" ? this.gradientColour2 : undefined,
+                  overlay: this.overlay,
+                  overlayBlend: this.overlayBlend,
+                  overlayColourBlend: this.overlayColourBlend,
+                  overlayColour: this.overlayColour
                 })
                 this.material.map = texture
                 this.material.needsUpdate = true
@@ -1141,11 +1179,12 @@
               <div id="minecraft-title-tabs">
                 <div @click="tab = 0" :class="{ selected: tab === 0 }">Text</div>
                 <div @click="tab = 1" :class="{ selected: tab === 1 }">Texture</div>
-                <div @click="tab = 2" :class="{ selected: tab === 2 }">Texture Options</div>
-                <div @click="tab = 3" :class="{ selected: tab === 3 }">Settings</div>
+                <div @click="tab = 2" :class="{ selected: tab === 2 }">Overlay</div>
+                <div @click="tab = 3" :class="{ selected: tab === 3 }">Style</div>
+                <div @click="tab = 4" :class="{ selected: tab === 4 }">Settings</div>
               </div>
-              <div id="minecraft-title-preview-container" @click="expandCanvas" :class="{ visible: [1, 2].includes(tab) }">
-                <canvas id="minecraft-title-preview" class="checkerboard" width="1080" height="300"></canvas>
+              <div id="minecraft-title-preview-container" @click="expandCanvas" :class="{ visible: [1, 2, 3].includes(tab) }">
+                <canvas id="minecraft-title-preview" class="checkerboard" width="2160" height="600"></canvas>
                 <i class="material-icons icon">open_in_full</i>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 0 }">
@@ -1210,6 +1249,27 @@
                 </div>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 2 }">
+                <h2>Overlay Texture</h2>
+                <p>A texture to overlay onto the text</p>
+                <div class="minecraft-title-list">
+                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(overlays)" v-if="fonts[font].overlays[id]" @click="overlay = id; updatePreview()" :class="{ selected: overlay === id }">
+                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                    <div>{{ data.name }}</div>
+                    <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                  </div>
+                </div>
+                <br>
+                <p>The blend method to use when applying the overlay</p>
+                <select-input v-model="overlayBlend" :options="blends" @input="updatePreview" />
+                <br>
+                <h2>Overlay Colour</h2>
+                <p>A colour to apply to the overlay texture</p>
+                <input ref="overlayColour" />
+                <p>The blend method to use when applying the colour</p>
+                <select-input v-model="overlayColourBlend" :options="blends" @input="updatePreview" />
+                <br>
+              </div>
+              <div class="minecraft-title-contents" :class="{ visible: tab === 3 }">
                 <h2>Hue Shift</h2>
                 <p>Shift the hue of the chosen texture by the provided number of degrees</p>
                 <div class="bar slider_input_combo">
@@ -1246,7 +1306,7 @@
                 </div>
                 <p v-if="!fonts[font].forcedTerminators">Line terminators are special characters that appear at the start and end of the text</p>
               </div>
-              <div class="minecraft-title-contents" :class="{ visible: tab === 3 }">
+              <div class="minecraft-title-contents" :class="{ visible: tab === 4 }">
                 <h2>Character Spacing</h2>
                 <p>Add a space between each character</p>
                 <div class="bar slider_input_combo">
@@ -1282,7 +1342,7 @@
               <div id="minecraft-title-buttons">
                 <button v-if="tab > 0" @click="tab--">Back</button>
                 <div class="spacer"></div>
-                <button v-if="tab < 3" @click="tab++">Next</button>
+                <button v-if="tab < 4" @click="tab++">Next</button>
                 <button @click="finish">Finish</button>
               </div>
             </div>
@@ -1320,7 +1380,11 @@
             customTexture: this.content_vue.textureSource === "file" ? this.content_vue.customTexture : undefined,
             gradientColour0: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour0 : undefined,
             gradientColour1: this.content_vue.textureSource === "gradient" && this.content_vue.middleColour ? this.content_vue.gradientColour1 : undefined,
-            gradientColour2: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour2 : undefined
+            gradientColour2: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour2 : undefined,
+            overlay: this.content_vue.overlay,
+            overlayBlend: this.content_vue.overlayBlend,
+            overlayColourBlend: this.content_vue.overlayColourBlend,
+            overlayColour: this.content_vue.overlayColour
           })
         },
         async onBuild() {
@@ -1443,14 +1507,14 @@
     }
   })
 
-  async function getTexture(font, texture, direct) {
-    if (!direct && fonts[font].textures[texture].texture.startsWith("data:image/png;base64,")) return fonts[font].textures[texture].texture
+  async function getTexture(object, texture, direct) {
+    if (!direct && object[texture].texture.startsWith("data:image/png;base64,")) return object[texture].texture
     const data = await new Promise(async fulfil => {
       const reader = new FileReader()
       reader.onload = e => fulfil(e.target.result)
-      reader.readAsDataURL(new Blob([await fetch(direct ?? fonts[font].textures[texture].texture).then(e => e.arrayBuffer())], { type: "image/png" }))
+      reader.readAsDataURL(new Blob([await fetch(direct ?? object[texture].texture).then(e => e.arrayBuffer())], { type: "image/png" }))
     }).catch(() => {})
-    if (!direct) fonts[font].textures[texture].texture = data
+    if (!direct) object[texture].texture = data
     return data
   }
 
@@ -1475,7 +1539,11 @@
       customTexture: args.customTexture,
       gradientColour0: args.gradientColour0,
       gradientColour1: args.gradientColour1,
-      gradientColour2: args.gradientColour2
+      gradientColour2: args.gradientColour2,
+      overlay: args.overlay,
+      overlayBlend: args.overlayBlend,
+      overlayColourBlend: args.overlayColourBlend,
+      overlayColour: args.overlayColour
     })
     await getFontCharacters(args.font)
     if ((args.terminators || fonts[args.font].forcedTerminators) && fonts[args.font].terminatorSpace) {
@@ -1541,12 +1609,12 @@
   }
 
   async function makeTexture(font, texture, args) {
-    const img = (await new Promise(async fulfill => new THREE.TextureLoader().load(args.customTexture ?? await getTexture(font, texture), fulfill, null, fulfill))).image
-    const canvas = document.createElement("canvas")
+    const img = (await new Promise(async fulfill => new THREE.TextureLoader().load(args.customTexture ?? await getTexture(fonts[font].textures, texture), fulfill, null, fulfill))).image
+    let canvas = document.createElement("canvas")
     canvas.width = img.width
     canvas.height = img.height
-    const m = canvas.width / 1000
-    const ctx = canvas.getContext("2d")
+    let m = canvas.width / 1000
+    let ctx = canvas.getContext("2d")
     ctx.drawImage(img, 0, 0)
     if (args.gradientColour0) {
       ctx.globalCompositeOperation = "source-atop"
@@ -1584,6 +1652,27 @@
         ctx.drawImage(fonts[font].overlay, 0, 0)
       }
     }
+    if (args.overlay && args.overlay !== "none") {
+      const overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(fonts[font].overlays, args.overlay), fulfill, null, fulfill))).image
+      const overlayCanvas = new CanvasFrame(overlay.width, overlay.height)
+      overlayCanvas.ctx.drawImage(overlay, 0, 0)
+      overlayCanvas.ctx.globalCompositeOperation = args.overlayColourBlend
+      overlayCanvas.ctx.fillStyle = args.overlayColour
+      overlayCanvas.ctx.fillRect(0, 0, overlay.width, overlay.height)
+      overlayCanvas.ctx.globalCompositeOperation = "destination-in"
+      overlayCanvas.ctx.drawImage(overlay, 0, 0)
+      if (overlay.width > canvas.width) {
+        const frame = new CanvasFrame(overlay.width, overlay.height)
+        frame.ctx.imageSmoothingEnabled = false
+        frame.ctx.drawImage(canvas, 0, 0, overlay.width, overlay.height)
+        canvas = frame.canvas
+        ctx = frame.ctx
+        m = canvas.width / 1000
+      }
+      ctx.globalCompositeOperation = args.overlayBlend
+      ctx.imageSmoothingEnabled = false
+      ctx.drawImage(overlayCanvas.canvas, 0, 0, canvas.width, canvas.height)
+    }
     ctx.globalCompositeOperation = "copy"
     ctx.filter =`hue-rotate(${args.hue}deg)`
     ctx.drawImage(canvas, 0, 0)
@@ -1592,7 +1681,7 @@
     ctx.fillStyle = args.colour
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.globalCompositeOperation = "destination-in"
-    ctx.drawImage(img, 0, 0)
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
     if (args.customBorder) {
       ctx.globalCompositeOperation = "source-atop"
       ctx.fillStyle = args.customBorderColour
@@ -1771,16 +1860,26 @@
   async function getFontTextures(font) {
     if (typeof fonts[font].textures === "object") return
     fonts[font].textures = {}
+    fonts[font].overlays = { none: { name: "None" } }
     const data = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/textures.json`).then(e => e.json())
     for (const [id, texture] of Object.entries(data.textures)) {
-      texture.name ??= id
+      texture.name ??= titleCase(id)
+      texture.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/textures/${id}.png`
       fonts[font].textures[id] = texture
-      fonts[font].textures[id].texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/textures/${id}.png`
+    }
+    for (const [id, overlay] of Object.entries(data.overlays)) {
+      overlay.name ??= titleCase(id)
+      overlay.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/overlays/${id}.png`
+      fonts[font].overlays[id] = overlay
     }
   }
 
   async function getFontCharacters(id) {
     if (typeof fonts[id].characters === "object") return
     fonts[id].characters = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${id}/characters.json`).then(e => e.json()).catch(() => {})
+  }
+
+  function titleCase(str) {
+    return str.replace(/_/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
   }
 })()
