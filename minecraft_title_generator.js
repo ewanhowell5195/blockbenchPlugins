@@ -35,9 +35,9 @@
     title: name,
     icon,
     author: "Ewan Howell",
-    description: "placeholder",
-    about: "placeholder",
-    tags: ["placeholder"],
+    description: "Create Minecraft style title models!",
+    about: "This plugin adds a new format that allows you to create Minecraft styled title models that you can render in high quality.",
+    tags: ["Minecraft", "Title", "Logo"],
     version: "1.0.0",
     min_version: "4.7.2",
     variant: "both",
@@ -177,22 +177,22 @@
           })
         }
       })
-      const textureData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures.json").then(e => e.json()).catch(() => ({ textures: {}, overlays: {} }))
+      const textureData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/minecraft-ten/textures.json").then(e => e.json()).catch(() => ({ textures: {}, overlays: {} }))
       for (const [id, texture] of Object.entries(textureData.textures)) {
         texture.name ??= titleCase(id)
-        texture.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/textures/${id}.png`
+        texture.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/minecraft-ten/textures/${id}.png`
         fonts["minecraft-ten"].textures[id] = texture
       }
       for (const [id, overlay] of Object.entries(textureData.overlays)) {
         overlay.name ??= titleCase(id)
-        overlay.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/minecraft-ten/overlays/${id}.png`
+        overlay.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/minecraft-ten/overlays/${id}.png`
         fonts["minecraft-ten"].overlays[id] = overlay
       }
-      const fontData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts.json").then(e => e.json()).catch(() => [])
+      const fontData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts.json").then(e => e.json()).catch(() => [])
       for (const font of fontData) {
         fonts[font.id] = font
-        fonts[font.id].characters = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font.id}/characters.json`
-        fonts[font.id].textures = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font.id}/textures.json`
+        fonts[font.id].characters = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/characters.json`
+        fonts[font.id].textures = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/textures.json`
       }
       action = new Action("minecraft_title_add_text", {
         name: "Add Minecraft Title Text",
@@ -529,7 +529,7 @@
           }
           .minecraft-title-contents {
             display: none;
-            padding: 20px;
+            padding: 20px 20px 0;
             flex-direction: column;
           }
           #minecraft_title_generator .visible {
@@ -720,6 +720,18 @@
             filter: grayscale(1);
             pointer-events: none;
             cursor: not-allowed;
+          }
+          .github-link, .github-link > a {
+            display: flex;
+            gap: 5px;
+            justify-content: flex-end;
+            align-items: center;
+            text-decoration: none;
+            margin-top: 5px;
+          }
+          .github-link > a:hover > div {
+            text-decoration: underline;
+            cursor: pointer;
           }
         </style>`],
         component: {
@@ -1196,12 +1208,17 @@
                 <p>The font to use for the text</p>
                 <div class="minecraft-title-list small">
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="font = id; updateFont()" :class="{ selected: font === id }">
-                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + id + '/thumbnails/flat.png'" />
+                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + id + '/thumbnails/flat.png'" />
                     <div>{{ data.name }}</div>
                     <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
                   </div>
                 </div>
-                <br>
+                <div class="github-link">
+                  <a href="https://github.com/ewanhowell5195/MinecraftTitleGenerator/">
+                    <i class="icon fab fa-github"></i>
+                    <div>Submit fonts</div>
+                  </a>
+                </div>
                 <h2>Text Type</h2>
                 <p>The type of text to add</p>
                 <select-input v-model="textType" :options="textTypes" />
@@ -1223,10 +1240,16 @@
                 </ul>
                 <div v-if="textureSource === 'premade'" class="minecraft-title-list">
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(textures)" v-if="fonts[font].textures[id]" @click="texture = id; updatePreview()" :class="{ selected: texture === id }">
-                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                     <div>{{ data.name }}</div>
                     <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
                   </div>
+                </div>
+                <div v-if="textureSource === 'premade'" class="github-link">
+                  <a href="https://github.com/ewanhowell5195/MinecraftTitleGenerator/">
+                    <i class="icon fab fa-github"></i>
+                    <div>Submit textures</div>
+                  </a>
                 </div>
                 <div :class="{ hidden: textureSource !== 'gradient' }" id="custom-gradient">
                   <div id="gradient-preview" :style="{ background: middleColour ? 'linear-gradient(' + gradientColour0 + ',' + gradientColour1 + ',' + gradientColour2 + ')' : 'linear-gradient(' + gradientColour0 + ',' + gradientColour2 + ')' }"></div>
@@ -1253,12 +1276,17 @@
                 <p>A texture to overlay onto the text</p>
                 <div class="minecraft-title-list">
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(overlays)" v-if="fonts[font].overlays[id]" @click="overlay = id; updatePreview()" :class="{ selected: overlay === id }">
-                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                     <div>{{ data.name }}</div>
                     <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
                   </div>
                 </div>
-                <br>
+                <div class="github-link">
+                  <a href="https://github.com/ewanhowell5195/MinecraftTitleGenerator/">
+                    <i class="icon fab fa-github"></i>
+                    <div>Submit overlays</div>
+                  </a>
+                </div>
                 <p>The blend method to use when applying the overlay</p>
                 <select-input v-model="overlayBlend" :options="blends" @input="updatePreview" />
                 <br>
@@ -1647,7 +1675,7 @@
       }
       if (fonts[font].overlay) {
         if (typeof fonts[font].overlay === "boolean") {
-          fonts[font].overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(null, null, `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/textures/overlay.png`), fulfill, null, fulfill))).image
+          fonts[font].overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(null, null, `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/textures/overlay.png`), fulfill, null, fulfill))).image
         }
         ctx.drawImage(fonts[font].overlay, 0, 0)
       }
@@ -1861,22 +1889,22 @@
     if (typeof fonts[font].textures === "object") return
     fonts[font].textures = {}
     fonts[font].overlays = { none: { name: "None" } }
-    const data = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/textures.json`).then(e => e.json())
+    const data = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/textures.json`).then(e => e.json())
     for (const [id, texture] of Object.entries(data.textures)) {
       texture.name ??= titleCase(id)
-      texture.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/textures/${id}.png`
+      texture.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/textures/${id}.png`
       fonts[font].textures[id] = texture
     }
     for (const [id, overlay] of Object.entries(data.overlays)) {
       overlay.name ??= titleCase(id)
-      overlay.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${font}/overlays/${id}.png`
+      overlay.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/overlays/${id}.png`
       fonts[font].overlays[id] = overlay
     }
   }
 
   async function getFontCharacters(id) {
     if (typeof fonts[id].characters === "object") return
-    fonts[id].characters = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleTextures/main/fonts/${id}/characters.json`).then(e => e.json()).catch(() => {})
+    fonts[id].characters = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${id}/characters.json`).then(e => e.json()).catch(() => {})
   }
 
   function titleCase(str) {
