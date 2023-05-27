@@ -27,20 +27,28 @@
       terminatorSpace: true
     }
   }
-  let format, action, dialog, mode, panel, styles, preview, debug
+  let format, action, dialog, mode, panel, styles, preview, debug, aboutAction
   const id = "minecraft_title_generator"
   const name = "Minecraft Title Generator"
   const icon = "text_fields"
+  const author = "Ewan Howell"
+  const about = "This plugin adds a new format that allows you to create Minecraft styled title models that you can render in high quality."
+  const links = {
+    website: "https://ewanhowell.com/",
+    discord: "https://discord.ewanhowell.com/",
+    github: "https://github.com/ewanhowell5195/MinecraftTitleGenerator/"
+  }
   Plugin.register(id, {
     title: name,
     icon,
-    author: "Ewan Howell",
+    author,
     description: "Create Minecraft style title models!",
-    about: "This plugin adds a new format that allows you to create Minecraft styled title models that you can render in high quality.",
+    about,
     tags: ["Minecraft", "Title", "Logo"],
     version: "1.0.0",
     min_version: "4.7.2",
     variant: "both",
+    oninstall: () => showAbout(true),
     async onload() {
       styles = Blockbench.addCSS(`
         #work_screen:has(#panel_minecraft_title_render_panel:not(.hidden)) {
@@ -715,11 +723,22 @@
           #gradient-colours .sp-replacer {
             margin-bottom: 0;
           }
+          #gradient-colours .sp-preview {
+            width: 50px;
+          }
           #gradient-colours input.disabled + div {
             opacity: 0.5;
-            filter: grayscale(1);
             pointer-events: none;
             cursor: not-allowed;
+          }
+          #gradient-colours input.disabled + div .sp-preview::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top right, transparent calc(50% - 2px), var(--color-close) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 2px)), linear-gradient(to top left, transparent calc(50% - 2px), var(--color-close) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 2px));
+          }
+          #gradient-colours input.disabled + div .sp-preview-inner {
+            filter: grayscale(1);
           }
           .github-link, .github-link > a {
             display: flex;
@@ -780,10 +799,14 @@
             customEdge: false,
             customEdgeColour: "#000000",
             textureSource: "premade",
-            gradientColour0: "#ff0000",
-            gradientColour1: "#00ff00",
-            gradientColour2: "#0000ff",
-            middleColour: false,
+            gradientColour0: "#FFCF76 ",
+            gradientColour1: "#FFA3A3",
+            gradientColour2: "#F4C1A4",
+            gradientColour3: "#E19A3E",
+            gradientColour4: "#DA371E",
+            gradientColour1Enabled: false,
+            gradientColour2Enabled: false,
+            gradientColour3Enabled: false,
             overlayColour: "#ffffff",
             overlayBlend: "overlay",
             overlayColourBlend: "multiply"
@@ -873,6 +896,34 @@
                 this.updatePreview()
               }
             }),
+            $(this.$refs.gradientColour3).spectrum({
+              preferredFormat: "hex",
+              color: this.gradientColour3,
+              showAlpha: false,
+              showInput: true,
+              move: c => {
+                this.gradientColour3 = c.toHexString()
+                this.updatePreview()
+              },
+              change: c => {
+                this.gradientColour3 = c.toHexString()
+                this.updatePreview()
+              }
+            }),
+            $(this.$refs.gradientColour4).spectrum({
+              preferredFormat: "hex",
+              color: this.gradientColour4,
+              showAlpha: false,
+              showInput: true,
+              move: c => {
+                this.gradientColour4 = c.toHexString()
+                this.updatePreview()
+              },
+              change: c => {
+                this.gradientColour4 = c.toHexString()
+                this.updatePreview()
+              }
+            }),
             $(this.$refs.overlayColour).spectrum({
               preferredFormat: "hex",
               color: this.overlayColour,
@@ -912,9 +963,11 @@
                 customEdge: this.customEdge,
                 customEdgeColour: this.customEdgeColour,
                 customTexture: this.textureSource === "file" ? this.customTexture : undefined,
-                gradientColour0: this.textureSource === "gradient" ? this.gradientColour0 : undefined,
-                gradientColour1: this.textureSource === "gradient" && this.middleColour ? this.gradientColour1 : undefined,
-                gradientColour2: this.textureSource === "gradient" ? this.gradientColour2 : undefined,
+                gradientColour0: this.textureSource === "gradient" ? this.gradientColour0 : null,
+                gradientColour1: this.textureSource === "gradient" && this.gradientColour1Enabled ? this.gradientColour1 : null,
+                gradientColour2: this.textureSource === "gradient" && this.gradientColour2Enabled ? this.gradientColour2 : null,
+                gradientColour3: this.textureSource === "gradient" && this.gradientColour3Enabled ? this.gradientColour3 : null,
+                gradientColour4: this.textureSource === "gradient" ? this.gradientColour4 : null,
                 overlay: this.overlay,
                 overlayBlend: this.overlayBlend,
                 overlayColourBlend: this.overlayColourBlend,
@@ -1117,9 +1170,11 @@
                   customEdge: this.customEdge,
                   customEdgeColour: this.customEdgeColour,
                   customTexture: this.textureSource === "file" ? this.customTexture : undefined,
-                  gradientColour0: this.textureSource === "gradient" ? this.gradientColour0 : undefined,
-                  gradientColour1: this.textureSource === "gradient" && this.middleColour ? this.gradientColour1 : undefined,
-                  gradientColour2: this.textureSource === "gradient" ? this.gradientColour2 : undefined,
+                  gradientColour0: this.textureSource === "gradient" ? this.gradientColour0 : null,
+                  gradientColour1: this.textureSource === "gradient" && this.gradientColour1Enabled ? this.gradientColour1 : null,
+                  gradientColour2: this.textureSource === "gradient" && this.gradientColour2Enabled ? this.gradientColour2 : null,
+                  gradientColour3: this.textureSource === "gradient" && this.gradientColour3Enabled ? this.gradientColour3 : null,
+                  gradientColour4: this.textureSource === "gradient" ? this.gradientColour4 : null,
                   overlay: this.overlay,
                   overlayBlend: this.overlayBlend,
                   overlayColourBlend: this.overlayColourBlend,
@@ -1186,6 +1241,17 @@
               this.makePreview()
             }
           },
+          computed: {
+            linearGradient() {
+              return `linear-gradient(${[
+                `${this.gradientColour0} 0%`,
+                this.gradientColour1Enabled ? `${this.gradientColour1} 25%` : null,
+                this.gradientColour2Enabled ? `${this.gradientColour2} 50%` : null,
+                this.gradientColour3Enabled ? `${this.gradientColour3} 75%` : null,
+                `${this.gradientColour4} 100%`
+              ].filter(e => e).join(",")})`
+            }
+          },
           template: `
             <div id="${id}">
               <div id="minecraft-title-tabs">
@@ -1214,7 +1280,7 @@
                   </div>
                 </div>
                 <div class="github-link">
-                  <a href="https://github.com/ewanhowell5195/MinecraftTitleGenerator/">
+                  <a href="${links.github}">
                     <i class="icon fab fa-github"></i>
                     <div>Submit fonts</div>
                   </a>
@@ -1246,23 +1312,31 @@
                   </div>
                 </div>
                 <div v-if="textureSource === 'premade'" class="github-link">
-                  <a href="https://github.com/ewanhowell5195/MinecraftTitleGenerator/">
+                  <a href="${links.github}">
                     <i class="icon fab fa-github"></i>
                     <div>Submit textures</div>
                   </a>
                 </div>
                 <div :class="{ hidden: textureSource !== 'gradient' }" id="custom-gradient">
-                  <div id="gradient-preview" :style="{ background: middleColour ? 'linear-gradient(' + gradientColour0 + ',' + gradientColour1 + ',' + gradientColour2 + ')' : 'linear-gradient(' + gradientColour0 + ',' + gradientColour2 + ')' }"></div>
+                  <div id="gradient-preview" :style="{ background: linearGradient }"></div>
                   <div id="gradient-colours">
                     <div>
                       <input ref="gradientColour0" />
                     </div>
                     <div>
-                      <input type="checkbox" :checked="middleColour" v-model="middleColour" @input="updatePreview">
-                      <input ref="gradientColour1" :class="{ disabled: !middleColour }" />
+                      <input type="checkbox" :checked="gradientColour1Enabled" v-model="gradientColour1Enabled" @input="updatePreview">
+                      <input ref="gradientColour1" :class="{ disabled: !gradientColour1Enabled }" />
                     </div>
                     <div>
-                      <input ref="gradientColour2" />
+                      <input type="checkbox" :checked="gradientColour2Enabled" v-model="gradientColour2Enabled" @input="updatePreview">
+                      <input ref="gradientColour2" :class="{ disabled: !gradientColour2Enabled }" />
+                    </div>
+                    <div>
+                      <input type="checkbox" :checked="gradientColour3Enabled" v-model="gradientColour3Enabled" @input="updatePreview">
+                      <input ref="gradientColour3" :class="{ disabled: !gradientColour3Enabled }" />
+                    </div>
+                    <div>
+                      <input ref="gradientColour4" />
                     </div>
                   </div>
                 </div>
@@ -1282,7 +1356,7 @@
                   </div>
                 </div>
                 <div class="github-link">
-                  <a href="https://github.com/ewanhowell5195/MinecraftTitleGenerator/">
+                  <a href="${links.github}">
                     <i class="icon fab fa-github"></i>
                     <div>Submit overlays</div>
                   </a>
@@ -1405,10 +1479,12 @@
             terminators: this.content_vue.terminators,
             customEdge: this.content_vue.customEdge,
             customEdgeColour: this.content_vue.customEdgeColour,
-            customTexture: this.content_vue.textureSource === "file" ? this.content_vue.customTexture : undefined,
-            gradientColour0: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour0 : undefined,
-            gradientColour1: this.content_vue.textureSource === "gradient" && this.content_vue.middleColour ? this.content_vue.gradientColour1 : undefined,
-            gradientColour2: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour2 : undefined,
+            customTexture: this.content_vue.textureSource === "file" ? this.content_vue.customTexture : null,
+            gradientColour0: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour0 : null,
+            gradientColour1: this.content_vue.textureSource === "gradient" && this.content_vue.gradientColour1Enabled ? this.content_vue.gradientColour1 : null,
+            gradientColour2: this.content_vue.textureSource === "gradient" && this.content_vue.gradientColour2Enabled ? this.content_vue.gradientColour2 : null,
+            gradientColour3: this.content_vue.textureSource === "gradient" && this.content_vue.gradientColour3Enabled ? this.content_vue.gradientColour3 : null,
+            gradientColour4: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour4 : null,
             overlay: this.content_vue.overlay,
             overlayBlend: this.content_vue.overlayBlend,
             overlayColourBlend: this.content_vue.overlayColourBlend,
@@ -1520,6 +1596,7 @@
       })
       MenuBar.addAction(debug, "help.developer.1")
       Blockbench.on("update_selection", selectHandler)
+      addAbout()
     },
     onunload() {
       Blockbench.removeListener("update_selection", selectHandler)
@@ -1530,6 +1607,7 @@
       styles.delete()
       preview.delete()
       debug.delete()
+      aboutAction.delete()
       dialog.close()
       debugDialog.close()
     }
@@ -1568,6 +1646,8 @@
       gradientColour0: args.gradientColour0,
       gradientColour1: args.gradientColour1,
       gradientColour2: args.gradientColour2,
+      gradientColour3: args.gradientColour3,
+      gradientColour4: args.gradientColour4,
       overlay: args.overlay,
       overlayBlend: args.overlayBlend,
       overlayColourBlend: args.overlayColourBlend,
@@ -1655,16 +1735,20 @@
         gradient.addColorStop(end[0] / height, args.gradientColour0)
         if (face.length === 2) {
           gradient.addColorStop(face[0] / height, args.gradientColour0)
-          if (args.gradientColour1) gradient.addColorStop((face[0] + face[1]) / 2 / height, args.gradientColour1)
-          gradient.addColorStop(face[1] / height, args.gradientColour2)
+          if (args.gradientColour1) gradient.addColorStop(Math.lerp(face[0], face[1], 0.25) / height, args.gradientColour1)
+          if (args.gradientColour2) gradient.addColorStop((face[0] + face[1]) / 2 / height, args.gradientColour2)
+          if (args.gradientColour3) gradient.addColorStop(Math.lerp(face[0], face[1], 0.75) / height, args.gradientColour3)
+          gradient.addColorStop(face[1] / height, args.gradientColour4)
         } else {
           gradient.addColorStop(face[0] / height, args.gradientColour0)
           gradient.addColorStop(face[1] / height, args.gradientColour0)
-          if (args.gradientColour1) gradient.addColorStop((face[1] + face[2]) / 2 / height, args.gradientColour1)
-          gradient.addColorStop(face[2] / height, args.gradientColour2)
-          gradient.addColorStop(face[3] / height, args.gradientColour2)
+          if (args.gradientColour1) gradient.addColorStop(Math.lerp(face[1], face[2], 0.25) / height, args.gradientColour1)
+          if (args.gradientColour2) gradient.addColorStop((face[1] + face[2]) / 2 / height, args.gradientColour2)
+          if (args.gradientColour3) gradient.addColorStop(Math.lerp(face[1], face[2], 0.75) / height, args.gradientColour3)
+          gradient.addColorStop(face[2] / height, args.gradientColour4)
+          gradient.addColorStop(face[3] / height, args.gradientColour4)
         }
-        gradient.addColorStop(end[3] / height, args.gradientColour2)
+        gradient.addColorStop(end[3] / height, args.gradientColour4)
       }
       ctx.fillStyle = gradient
       ctx.fillRect(0, 0, canvas.width * m, height * m)
@@ -1909,5 +1993,90 @@
 
   function titleCase(str) {
     return str.replace(/_/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
+  }
+
+  function addAbout() {
+    let about = MenuBar.menus.help.structure.find(e => e.id === "about_plugins")
+    if (!about) {
+      about = new Action("about_plugins", {
+        name: "About Plugins...",
+        icon: "info",
+        children: []
+      })
+      MenuBar.addAction(about, "help")
+    }
+    aboutAction = new Action(`about_${id}`, {
+      name: `About ${name}...`,
+      icon,
+      click: () => showAbout()
+    })
+    about.children.push(aboutAction)
+  }
+
+  function showAbout(banner) {
+    new Dialog({
+      id: "about",
+      title: name,
+      width: 780,
+      buttons: [],
+      lines: [`
+        <style>
+          dialog#about .dialog_title {
+            padding-left: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+          dialog#about .dialog_content {
+            text-align: left!important;
+            margin: 0!important;
+          }
+          dialog#about .socials {
+            padding: 0!important;
+          }
+          dialog#about code {
+            padding: 0 2px;
+          }
+          dialog#about #banner {
+            background-color: var(--color-accent);
+            color: var(--color-accent_text);
+            width: 100%;
+            padding: 0 8px
+          }
+          dialog#about #content {
+            margin: 24px;
+          }
+        </style>
+        ${banner ? `<div id="banner">This window can be reopened at any time from <strong>Help > About Plugins > ${name}</strong></div>` : ""}
+        <div id="content">
+          <h1 style="margin-top:-10px">${name}</h1>
+          <p>${about}</p>
+          <br>
+          <h2>Getting started</h2>
+          <p>To use this plugin, start by creating a new Minecraft Title project from the start screen, or by going to <strong>File > New > Minecraft Title</strong> and selecting <strong>${name}</strong>. From here, use the dialog to add some text to the project. Don't forget to set the text type! You can add more text by using the add text button <i class="icon material-icons" style="translate:0 5px;">text_fields</i> in the outliner.</p>
+          <br>
+          <p>Once you are done adding text, you can go to the <strong>Render</strong> tab at the top right to render your title. The positon camera button <i class="icon material-icons" style="translate:0 5px;">auto_mode</i> will set the correct camera position for you.</p>
+          <br>
+          <div class="socials">
+            <a href="${links.website}" class="open-in-browser">
+              <i class="icon material-icons" style="color:#33E38E">language</i>
+              <label>By ${author}</label>
+            </a>
+            <a href="${links.discord}" class="open-in-browser">
+              <i class="icon fab fa-discord" style="color:#727FFF"></i>
+              <label>Discord Server</label>
+            </a>
+            <a href="${links.github}" class="open-in-browser">
+              <i class="icon fab fa-github" style="color:#6E40C9"></i>
+              <label>Submit Textures / Fonts</label>
+            </a>
+          </div>
+        </div>
+      `]
+    }).show()
+    $("dialog#about .dialog_title").html(`
+      <i class="icon material-icons">${icon}</i>
+      ${name}
+    `)
   }
 })()
