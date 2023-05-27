@@ -2053,7 +2053,7 @@
           <p>${about}</p>
           <br>
           <h2>Getting started</h2>
-          <p>To use this plugin, start by creating a new Minecraft Title project from the start screen, or by going to <strong>File > New > Minecraft Title</strong> and selecting <strong>${name}</strong>. From here, use the dialog to add some text to the project. Don't forget to set the text type! You can add more text by using the add text button <i class="icon material-icons" style="translate:0 5px;">text_fields</i> in the outliner.</p>
+          <p>To use this plugin, start by creating a new Minecraft Title project from the start screen, or go to <strong>File > New > Minecraft Title</strong> and select <strong>${name}</strong>. From here, use the dialog to add some text to the project. Don't forget to set the text type! You can add more text by using the add text button <i class="icon material-icons" style="translate:0 5px;">text_fields</i> in the outliner.</p>
           <br>
           <p>Once you are done adding text, you can go to the <strong>Render</strong> tab at the top right to render your title. The positon camera button <i class="icon material-icons" style="translate:0 5px;">auto_mode</i> will set the correct camera position for you.</p>
           <br>
