@@ -105,9 +105,6 @@
           cursor: pointer;
           border-radius: 4px;
         }
-        .minecraft-title-button:hover {
-          color: var(--color-light);
-        }
         .minecraft-title-button:hover > svg {
           fill: var(--color-light);
         }
@@ -185,17 +182,7 @@
           })
         }
       })
-      const textureData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/minecraft-ten/textures.json").then(e => e.json()).catch(() => ({ textures: {}, overlays: {} }))
-      for (const [id, texture] of Object.entries(textureData.textures)) {
-        texture.name ??= titleCase(id)
-        texture.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/minecraft-ten/textures/${id}.png`
-        fonts["minecraft-ten"].textures[id] = texture
-      }
-      for (const [id, overlay] of Object.entries(textureData.overlays)) {
-        overlay.name ??= titleCase(id)
-        overlay.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/minecraft-ten/overlays/${id}.png`
-        fonts["minecraft-ten"].overlays[id] = overlay
-      }
+      await getFontTextures("minecraft-ten", true)
       const fontData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts.json").then(e => e.json()).catch(() => [])
       for (const font of fontData) {
         fonts[font.id] = font
@@ -585,10 +572,17 @@
             height: 150px;
             image-rendering: auto;
           }
-          #minecraft-title-preview-container > i {
+          #minecraft-title-preview-container > .icon {
             position: absolute;
             bottom: 7px;
             right: 7px;
+          }
+          #minecraft-title-preview-container > .fa {
+            position: absolute;
+            bottom: 3px;
+            left: 3px;
+            font-size: 18px;
+            padding: 6px;
           }
           .minecraft-title-list {
             display: flex;
@@ -598,7 +592,7 @@
             overflow-x: hidden;
           }
           .minecraft-title-list.small {
-            max-height: 118px;
+            max-height: 198px;
           }
           .minecraft-title-item {
             display: flex;
@@ -610,6 +604,9 @@
             cursor: pointer;
             flex: 1;
             position: relative;
+          }
+          .minecraft-title-item * {
+            cursor: pointer;
           }
           .minecraft-title-item:hover {
             background-color: var(--color-button);
@@ -631,18 +628,23 @@
             background-color: var(--color-button);
             outline-offset: -2px;
           }
-          .minecraft-title-item-author {
+          .minecraft-title-item-buttons {
             position: absolute;
             top: 4px;
             left: 4px;
-            display: none;
+            display: none!important;
             font-size: 1.25rem;
             z-index: 1;
+            flex-direction: column;
+            gap: 5px;
           }
-          .minecraft-title-item:hover > .minecraft-title-item-author {
-            display: inline;
+          .minecraft-title-item:hover > .minecraft-title-item-buttons {
+            display: flex!important;
           }
-          .minecraft-title-item-author:hover {
+          .minecraft-title-item-buttons > i {
+            font-size: 1.25rem;
+          }
+          .minecraft-title-item-buttons > i:hover, #minecraft-title-preview-container > i:hover, .minecraft-title-button:hover {
             color: var(--color-light);
           }
           .minecraft-title-item-author:hover::after {
@@ -655,7 +657,7 @@
             font-size: 0.8em;
             pointer-events: none;
           }
-          .minecraft-title-item:nth-child(3n) > .minecraft-title-item-author:hover::after {
+          .minecraft-title-item:nth-child(3n) .minecraft-title-item-author:hover::after {
             margin: 0 4px 0 0;
             transform: translateX(calc(-100% - 22px));
           }
@@ -688,12 +690,12 @@
           #minecraft_title_generator .form_inline_select > li {
             flex: 1;
           }
-          #minecraft-title-file > canvas {
+          .minecraft-title-file > canvas {
             max-width: 500px;
             max-height: 160px;
             object-fit: contain;
           }
-          #minecraft-title-file {
+          .minecraft-title-file {
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -707,7 +709,7 @@
             flex: 1;
             height: 160px;
           }
-          #minecraft-title-file.hidden, #custom-gradient.hidden {
+          .minecraft-title-file.hidden, #custom-gradient.hidden {
             display: none;
           }
           #gradient-colours {
@@ -770,6 +772,7 @@
             textures: fonts["minecraft-ten"].textures,
             overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
             overlays: fonts["minecraft-ten"].overlays,
+            variant: null,
             hue: 0,
             colour: "#ffffff",
             blend: "multiply",
@@ -799,6 +802,7 @@
             customEdge: false,
             customEdgeColour: "#000000",
             textureSource: "premade",
+            overlaySource: "premade",
             gradientColour0: "#FFCF76 ",
             gradientColour1: "#FFA3A3",
             gradientColour2: "#F4C1A4",
@@ -835,27 +839,7 @@
             async makePreview() {
               this.scene.remove(...this.scene.children)
 
-              const texture = await makeTexture(this.font, this.textureSource === "gradient" ? "flat" : this.texture, {
-                three: true,
-                colour: this.colour,
-                blend: this.blend,
-                hue: this.hue,
-                customBorder: this.customBorder,
-                customBorderColour: this.customBorderColour,
-                fadeToBorder: this.fadeToBorder,
-                customEdge: this.customEdge,
-                customEdgeColour: this.customEdgeColour,
-                customTexture: this.textureSource === "file" ? this.customTexture : undefined,
-                gradientColour0: this.textureSource === "gradient" ? this.gradientColour0 : null,
-                gradientColour1: this.textureSource === "gradient" && this.gradientColour1Enabled ? this.gradientColour1 : null,
-                gradientColour2: this.textureSource === "gradient" && this.gradientColour2Enabled ? this.gradientColour2 : null,
-                gradientColour3: this.textureSource === "gradient" && this.gradientColour3Enabled ? this.gradientColour3 : null,
-                gradientColour4: this.textureSource === "gradient" ? this.gradientColour4 : null,
-                overlay: this.overlay,
-                overlayBlend: this.overlayBlend,
-                overlayColourBlend: this.overlayColourBlend,
-                overlayColour: this.overlayColour
-              })
+              const texture = await makeTexture(getArgs(this, true))
 
               this.material = new THREE.MeshBasicMaterial({
                 map: texture,
@@ -1042,27 +1026,7 @@
                   return
                 }
                 this.updating = true
-                const texture = await makeTexture(this.font, this.textureSource === "gradient" ? "flat" : this.texture, {
-                  three: true,
-                  colour: this.colour,
-                  blend: this.blend,
-                  hue: this.hue,
-                  customBorder: this.customBorder,
-                  customBorderColour: this.customBorderColour,
-                  fadeToBorder: this.fadeToBorder,
-                  customEdge: this.customEdge,
-                  customEdgeColour: this.customEdgeColour,
-                  customTexture: this.textureSource === "file" ? this.customTexture : undefined,
-                  gradientColour0: this.textureSource === "gradient" ? this.gradientColour0 : null,
-                  gradientColour1: this.textureSource === "gradient" && this.gradientColour1Enabled ? this.gradientColour1 : null,
-                  gradientColour2: this.textureSource === "gradient" && this.gradientColour2Enabled ? this.gradientColour2 : null,
-                  gradientColour3: this.textureSource === "gradient" && this.gradientColour3Enabled ? this.gradientColour3 : null,
-                  gradientColour4: this.textureSource === "gradient" ? this.gradientColour4 : null,
-                  overlay: this.overlay,
-                  overlayBlend: this.overlayBlend,
-                  overlayColourBlend: this.overlayColourBlend,
-                  overlayColour: this.overlayColour
-                })
+                const texture = await makeTexture(getArgs(this, true))
                 this.material.map = texture
                 this.material.needsUpdate = true
                 this.renderer.render(this.scene, this.camera)
@@ -1083,45 +1047,41 @@
               overlay.addEventListener("click", e => overlay.remove())
               document.body.append(overlay)
             },
-            async selectFile() {
-              let texture
-              try {
-                if (isApp) {
-                  const file = electron.dialog.showOpenDialogSync({
-                    filters: [{
-                      name: "PNG Texture",
-                      extensions: ["png"]
-                    }]
-                  })
-                  if (!file) return
-                  texture = await new Promise(fulfill => new THREE.TextureLoader().load(file[0], fulfill, null, fulfill))
-                } else {
-                  const input = document.createElement("input")
-                  let file
-                  input.type = "file"
-                  input.accept = ".png"
-                  await new Promise(fulfil => {
-                    input.onchange = () => {
-                      file = Array.from(input.files)
-                      fulfil()
-                    }
-                    input.click()
-                  })
-                  const data = await new Promise(fulfil => {
-                    const fr = new FileReader()
-                    fr.onload = () => fulfil(fr.result)
-                    fr.readAsDataURL(file[0])
-                  })
-                  texture = await new Promise(fulfill => new THREE.TextureLoader().load(data, fulfill, null, fulfill))
-                }
-              } catch {
-                return Blockbench.showQuickMessage("Unable to load texture")
-              }
-              this.customFileCanvas.width = texture.image.width
-              this.customFileCanvas.height = texture.image.height
-              this.customFileCanvas.getContext("2d").drawImage(texture.image, 0, 0, this.customFileCanvas.width, this.customFileCanvas.height)
-              this.customTexture = this.customFileCanvas.toDataURL()
+            async selectCustomTexture() {
+              const texture = await getTextureFromFile()
+              if (!texture) return
+              this.customTextureCanvas.width = texture.image.width
+              this.customTextureCanvas.height = texture.image.height
+              this.customTextureCanvas.getContext("2d").drawImage(texture.image, 0, 0, this.customTextureCanvas.width, this.customTextureCanvas.height)
+              this.customTexture = this.customTextureCanvas.toDataURL()
               this.makePreview()
+            },
+            async selectCustomOverlay() {
+              const texture = await getTextureFromFile()
+              if (!texture) return
+              this.customOverlayCanvas.width = texture.image.width
+              this.customOverlayCanvas.height = texture.image.height
+              this.customOverlayCanvas.getContext("2d").drawImage(texture.image, 0, 0, this.customOverlayCanvas.width, this.customOverlayCanvas.height)
+              this.customOverlay = this.customOverlayCanvas.toDataURL()
+              this.makePreview()
+            },
+            saveTexture: async (font, type, texture, variant) => Blockbench.export({
+              type: "PNG Texture",
+              extensions: ["png"],
+              name: variant ?? texture,
+              content: await getTexture(fonts[font][type], texture, variant),
+              savetype: "image"
+            }),
+            async importTexture() {
+              const textures = []
+              Undo.initEdit({ textures })
+              const args = getArgs(this)
+              args.text = args.customTexture ? "custom" : this.textureSource === "gradient" ? "gradient" : this.texture
+              const texture = await makeTexture(args)
+              texture.add()
+              textures.push(texture)
+              Undo.finishEdit("Add Minecraft title texture")
+              dialog.close()
             }
           },
           computed: {
@@ -1144,9 +1104,10 @@
                 <div @click="tab = 3" :class="{ selected: tab === 3 }">Style</div>
                 <div @click="tab = 4" :class="{ selected: tab === 4 }">Settings</div>
               </div>
-              <div id="minecraft-title-preview-container" @click="expandCanvas" :class="{ visible: [1, 2, 3].includes(tab) }">
-                <canvas id="minecraft-title-preview" class="checkerboard" width="2160" height="600"></canvas>
-                <i class="material-icons icon">open_in_full</i>
+              <div id="minecraft-title-preview-container" :class="{ visible: [1, 2, 3].includes(tab) }">
+                <canvas @click="expandCanvas" id="minecraft-title-preview" class="checkerboard" width="2160" height="600"></canvas>
+                <i @click="expandCanvas" class="material-icons icon">open_in_full</i>
+                <i class="fa fa-file-import" title="Import texture into project" @click="importTexture"></i>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 0 }">
                 <h2>Minecraft Title Text</h2>
@@ -1159,7 +1120,9 @@
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="font = id; updateFont()" :class="{ selected: font === id }">
                     <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + id + '/thumbnails/flat.png'" />
                     <div>{{ data.name }}</div>
-                    <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                    <div class="minecraft-title-item-buttons">
+                      <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                    </div>
                   </div>
                 </div>
                 <div class="github-link">
@@ -1187,18 +1150,45 @@
                   <li @click="textureSource = 'gradient'; updatePreview()" :class="{ selected: textureSource === 'gradient' }">Gradient</li>
                   <li @click="textureSource = 'file'; updatePreview()" :class="{ selected: textureSource === 'file' }">File</li>
                 </ul>
-                <div v-if="textureSource === 'premade'" class="minecraft-title-list">
-                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(textures)" v-if="fonts[font].textures[id]" @click="texture = id; updatePreview()" :class="{ selected: texture === id }">
-                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
-                    <div>{{ data.name }}</div>
-                    <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                <div v-if="textureSource === 'premade'" >
+                  <div class="minecraft-title-list">
+                    <div class="minecraft-title-item" v-for="[id, data] of Object.entries(textures)" v-if="fonts[font].textures[id]" @click="texture = id; variant = null; updatePreview()" :class="{ selected: texture === id }">
+                      <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                      <div>{{ data.name }}</div>
+                      <div class="minecraft-title-item-buttons">
+                        <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                        <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', id)">save</i>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div v-if="textureSource === 'premade'" class="github-link">
-                  <a href="${links.github}">
-                    <i class="icon fab fa-github"></i>
-                    <div>Submit textures</div>
-                  </a>
+                  <div v-if="fonts[font].textures[texture]?.variants">
+                    <br>
+                    <h2>Texture Variants</h2>
+                    <div class="minecraft-title-list">
+                      <div class="minecraft-title-item" @click="variant = null; updatePreview()" :class="{ selected: !variant }">
+                        <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + texture + '.png'" />
+                        <div>{{ fonts[font].textures[texture].name }}</div>
+                        <div class="minecraft-title-item-buttons">
+                          <i v-if="fonts[font].textures[texture].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + fonts[font].textures[texture].author">person</i>
+                          <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', texture)">save</i>
+                        </div>
+                      </div>
+                      <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures[texture].variants)" @click="variant = id; updatePreview()" :class="{ selected: variant === id }">
+                        <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                        <div>{{ data.name }}</div>
+                        <div class="minecraft-title-item-buttons">
+                          <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                          <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', texture, id)">save</i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="github-link">
+                    <a href="${links.github}">
+                      <i class="icon fab fa-github"></i>
+                      <div>Submit textures</div>
+                    </a>
+                  </div>
                 </div>
                 <div :class="{ hidden: textureSource !== 'gradient' }" id="custom-gradient">
                   <div id="gradient-preview" :style="{ background: linearGradient }"></div>
@@ -1223,7 +1213,7 @@
                     </div>
                   </div>
                 </div>
-                <div :class="{ hidden: textureSource !== 'file' }" id="minecraft-title-file" @click="selectFile">
+                <div :class="{ hidden: textureSource !== 'file' }" id="minecraft-title-custom-texture" class="minecraft-title-file" @click="selectCustomTexture">
                   <canvas class="checkerboard" width="500" height="160" />
                   <button>Select File</button>
                 </div>
@@ -1231,18 +1221,30 @@
               <div class="minecraft-title-contents" :class="{ visible: tab === 2 }">
                 <h2>Overlay Texture</h2>
                 <p>A texture to overlay onto the text</p>
-                <div class="minecraft-title-list">
+                <ul class="form_inline_select">
+                  <li @click="overlaySource = 'premade'; updatePreview()" :class="{ selected: overlaySource === 'premade' }">Pre-made</li>
+                  <li @click="overlaySource = 'file'; updatePreview()" :class="{ selected: overlaySource === 'file' }">File</li>
+                </ul>
+                <div v-if="overlaySource === 'premade'" class="minecraft-title-list small">
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(overlays)" v-if="fonts[font].overlays[id]" @click="overlay = id; updatePreview()" :class="{ selected: overlay === id }">
                     <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                     <div>{{ data.name }}</div>
-                    <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                    <div class="minecraft-title-item-buttons">
+                      <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                      <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'overlays', id)">save</i>
+                    </div>
                   </div>
                 </div>
-                <div class="github-link">
+                <div v-if="overlaySource === 'premade'" class="github-link">
                   <a href="${links.github}">
                     <i class="icon fab fa-github"></i>
                     <div>Submit overlays</div>
                   </a>
+                </div>
+                <div :class="{ hidden: overlaySource !== 'file' }" id="minecraft-title-custom-overlay" class="minecraft-title-file" @click="selectCustomOverlay">
+                  <canvas class="checkerboard" width="500" height="160" />
+                  <button>Select File</button>
+                  <br>
                 </div>
                 <p>The blend method to use when applying the overlay</p>
                 <select-input v-model="overlayBlend" :options="blends" @input="updatePreview" />
@@ -1320,7 +1322,7 @@
                 </div>
                 <div class="bar slider_input_combo">
                   <div class="slider-label">Z</div>
-                  <input type="range" class="tool disp_range" v-model.number="scaleZ" min="0.05" max="4" step="0.05" value="{{ scaleZ }}" style="--color-thumb:var(--color-axis-z)" />
+                  <input type="range" class="tool disp_range" v-model.number="scaleZ" min="0" max="4" step="0.05" value="{{ scaleZ }}" style="--color-thumb:var(--color-axis-z)" />
                   <input type="number" class="tool disp_text" v-model.number="scaleZ" step="1" />
                 </div>
               </div>
@@ -1345,39 +1347,14 @@
             return false
           }
           dialog.close()
-          addText(text, {
-            font: this.content_vue.font,
-            type: this.content_vue.textType,
-            row: this.content_vue.row,
-            texture: this.content_vue.textureSource === "gradient" ? "flat" : this.content_vue.texture,
-            characterSpacing: this.content_vue.characterSpacing,
-            rowSpacing: this.content_vue.rowSpacing,
-            scale: [this.content_vue.scaleX, this.content_vue.scaleY, this.content_vue.scaleZ],
-            colour: this.content_vue.colour,
-            blend: this.content_vue.blend,
-            hue: this.content_vue.hue,
-            customBorder: this.content_vue.customBorder,
-            customBorderColour: this.content_vue.customBorderColour,
-            fadeToBorder: this.content_vue.fadeToBorder,
-            terminators: this.content_vue.terminators,
-            customEdge: this.content_vue.customEdge,
-            customEdgeColour: this.content_vue.customEdgeColour,
-            customTexture: this.content_vue.textureSource === "file" ? this.content_vue.customTexture : null,
-            gradientColour0: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour0 : null,
-            gradientColour1: this.content_vue.textureSource === "gradient" && this.content_vue.gradientColour1Enabled ? this.content_vue.gradientColour1 : null,
-            gradientColour2: this.content_vue.textureSource === "gradient" && this.content_vue.gradientColour2Enabled ? this.content_vue.gradientColour2 : null,
-            gradientColour3: this.content_vue.textureSource === "gradient" && this.content_vue.gradientColour3Enabled ? this.content_vue.gradientColour3 : null,
-            gradientColour4: this.content_vue.textureSource === "gradient" ? this.content_vue.gradientColour4 : null,
-            overlay: this.content_vue.overlay,
-            overlayBlend: this.content_vue.overlayBlend,
-            overlayColourBlend: this.content_vue.overlayColourBlend,
-            overlayColour: this.content_vue.overlayColour
-          })
+          addText(text, getArgs(this.content_vue))
         },
         async onBuild() {
           this.content_vue.canvas = dialog.content_vue.$el.querySelector("#minecraft-title-preview")
-          this.content_vue.customFileCanvas = dialog.content_vue.$el.querySelector("#minecraft-title-file > canvas")
-          this.content_vue.customFileCanvas.getContext("2d").globalCompositeOperation = "copy"
+          this.content_vue.customTextureCanvas = dialog.content_vue.$el.querySelector("#minecraft-title-custom-texture > canvas")
+          this.content_vue.customOverlayCanvas = dialog.content_vue.$el.querySelector("#minecraft-title-custom-overlay > canvas")
+          this.content_vue.customTextureCanvas.getContext("2d").globalCompositeOperation = "copy"
+          this.content_vue.customOverlayCanvas.getContext("2d").globalCompositeOperation = "copy"
 
           this.content_vue.camera = new THREE.PerspectiveCamera(18, this.content_vue.canvas.width / this.content_vue.canvas.height, 1, 1000)
           this.content_vue.camera.position.x = 0
@@ -1496,53 +1473,49 @@
     }
   })
 
-  async function getTexture(object, texture, direct) {
-    if (!direct && object[texture].texture.startsWith("data:image/png;base64,")) return object[texture].texture
+  async function getTexture(object, texture, variant, direct) {
+    if (!direct && ((variant && object[texture].variants[variant]?.texture.startsWith("data:image/png;base64,")) || (!variant && object[texture].texture.startsWith("data:image/png;base64,")))) return variant ? object[texture].variants[variant].texture : object[texture].texture
     const data = await new Promise(async fulfil => {
       const reader = new FileReader()
       reader.onload = e => fulfil(e.target.result)
-      reader.readAsDataURL(new Blob([await fetch(direct ?? object[texture].texture).then(e => e.arrayBuffer())], { type: "image/png" }))
+      reader.readAsDataURL(new Blob([await fetch(direct ?? (variant ? object[texture].variants[variant].texture : object[texture].texture)).then(e => e.arrayBuffer())], { type: "image/png" }))
     }).catch(() => {})
-    if (!direct) object[texture].texture = data
+    if (!direct) {
+      if (variant) object[texture].variants[variant].texture = data
+      else object[texture].texture = data
+    }
     return data
   }
 
   async function addText(text, args) {
-    const newCubes = []
-    const newTextures = []
+    args.text = text
+    const elements = []
+    const textures = []
     Undo.initEdit({
-      elements: newCubes,
       outliner: true,
-      textures: newTextures
+      elements,
+      textures
     })
-    const texture = await makeTexture(args.font, args.texture, {
-      text,
-      hue: args.hue,
-      blend: args.blend,
-      colour: args.colour,
-      customBorder: args.customBorder,
-      customBorderColour: args.customBorderColour,
-      fadeToBorder: args.fadeToBorder,
-      customEdge: args.customEdge,
-      customEdgeColour: args.customEdgeColour,
-      customTexture: args.customTexture,
-      gradientColour0: args.gradientColour0,
-      gradientColour1: args.gradientColour1,
-      gradientColour2: args.gradientColour2,
-      gradientColour3: args.gradientColour3,
-      gradientColour4: args.gradientColour4,
-      overlay: args.overlay,
-      overlayBlend: args.overlayBlend,
-      overlayColourBlend: args.overlayColourBlend,
-      overlayColour: args.overlayColour
-    })
+    let texture = await makeTexture(args)
+    const dataURL = texture.canvas.toDataURL()
+    let match
+    for (const image of Texture.all) {
+      if (image.canvas.toDataURL() === dataURL) {
+        match = true
+        texture = image
+        break
+      }
+    }
+    if (!match) {
+      texture.add()
+      textures.push(texture)
+    }
     await getFontCharacters(args.font)
     if ((args.terminators || fonts[args.font].forcedTerminators) && fonts[args.font].terminatorSpace) {
       text = `┫ ${text} ┣`
     } else if (args.terminators || fonts[args.font].forcedTerminators) {
       text = `┫${text}┣`
     }
-    newTextures.push(texture)
     let words
     if (fonts[args.font].characters[" "]) words = [text]
     else words = text.split(" ")
@@ -1557,7 +1530,7 @@
         characterSpacing: args.characterSpacing,
         rowSpacing: args.rowSpacing,
         scale: args.scale,
-        newCubes
+        elements
       })
     } else {
       group = new Group(makeName(text)).init()
@@ -1570,7 +1543,7 @@
           characterSpacing: args.characterSpacing,
           rowSpacing: args.rowSpacing,
           scale: args.scale,
-          newCubes
+          elements
         })
         offset = newOffset + (8 + args.characterSpacing) * args.scale[0]
       }
@@ -1599,8 +1572,8 @@
     updateSelection()
   }
 
-  async function makeTexture(font, texture, args) {
-    const img = (await new Promise(async fulfill => new THREE.TextureLoader().load(args.customTexture ?? await getTexture(fonts[font].textures, texture), fulfill, null, fulfill))).image
+  async function makeTexture(args) {
+    const img = (await new Promise(async fulfill => new THREE.TextureLoader().load(args.customTexture ?? await getTexture(fonts[args.font].textures, args.texture, args.variant), fulfill, null, fulfill))).image
     let canvas = document.createElement("canvas")
     canvas.width = img.width
     canvas.height = img.height
@@ -1609,12 +1582,12 @@
     ctx.drawImage(img, 0, 0)
     if (args.gradientColour0) {
       ctx.globalCompositeOperation = "source-atop"
-      const height = fonts[font].ends[fonts[font].ends.length - 1][3]
+      const height = fonts[args.font].ends[fonts[args.font].ends.length - 1][3]
       const gradient = ctx.createLinearGradient(0, 0, 0, height * m)
       gradient.addColorStop(0, "transparent")
-      for (let i = 0; i < fonts[font].faces.length; i++) {
-        const face = fonts[font].faces[i]
-        const end = fonts[font].ends[i]
+      for (let i = 0; i < fonts[args.font].faces.length; i++) {
+        const face = fonts[args.font].faces[i]
+        const end = fonts[args.font].ends[i]
         gradient.addColorStop(end[0] / height, args.gradientColour0)
         if (face.length === 2) {
           gradient.addColorStop(face[0] / height, args.gradientColour0)
@@ -1636,15 +1609,15 @@
       ctx.fillStyle = gradient
       ctx.fillRect(0, 0, canvas.width * m, height * m)
       ctx.fillStyle = "#0006"
-      for (const end of fonts[font].ends) {
+      for (const end of fonts[args.font].ends) {
         ctx.fillRect(0, end[0] * m, canvas.width, end[1] * m - end[0] * m)
         ctx.fillRect(0, end[2] * m, canvas.width, end[3] * m - end[2] * m)
       }
-      if (fonts[font].overlay) {
-        if (typeof fonts[font].overlay === "boolean") {
-          fonts[font].overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(null, null, `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/textures/overlay.png`), fulfill, null, fulfill))).image
+      if (fonts[args.font].overlay) {
+        if (typeof fonts[args.font].overlay === "boolean") {
+          fonts[args.font].overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(null, null, null, `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${args.font}/textures/overlay.png`), fulfill, null, fulfill))).image
         }
-        ctx.drawImage(fonts[font].overlay, 0, 0)
+        ctx.drawImage(fonts[args.font].overlay, 0, 0)
       }
     }
     ctx.globalCompositeOperation = "copy"
@@ -1659,13 +1632,13 @@
     if (args.customEdge) {
       ctx.globalCompositeOperation = "source-atop"
       ctx.fillStyle = args.customEdgeColour
-      for (const row of fonts[font].ends) {
+      for (const row of fonts[args.font].ends) {
         ctx.fillRect(0, row[0] * m, canvas.width, (row[1] - row[0]) * m)
         ctx.fillRect(0, row[2] * m, canvas.width, (row[3] - row[2]) * m)
       }
     }
     if (args.overlay && args.overlay !== "none") {
-      const overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(fonts[font].overlays, args.overlay), fulfill, null, fulfill))).image
+      const overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(args.customOverlay ?? await getTexture(fonts[args.font].overlays, args.overlay), fulfill, null, fulfill))).image
       const overlayCanvas = new CanvasFrame(overlay.width, overlay.height)
       overlayCanvas.ctx.drawImage(overlay, 0, 0)
       overlayCanvas.ctx.globalCompositeOperation = args.overlayColourBlend
@@ -1688,14 +1661,14 @@
     if (args.customBorder) {
       ctx.globalCompositeOperation = "source-atop"
       ctx.fillStyle = args.customBorderColour
-      ctx.fillRect(0, fonts[font].border * m, canvas.width, canvas.height - fonts[font].border * m)
+      ctx.fillRect(0, fonts[args.font].border * m, canvas.width, canvas.height - fonts[args.font].border * m)
     }
     if (args.fadeToBorder) {
       ctx.globalCompositeOperation = "source-atop"
-      const height = fonts[font].ends[fonts[font].ends.length - 1][3]
+      const height = fonts[args.font].ends[fonts[args.font].ends.length - 1][3]
       const border = ctx.getImageData(0, fonts[font].border * m, 1, 1).data
       const gradient = ctx.createLinearGradient(0, 0, 0, height * m)
-      for (const stop of fonts[font].ends) {
+      for (const stop of fonts[args.font].ends) {
         gradient.addColorStop(stop[0] / height, `rgb(${border[0]},${border[1]},${border[2]})`)
         gradient.addColorStop(stop[1] / height, `rgb(${border[0]},${border[1]},${border[2]}, 0)`)
         gradient.addColorStop(stop[2] / height, `rgb(${border[0]},${border[1]},${border[2]}, 0)`)
@@ -1710,7 +1683,7 @@
       texture.magFilter = THREE.NearestFilter
       return texture
     }
-    return new Texture({ name: `${makeName(args.text)}.png` }).fromDataURL(canvas.toDataURL()).add()
+    return new Texture({ name: `${makeName(args.text)}.png` }).fromDataURL(canvas.toDataURL())
   }
 
   function makeWord(text, offset, parent, args) {
@@ -1740,6 +1713,7 @@
       }
       const size = 2 * (args.scale[0] + args.scale[1]) / 2 * (args.type === "bottom" ? 0.75 : args.type === "small" ? 0.38 : 1)
       const border = new Cube({
+        name: "border",
         from: [maxX + size, maxY + size, maxZ + size],
         to: [minX - size, minY - size, minZ - size]
       })
@@ -1749,9 +1723,15 @@
         face.uv = uv
       }
       border.addTo(word).init()
-      args.newCubes.push(border)
+      args.elements.push(border)
     }
     return [word, offset]
+  }
+
+  const charMap = {
+    "┫": "open_terminator",
+    "┣": "close_terminator",
+    " ": "space"
   }
 
   function makeCharacter(char, offset, parent, args) {
@@ -1795,7 +1775,7 @@
       }
       cubes.push(cube)
     }
-    const character = new Group(makeName(char))
+    const character = new Group(charMap[char] ? charMap[char] : makeName(char))
     character.addTo(parent).init()
     const heightOffset = fonts[args.font].height
     for (const cube of cubes) {
@@ -1837,13 +1817,13 @@
       cube.to = cube.to.map((e, i) => e * args.scale[i])
       cube.from = cube.from.map((e, i) => e * args.scale[i])
       cube.addTo(character).init()
-      args.newCubes.push(cube)
+      args.elements.push(cube)
     }
     return [character, maxX - minX + args.characterSpacing * args.scale[0]]
   }
 
   function makeName(str) {
-    return str.replace(/\s/g, "_").replace(/😳/g, "a").replace(/😩/g, "'")
+    return str.replace(/\s/g, "_").replace(/😳/g, "a").replace(/😩/g, "'").replace(/┫|┣/g, "")
   }
 
   function selectHandler() {
@@ -1852,14 +1832,21 @@
     })
   }
 
-  async function getFontTextures(font) {
-    if (typeof fonts[font].textures === "object") return
-    fonts[font].textures = {}
+  async function getFontTextures(font, force) {
+    if (typeof fonts[font].textures === "object") {
+      if (!force) return
+    } else {
+      fonts[font].textures = {}
+    }
     fonts[font].overlays = { none: { name: "None" } }
     const data = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/textures.json`).then(e => e.json())
     for (const [id, texture] of Object.entries(data.textures)) {
       texture.name ??= titleCase(id)
       texture.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/textures/${id}.png`
+      if (texture.variants) for (const [id, variant] of Object.entries(texture.variants)) {
+        variant.name ??= titleCase(id)
+        variant.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/textures/${id}.png`
+      }
       fonts[font].textures[id] = texture
     }
     for (const [id, overlay] of Object.entries(data.overlays)) {
@@ -1978,5 +1965,76 @@
       <i class="icon material-icons">${icon}</i>
       ${name}
     `)
+  }
+
+  async function getTextureFromFile() {
+    try {
+      let texture
+      if (isApp) {
+        const file = electron.dialog.showOpenDialogSync({
+          filters: [{
+            name: "PNG Texture",
+            extensions: ["png"]
+          }]
+        })
+        if (!file) return
+        texture = await new Promise(fulfill => new THREE.TextureLoader().load(file[0], fulfill, null, fulfill))
+      } else {
+        const input = document.createElement("input")
+        let file
+        input.type = "file"
+        input.accept = ".png"
+        await new Promise(fulfil => {
+          input.onchange = () => {
+            file = Array.from(input.files)
+            fulfil()
+          }
+          input.click()
+        })
+        const data = await new Promise(fulfil => {
+          const fr = new FileReader()
+          fr.onload = () => fulfil(fr.result)
+          fr.readAsDataURL(file[0])
+        })
+        texture = await new Promise(fulfill => new THREE.TextureLoader().load(data, fulfill, null, fulfill))
+      }
+      return texture
+    } catch {
+      Blockbench.showQuickMessage("Unable to load texture")
+    }
+  }
+
+  function getArgs(vue, three) {
+    return {
+      font: vue.font,
+      type: vue.textType,
+      row: vue.row,
+      texture: vue.textureSource === "gradient" ? "flat" : vue.texture,
+      variant: vue.variant,
+      characterSpacing: vue.characterSpacing,
+      rowSpacing: vue.rowSpacing,
+      scale: [vue.scaleX, vue.scaleY, vue.scaleZ],
+      colour: vue.colour,
+      blend: vue.blend,
+      hue: vue.hue,
+      customBorder: vue.customBorder,
+      customBorderColour: vue.customBorderColour,
+      fadeToBorder: vue.fadeToBorder,
+      terminators: vue.terminators,
+      customEdge: vue.customEdge,
+      customEdgeColour: vue.customEdgeColour,
+      customTexture: vue.textureSource === "file" ? vue.customTexture : null,
+      customOverlay: vue.overlaySource === "file" ? vue.customOverlay : null,
+      gradientColour0: vue.textureSource === "gradient" ? vue.gradientColour0 : null,
+      gradientColour1: vue.textureSource === "gradient" && vue.gradientColour1Enabled ? vue.gradientColour1 : null,
+      gradientColour2: vue.textureSource === "gradient" && vue.gradientColour2Enabled ? vue.gradientColour2 : null,
+      gradientColour3: vue.textureSource === "gradient" && vue.gradientColour3Enabled ? vue.gradientColour3 : null,
+      gradientColour4: vue.textureSource === "gradient" ? vue.gradientColour4 : null,
+      overlay: vue.overlay,
+      overlayBlend: vue.overlayBlend,
+      overlayColourBlend: vue.overlayColourBlend,
+      overlayColour: vue.overlayColour,
+      three
+    }
   }
 })()
