@@ -812,132 +812,15 @@
             overlayColourBlend: "multiply"
           },
           mounted() {
-            $(this.$refs.colour).spectrum({
-              preferredFormat: "hex",
-              color: this.colour,
-              showAlpha: false,
-              showInput: true,
-              move: c => {
-                this.colour = c.toHexString()
-                this.updatePreview()
-              },
-              change: c => {
-                this.colour = c.toHexString()
-                this.updatePreview()
-              }
-            }),
-            $(this.$refs.customBorderColour).spectrum({
-              preferredFormat: "hex",
-              color: this.customBorderColour,
-              showAlpha: false,
-              showInput: true,
-              move: c => {
-                this.customBorderColour = c.toHexString()
-                this.updatePreview()
-              },
-              change: c => {
-                this.customBorderColour = c.toHexString()
-                this.updatePreview()
-              }
-            }),
-            $(this.$refs.customEdgeColour).spectrum({
-              preferredFormat: "hex",
-              color: this.customEdgeColour,
-              showAlpha: false,
-              showInput: true,
-              move: c => {
-                this.customEdgeColour = c.toHexString()
-                this.updatePreview()
-              },
-              change: c => {
-                this.customEdgeColour = c.toHexString()
-                this.updatePreview()
-              }
-            }),
-            $(this.$refs.gradientColour0).spectrum({
-              preferredFormat: "hex",
-              color: this.gradientColour0,
-              showAlpha: false,
-              showInput: true,
-              move: c => {
-                this.gradientColour0 = c.toHexString()
-                this.updatePreview()
-              },
-              change: c => {
-                this.gradientColour0 = c.toHexString()
-                this.updatePreview()
-              }
-            }),
-            $(this.$refs.gradientColour1).spectrum({
-              preferredFormat: "hex",
-              color: this.gradientColour1,
-              showAlpha: false,
-              showInput: true,
-              move: c => {
-                this.gradientColour1 = c.toHexString()
-                this.updatePreview()
-              },
-              change: c => {
-                this.gradientColour1 = c.toHexString()
-                this.updatePreview()
-              }
-            }),
-            $(this.$refs.gradientColour2).spectrum({
-              preferredFormat: "hex",
-              color: this.gradientColour2,
-              showAlpha: false,
-              showInput: true,
-              move: c => {
-                this.gradientColour2 = c.toHexString()
-                this.updatePreview()
-              },
-              change: c => {
-                this.gradientColour2 = c.toHexString()
-                this.updatePreview()
-              }
-            }),
-            $(this.$refs.gradientColour3).spectrum({
-              preferredFormat: "hex",
-              color: this.gradientColour3,
-              showAlpha: false,
-              showInput: true,
-              move: c => {
-                this.gradientColour3 = c.toHexString()
-                this.updatePreview()
-              },
-              change: c => {
-                this.gradientColour3 = c.toHexString()
-                this.updatePreview()
-              }
-            }),
-            $(this.$refs.gradientColour4).spectrum({
-              preferredFormat: "hex",
-              color: this.gradientColour4,
-              showAlpha: false,
-              showInput: true,
-              move: c => {
-                this.gradientColour4 = c.toHexString()
-                this.updatePreview()
-              },
-              change: c => {
-                this.gradientColour4 = c.toHexString()
-                this.updatePreview()
-              }
-            }),
-            $(this.$refs.overlayColour).spectrum({
-              preferredFormat: "hex",
-              color: this.overlayColour,
-              showAlpha: false,
-              showInput: true,
-              move: c => {
-                this.overlayColour = c.toHexString()
-                this.updatePreview()
-              },
-              change: c => {
-                this.overlayColour = c.toHexString()
-                this.updatePreview()
-              }
-            })
+            $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
+            $(this.$refs.customBorderColour).spectrum(colourInput(dialog, "customBorderColour")),
+            $(this.$refs.customEdgeColour).spectrum(colourInput(dialog, "customEdgeColour")),
+            $(this.$refs.gradientColour0).spectrum(colourInput(dialog, "gradientColour0")),
+            $(this.$refs.gradientColour1).spectrum(colourInput(dialog, "gradientColour1")),
+            $(this.$refs.gradientColour2).spectrum(colourInput(dialog, "gradientColour2")),
+            $(this.$refs.gradientColour3).spectrum(colourInput(dialog, "gradientColour3")),
+            $(this.$refs.gradientColour4).spectrum(colourInput(dialog, "gradientColour4")),
+            $(this.$refs.overlayColour).spectrum(colourInput(dialog, "overlayColour"))
           },
           methods: {
             finish: () => dialog.onConfirm(),
@@ -1764,6 +1647,23 @@
         ctx.drawImage(fonts[font].overlay, 0, 0)
       }
     }
+    ctx.globalCompositeOperation = "copy"
+    ctx.filter =`hue-rotate(${args.hue}deg)`
+    ctx.drawImage(canvas, 0, 0)
+    ctx.filter ="hue-rotate(0deg)"
+    ctx.globalCompositeOperation = args.blend
+    ctx.fillStyle = args.colour
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.globalCompositeOperation = "destination-in"
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    if (args.customEdge) {
+      ctx.globalCompositeOperation = "source-atop"
+      ctx.fillStyle = args.customEdgeColour
+      for (const row of fonts[font].ends) {
+        ctx.fillRect(0, row[0] * m, canvas.width, (row[1] - row[0]) * m)
+        ctx.fillRect(0, row[2] * m, canvas.width, (row[3] - row[2]) * m)
+      }
+    }
     if (args.overlay && args.overlay !== "none") {
       const overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(fonts[font].overlays, args.overlay), fulfill, null, fulfill))).image
       const overlayCanvas = new CanvasFrame(overlay.width, overlay.height)
@@ -1785,27 +1685,10 @@
       ctx.imageSmoothingEnabled = false
       ctx.drawImage(overlayCanvas.canvas, 0, 0, canvas.width, canvas.height)
     }
-    ctx.globalCompositeOperation = "copy"
-    ctx.filter =`hue-rotate(${args.hue}deg)`
-    ctx.drawImage(canvas, 0, 0)
-    ctx.filter ="hue-rotate(0deg)"
-    ctx.globalCompositeOperation = args.blend
-    ctx.fillStyle = args.colour
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.globalCompositeOperation = "destination-in"
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
     if (args.customBorder) {
       ctx.globalCompositeOperation = "source-atop"
       ctx.fillStyle = args.customBorderColour
       ctx.fillRect(0, fonts[font].border * m, canvas.width, canvas.height - fonts[font].border * m)
-    }
-    if (args.customEdge) {
-      ctx.globalCompositeOperation = "source-atop"
-      ctx.fillStyle = args.customEdgeColour
-      for (const row of fonts[font].ends) {
-        ctx.fillRect(0, row[0] * m, canvas.width, (row[1] - row[0]) * m)
-        ctx.fillRect(0, row[2] * m, canvas.width, (row[3] - row[2]) * m)
-      }
     }
     if (args.fadeToBorder) {
       ctx.globalCompositeOperation = "source-atop"
@@ -1993,6 +1876,23 @@
 
   function titleCase(str) {
     return str.replace(/_/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
+  }
+
+  function updateColour(dialog, v, c) {
+    dialog.component.data[v] = c.toHexString()
+    dialog.component.methods.updatePreview.bind(dialog.content_vue)()
+  }
+
+  function colourInput(dialog, v) {
+    return {
+      preferredFormat: "hex",
+      color: dialog.component.data[v],
+      showAlpha: false,
+      showInput: true,
+      move: c => updateColour(dialog, v, c),
+      change: c => updateColour(dialog, v, c),
+      hide: c => updateColour(dialog, v, c)
+    }
   }
 
   function addAbout() {
