@@ -185,9 +185,10 @@
       await getFontTextures("minecraft-ten", true)
       const fontData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts.json").then(e => e.json()).catch(() => [])
       for (const font of fontData) {
+        font.name ??= titleCase(font.id)
+        font.characters = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/characters.json`
+        font.textures = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/textures.json`
         fonts[font.id] = font
-        fonts[font.id].characters = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/characters.json`
-        fonts[font.id].textures = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/textures.json`
       }
       action = new Action("minecraft_title_add_text", {
         name: "Add Minecraft Title Text",
@@ -1397,6 +1398,7 @@
           const scale = [1, 1, 1]
           if (result.texture === "all") for (const [i, texture] of Object.keys(fonts[result.font].textures).entries()) {
             addText(str, {
+              debug: true,
               font: result.font,
               texture: texture,
               row: Object.keys(fonts[result.font].textures).length - i - 1,
@@ -1405,7 +1407,8 @@
               blend: "multiply",
               colour: "#fff",
               scale,
-              customBorder: false
+              customBorder: false,
+              spacerWidth: fonts[result.font].width - 1
             })
           } else {
             if (result.compact) {
@@ -1424,6 +1427,7 @@
               if (part) parts.push(part)
               for (const [i, part] of parts.entries()) {
                 addText(part, {
+                  debug: true,
                   font: result.font,
                   texture: result.texture,
                   row: parts.length - i - 1,
@@ -1432,10 +1436,12 @@
                   blend: "multiply",
                   colour: "#fff",
                   scale,
-                  customBorder: false
+                  customBorder: false,
+                  spacerWidth: fonts[result.font].width - 1
                 })
               }
             } else addText(str, {
+              debug: true,
               font: result.font,
               texture: result.texture,
               row: 0,
@@ -1443,7 +1449,8 @@
               blend: "multiply",
               colour: "#fff",
               scale,
-              customBorder: false
+              customBorder: false,
+              spacerWidth: fonts[result.font].width - 1
             })
           }
         }
@@ -1510,9 +1517,14 @@
       textures.push(texture)
     }
     await getFontCharacters(args.font)
-    if ((args.terminators || fonts[args.font].forcedTerminators) && fonts[args.font].terminatorSpace) {
+    if (!args.debug && args.characterSpacing && fonts[args.font].characters["​"]) {
+      text = text.split("").join("​")
+      args.spacerWidth = args.characterSpacing - 1
+      args.characterSpacing = 0
+    }
+    if (!args.debug && (args.terminators || fonts[args.font].forcedTerminators) && fonts[args.font].terminatorSpace) {
       text = `┫ ${text} ┣`
-    } else if (args.terminators || fonts[args.font].forcedTerminators) {
+    } else if (!args.debug && (args.terminators || fonts[args.font].forcedTerminators)) {
       text = `┫${text}┣`
     }
     let words
@@ -1527,6 +1539,7 @@
         row: args.row,
         type: args.type,
         characterSpacing: args.characterSpacing,
+        spacerWidth: args.spacerWidth,
         rowSpacing: args.rowSpacing,
         scale: args.scale,
         elements
@@ -1540,6 +1553,7 @@
           row: args.row,
           type: args.type,
           characterSpacing: args.characterSpacing,
+          spacerWidth: args.spacerWidth,
           rowSpacing: args.rowSpacing,
           scale: args.scale,
           elements
@@ -1730,7 +1744,8 @@
   const charMap = {
     "┫": "open_terminator",
     "┣": "close_terminator",
-    " ": "space"
+    " ": "space",
+    "​": "spacer"
   }
 
   function makeCharacter(char, offset, parent, args) {
@@ -1747,6 +1762,13 @@
         }
       }
       const cube = new Cube(element)
+      if (char === "​") {
+        if (cube.to[0] > cube.from[0]) {
+          cube.to[0] += args.spacerWidth
+        } else {
+          cube.from[0] += args.spacerWidth
+        }
+      }
       if (args.type === "small") {
         if (cube.to[2] > cube.from[2]) {
           cube.to[2] -= 6
@@ -1822,7 +1844,7 @@
   }
 
   function makeName(str) {
-    return str.replace(/\s/g, "_").replace(/😳/g, "a").replace(/😩/g, "'").replace(/┫|┣/g, "")
+    return str.replace(/\s/g, "_").replace(/😳/g, "a").replace(/😩/g, "'").replace(/┫|┣|\u200b/g, "")
   }
 
   function selectHandler() {
@@ -1861,7 +1883,7 @@
   }
 
   function titleCase(str) {
-    return str.replace(/_/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
+    return str.replace(/_|-/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
   }
 
   function updateColour(dialog, v, c) {
