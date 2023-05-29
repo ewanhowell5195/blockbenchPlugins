@@ -1497,10 +1497,9 @@
       textures
     })
     let texture = await makeTexture(args)
-    const dataURL = texture.canvas.toDataURL()
     let match
     for (const image of Texture.all) {
-      if (image.canvas.toDataURL() === dataURL) {
+      if (image.img.src === texture.img.src) {
         match = true
         texture = image
         break
