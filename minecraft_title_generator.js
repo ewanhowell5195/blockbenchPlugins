@@ -130,6 +130,57 @@
         .resolution > svg {
           fill: var(--color-text);
         }
+        .minecraft-title-list {
+          display: flex;
+          max-height: 384px;
+          flex-wrap: wrap;
+          gap: 10px;
+          overflow-x: hidden;
+        }
+        .minecraft-title-list.small {
+          max-height: 198px;
+        }
+        .minecraft-title-item {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          padding: 10px 10px 5px;
+          background-color: var(--color-back);
+          align-items: center;
+          cursor: pointer;
+          flex: 1;
+          position: relative;
+        }
+        .minecraft-title-item * {
+          cursor: pointer;
+        }
+        .minecraft-title-item:hover {
+          background-color: var(--color-button);
+        }
+        .minecraft-title-item > img {
+          max-width: 100px;
+          height: 50px;
+          display: flex;
+          object-fit: contain;
+        }
+        .minecraft-title-item > div {
+          text-align: center;
+          flex: 1;
+          display: flex;
+          align-items: center;
+        }
+        .minecraft-title-item.selected {
+          outline: 2px solid var(--color-accent);
+          background-color: var(--color-button);
+          outline-offset: -2px;
+        }
+        .minecraft-title-item-has-variants {
+          display: flex;
+          position: absolute;
+          bottom: 4px;
+          right: 4px;
+          z-index: 1;
+        }
       `)
       let shadeState
       BarItems.toggle_shading.condition = () => Project.format.id !== format.id
@@ -542,9 +593,6 @@
             z-index: 2;
             background-color: var(--color-ui);
           }
-          .spacer {
-            flex: 1;
-          }
           .minecraft-title-contents .slider-label {
             margin: 3px 10px 0 0;
           }
@@ -585,65 +633,21 @@
             font-size: 18px;
             padding: 6px;
           }
-          .minecraft-title-list {
-            display: flex;
-            max-height: 384px;
-            flex-wrap: wrap;
-            gap: 10px;
-            overflow-x: hidden;
-          }
-          .minecraft-title-list.small {
-            max-height: 198px;
-          }
-          .minecraft-title-item {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            padding: 10px 10px 5px;
-            background-color: var(--color-back);
-            align-items: center;
-            cursor: pointer;
-            flex: 1;
-            position: relative;
-          }
-          .minecraft-title-item * {
-            cursor: pointer;
-          }
-          .minecraft-title-item:hover {
-            background-color: var(--color-button);
-          }
-          .minecraft-title-item > img {
-            max-width: 100px;
-            height: 50px;
-            display: flex;
-            object-fit: contain;
-          }
-          .minecraft-title-item > div {
-            text-align: center;
-            flex: 1;
-            display: flex;
-            align-items: center;
-          }
-          .minecraft-title-item.selected {
-            outline: 2px solid var(--color-accent);
-            background-color: var(--color-button);
-            outline-offset: -2px;
-          }
           .minecraft-title-item-buttons {
             position: absolute;
             top: 4px;
             left: 4px;
-            display: none!important;
             font-size: 1.25rem;
             z-index: 1;
             flex-direction: column;
             gap: 5px;
           }
-          .minecraft-title-item:hover > .minecraft-title-item-buttons {
-            display: flex!important;
-          }
           .minecraft-title-item-buttons > i {
+            display: none;
             font-size: 1.25rem;
+          }
+          .minecraft-title-item:hover i{
+            display: flex!important;
           }
           .minecraft-title-item-buttons > i:hover, #minecraft-title-preview-container > i:hover, .minecraft-title-button:hover {
             color: var(--color-light);
@@ -682,14 +686,11 @@
             display: flex;
             margin-bottom: 10px;
           }
-          #minecraft_title_generator .sp-preview {
+          #minecraft_title_generator .sp-preview, #minecraft_title_generator .form_inline_select > li, .spacer {
             flex: 1;
           }
           #minecraft_title_generator .form_inline_select {
             margin: 10px 0;
-          }
-          #minecraft_title_generator .form_inline_select > li {
-            flex: 1;
           }
           .minecraft-title-file > canvas {
             max-width: 500px;
@@ -761,7 +762,7 @@
             tab: 0,
             text: "",
             font: Object.keys(fonts)[0],
-            fonts: fonts,
+            fonts,
             textType: "top",
             textTypes: {
               "top": 'Top - The "Minecraft" text',
@@ -770,9 +771,7 @@
             },
             row: 0,
             texture: Object.keys(fonts["minecraft-ten"].textures)[1] ?? Object.keys(fonts["minecraft-ten"].textures)[0],
-            textures: fonts["minecraft-ten"].textures,
             overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
-            overlays: fonts["minecraft-ten"].overlays,
             variant: null,
             hue: 0,
             colour: "#ffffff",
@@ -831,9 +830,7 @@
             finish: () => dialog.onConfirm(),
             async updateFont() {
               await getFontTextures(this.font)
-              this.textures = fonts[this.font].textures
               this.texture = Object.keys(fonts[this.font].textures)[1] ?? Object.keys(fonts[this.font].textures)[0]
-              this.overlays = fonts[this.font].overlays
               this.overlay = Object.keys(fonts[this.font].overlays)[0]
               this.makePreview()
             },
@@ -1083,6 +1080,13 @@
               textures.push(texture)
               Undo.finishEdit("Add Minecraft title texture")
               dialog.close()
+            },
+            scrollToVariants() {
+              setTimeout(() => {
+                if (this.$refs.textureVariants) {
+                  this.$refs.textureVariants.scrollIntoView({ behavior: "smooth" })
+                }
+              }, 0)
             }
           },
           computed: {
@@ -1118,7 +1122,7 @@
                 <h2>Font</h2>
                 <p>The font to use for the text</p>
                 <div class="minecraft-title-list small">
-                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="font = id; updateFont()" :class="{ selected: font === id }">
+                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="font = id; variant = null; updateFont()" :class="{ selected: font === id }">
                     <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + id + '/thumbnails/flat.png'" />
                     <div>{{ data.name }}</div>
                     <div class="minecraft-title-item-buttons">
@@ -1153,19 +1157,20 @@
                 </ul>
                 <div v-if="textureSource === 'premade'" >
                   <div class="minecraft-title-list">
-                    <div class="minecraft-title-item" v-for="[id, data] of Object.entries(textures)" v-if="fonts[font].textures[id]" @click="texture = id; variant = null; updatePreview()" :class="{ selected: texture === id }">
+                    <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures)" v-if="fonts[font].textures[id]" @click="texture = id; variant = null; updatePreview(); scrollToVariants()" :class="{ selected: texture === id }">
                       <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                       <div>{{ data.name }}</div>
                       <div class="minecraft-title-item-buttons">
                         <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
                         <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', id)">save</i>
                       </div>
+                      <i v-if="fonts[font].textures[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(fonts[font].textures[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(fonts[font].textures[id].variants).length > 9 ? '9_plus' : Object.keys(fonts[font].textures[id].variants).length + 1 }}</i>
                     </div>
                   </div>
                   <div v-if="fonts[font].textures[texture]?.variants">
                     <br>
                     <h2>Texture Variants</h2>
-                    <div class="minecraft-title-list">
+                    <div class="minecraft-title-list" ref="textureVariants">
                       <div class="minecraft-title-item" @click="variant = null; updatePreview()" :class="{ selected: !variant }">
                         <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + texture + '.png'" />
                         <div>{{ fonts[font].textures[texture].name }}</div>
@@ -1178,7 +1183,7 @@
                         <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                         <div>{{ data.name }}</div>
                         <div class="minecraft-title-item-buttons">
-                          <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                          <i v-if="fonts[font].textures[texture].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + (data.author ?? fonts[font].textures[texture].author)">person</i>
                           <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', texture, id)">save</i>
                         </div>
                       </div>
@@ -1227,7 +1232,7 @@
                   <li @click="overlaySource = 'file'; updatePreview()" :class="{ selected: overlaySource === 'file' }">File</li>
                 </ul>
                 <div v-if="overlaySource === 'premade'" class="minecraft-title-list small">
-                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(overlays)" v-if="fonts[font].overlays[id]" @click="overlay = id; updatePreview()" :class="{ selected: overlay === id }">
+                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].overlays)" v-if="fonts[font].overlays[id]" @click="overlay = id; updatePreview()" :class="{ selected: overlay === id }">
                     <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                     <div>{{ data.name }}</div>
                     <div class="minecraft-title-item-buttons">
@@ -1371,87 +1376,116 @@
       debugDialog = new Dialog({
         id: `debug_${id}`,
         title: "Load Debug Minecraft Title Text",
-        form: {
-          texture: {
-            label: "Texture",
-            type: "select",
-            default: "all",
-            options: Object.fromEntries([["all", "All"]].concat(Object.keys(fonts["minecraft-ten"].textures).map(e => [e, e])))
+        component: {
+          data: {
+            font: Object.keys(fonts)[0],
+            fonts,
+            texture: Object.keys(fonts["minecraft-ten"].textures)[1] ?? Object.keys(fonts["minecraft-ten"].textures)[0],
+            variant: null,
           },
-          font: {
-            label: "Font",
-            type: "select",
-            default: "minecraft-ten",
-            options: Object.fromEntries(Object.keys(fonts).map(e => [e, e]))
+          methods: {
+            async selectFont(id) {
+              await getFontTextures(id)
+              this.font = id
+              this.texture = Object.keys(fonts[id].textures)[1] ?? Object.keys(fonts[id].textures)[0]
+              this.variant = null
+            }
           },
-          compact: {
-            label: "Compact",
-            type: "checkbox",
-            value: true,
-            condition: form => form.texture !== "all"
-          }
+          template: `
+            <div>
+              <h2>Font</h2>
+              <div class="minecraft-title-list small">
+                <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="selectFont(id)" :class="{ selected: font === id }">
+                  <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + id + '/thumbnails/flat.png'" />
+                  <div>{{ data.name }}</div>
+                </div>
+              </div>
+              <br>
+              <h2>Texture</h2>
+              <div class="minecraft-title-list">
+                <div class="minecraft-title-item" @click="texture = 'all'; variant = null" :class="{ selected: texture === 'all' }">
+                  <div>All</div>
+                </div>
+                <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures)" v-if="fonts[font].textures[id]" @click="texture = id; variant = null" :class="{ selected: texture === id }">
+                  <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                  <div>{{ data.name }}</div>
+                  <i v-if="fonts[font].textures[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(fonts[font].textures[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(fonts[font].textures[id].variants).length > 9 ? '9_plus' : Object.keys(fonts[font].textures[id].variants).length + 1 }}</i>
+                </div>
+              </div>
+              <div v-if="fonts[font].textures[texture]?.variants">
+              <br>
+                <h2>Texture Variants</h2>
+                <div class="minecraft-title-list">
+                  <div class="minecraft-title-item" @click="variant = null" :class="{ selected: !variant }">
+                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + texture + '.png'" />
+                    <div>{{ fonts[font].textures[texture].name }}</div>
+                  </div>
+                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures[texture].variants)" @click="variant = id" :class="{ selected: variant === id }">
+                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                    <div>{{ data.name }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          `
         },
-        async onConfirm(result) {
-          await getFontCharacters(result.font)
-          await getFontTextures(result.font)
-          const str = Object.keys(fonts[result.font].characters).sort().join("").replace(/😩|😳/g, "").replace("a", "😳a").replace("'", "😩'")
+        async onConfirm() {
+          await getFontCharacters(this.content_vue.font)
+          const str = Object.keys(fonts[this.content_vue.font].characters).sort().join("").replace(/😩|😳/g, "").replace("a", "😳a").replace("'", "😩'")
           const scale = [1, 1, 1]
-          if (result.texture === "all") for (const [i, texture] of Object.keys(fonts[result.font].textures).entries()) {
-            addText(str, {
-              debug: true,
-              font: result.font,
-              texture: texture,
-              row: Object.keys(fonts[result.font].textures).length - i - 1,
-              characterSpacing: 8,
-              rowSpacing: 8,
-              blend: "multiply",
-              colour: "#fff",
-              scale,
-              customBorder: false,
-              spacerWidth: fonts[result.font].width - 1
-            })
+          if (this.content_vue.texture === "all") {
+            const textures = []
+            for (const [id, data] of Object.entries(fonts[this.content_vue.font].textures)) {
+              textures.push([id])
+              if (data.variants) textures.push(...Object.keys(data.variants).map(e => [id, e]))
+            }
+            for (const [i, texture] of textures.entries()) {
+              await addText(str, {
+                debug: true,
+                font: this.content_vue.font,
+                texture: texture[0],
+                variant: texture[1],
+                row: Object.keys(fonts[this.content_vue.font].textures).length - i - 1,
+                characterSpacing: 8,
+                rowSpacing: 8,
+                blend: "multiply",
+                colour: "#fff",
+                scale,
+                customBorder: false,
+                spacerWidth: fonts[this.content_vue.font].width - 1
+              })
+            }
           } else {
-            if (result.compact) {
-              const parts = []
-              let part = ""
-              let x = 0
-              for (const char of str) {
-                part += char
-                x++
-                if (x >= 11) {
-                  x = 0
-                  parts.push(part)
-                  part = ""
-                }
+            const parts = []
+            let part = ""
+            let x = 0
+            for (const char of str) {
+              part += char
+              x++
+              if (x >= 11) {
+                x = 0
+                parts.push(part)
+                part = ""
               }
-              if (part) parts.push(part)
-              for (const [i, part] of parts.entries()) {
-                addText(part, {
-                  debug: true,
-                  font: result.font,
-                  texture: result.texture,
-                  row: parts.length - i - 1,
-                  characterSpacing: 8,
-                  rowSpacing: 8,
-                  blend: "multiply",
-                  colour: "#fff",
-                  scale,
-                  customBorder: false,
-                  spacerWidth: fonts[result.font].width - 1
-                })
-              }
-            } else addText(str, {
-              debug: true,
-              font: result.font,
-              texture: result.texture,
-              row: 0,
-              characterSpacing: 8,
-              blend: "multiply",
-              colour: "#fff",
-              scale,
-              customBorder: false,
-              spacerWidth: fonts[result.font].width - 1
-            })
+            }
+            if (part) parts.push(part)
+            for (const [i, part] of parts.entries()) {
+              await addText(part, {
+                debug: true,
+                font: this.content_vue.font,
+                texture: this.content_vue.texture,
+                row: parts.length - i - 1,
+                characterSpacing: 8,
+                rowSpacing: 8,
+                blend: "multiply",
+                colour: "#fff",
+                scale,
+                customBorder: false,
+                spacerWidth: fonts[this.content_vue.font].width - 1,
+                variant: this.content_vue.variant
+              })
+            }
           }
         }
       })
@@ -1505,7 +1539,7 @@
     })
     let texture = await makeTexture(args)
     let match
-    for (const image of Texture.all) {
+    if (!args.debug) for (const image of Texture.all) {
       if (image.img.src === texture.img.src) {
         match = true
         texture = image
