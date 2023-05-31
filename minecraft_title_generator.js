@@ -774,6 +774,9 @@
             overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
             variant: null,
             hue: 0,
+            saturation: 100,
+            brightness: 100,
+            contrast: 100,
             colour: "#ffffff",
             blend: "multiply",
             blends: {
@@ -1159,7 +1162,7 @@
                   <div class="minecraft-title-list">
                     <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures)" v-if="fonts[font].textures[id]" @click="texture = id; variant = null; updatePreview(); scrollToVariants()" :class="{ selected: texture === id }">
                       <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
-                      <div>{{ data.name }}</div>
+                      <div>{{ data.category ?? data.name }}</div>
                       <div class="minecraft-title-item-buttons">
                         <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
                         <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', id)">save</i>
@@ -1263,11 +1266,27 @@
                 <br>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 3 }">
-                <h2>Hue Shift</h2>
-                <p>Shift the hue of the chosen texture by the provided number of degrees</p>
+                <h2>Filters</h2>
+                <p>Apply some filters to the chosen texture</p>
                 <div class="bar slider_input_combo">
+                  <div class="slider-label" style="width:70px">Hue</div>
                   <input type="range" class="tool disp_range" v-model.number="hue" min="0" max="359" step="1" @input="updatePreview" />
                   <input type="number" class="tool disp_text" v-model.number="hue" step="1" @input="updatePreview" />
+                </div>
+                <div class="bar slider_input_combo">
+                  <div class="slider-label" style="width:70px">Saturation</div>
+                  <input type="range" class="tool disp_range" v-model.number="saturation" min="0" max="200" step="1" @input="updatePreview" />
+                  <input type="number" class="tool disp_text" v-model.number="saturation" step="1" @input="updatePreview" />
+                </div>
+                <div class="bar slider_input_combo">
+                  <div class="slider-label" style="width:70px">Brightness</div>
+                  <input type="range" class="tool disp_range" v-model.number="brightness" min="0" max="200" step="1" @input="updatePreview" />
+                  <input type="number" class="tool disp_text" v-model.number="brightness" step="1" @input="updatePreview" />
+                </div>
+                <div class="bar slider_input_combo">
+                  <div class="slider-label" style="width:70px">Contrast</div>
+                  <input type="range" class="tool disp_range" v-model.number="contrast" min="0" max="200" step="1" @input="updatePreview" />
+                  <input type="number" class="tool disp_text" v-model.number="contrast" step="1" @input="updatePreview" />
                 </div>
                 <br>
                 <h2>Colour</h2>
@@ -1408,7 +1427,7 @@
                 </div>
                 <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures)" v-if="fonts[font].textures[id]" @click="texture = id; variant = null" :class="{ selected: texture === id }">
                   <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
-                  <div>{{ data.name }}</div>
+                  <div>{{ data.category ?? data.name }}</div>
                   <i v-if="fonts[font].textures[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(fonts[font].textures[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(fonts[font].textures[id].variants).length > 9 ? '9_plus' : Object.keys(fonts[font].textures[id].variants).length + 1 }}</i>
                 </div>
               </div>
@@ -1668,9 +1687,9 @@
       }
     }
     ctx.globalCompositeOperation = "copy"
-    ctx.filter =`hue-rotate(${args.hue}deg)`
+    ctx.filter =`hue-rotate(${args.hue}deg) saturate(${args.saturation}%) brightness(${args.brightness}%) contrast(${args.contrast}%`
     ctx.drawImage(canvas, 0, 0)
-    ctx.filter ="hue-rotate(0deg)"
+    ctx.filter ="hue-rotate(0deg) saturate(100%) brightness(100%) contrast(100%)"
     ctx.globalCompositeOperation = args.blend
     ctx.fillStyle = args.colour
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -2072,6 +2091,9 @@
       colour: vue.colour,
       blend: vue.blend,
       hue: vue.hue,
+      saturation: vue.saturation,
+      brightness: vue.brightness,
+      contrast: vue.contrast,
       customBorder: vue.customBorder,
       customBorderColour: vue.customBorderColour,
       fadeToBorder: vue.fadeToBorder,
