@@ -908,7 +908,7 @@
             finish: () => dialog.onConfirm(),
             async updateFont() {
               await getFontTextures(this.font)
-              if (!this.textures.find(e => e[0] === `${this.font}.flat`)) {
+              if (!this.textures.find(e => e[0] === "flat" && e[2] === this.font)) {
                 const textures = Object.entries(fonts[this.font].textures).map(e => e.concat([this.font]))
                 const overlays = Object.entries(fonts[this.font].overlays).map(e => e.concat([this.font]))
                 textures.sort((a, b) => {
