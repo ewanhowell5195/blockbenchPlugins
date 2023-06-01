@@ -649,7 +649,7 @@
           .minecraft-title-item:hover i{
             display: flex!important;
           }
-          .minecraft-title-item-buttons > i:hover, #minecraft-title-preview-container > i:hover, .minecraft-title-button:hover {
+          .minecraft-title-item-buttons > i:hover, #minecraft-title-preview-container > i:hover, .minecraft-title-button:hover, #minecraft-title-custom-texture > i:hover {
             color: var(--color-light);
           }
           .minecraft-title-item-author:hover::after {
@@ -658,13 +658,12 @@
             position: absolute;
             background-color: var(--color-dark);
             padding: 4px;
-            margin: 0 0 0 4px;
+            margin: 0 0 0 22px;
             font-size: 0.8em;
             pointer-events: none;
           }
           .minecraft-title-item:nth-child(3n) .minecraft-title-item-author:hover::after {
-            margin: 0 4px 0 0;
-            transform: translateX(calc(-100% - 22px));
+            transform: translateX(calc(-100% - 25px));
           }
           #minecraft-title-expanded-preview {
             position: absolute;
@@ -696,12 +695,19 @@
             max-width: 500px;
             max-height: 160px;
             object-fit: contain;
+            cursor: pointer;
           }
           .minecraft-title-file {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            cursor: pointer;
+          }
+          .minecraft-title-file > div {
+            display: flex;
+            gap: 10px;
+          }
+          .minecraft-title-file > div > button {
+            flex: 1;
           }
           #custom-gradient {
             display: flex;
@@ -756,6 +762,15 @@
             text-decoration: underline;
             cursor: pointer;
           }
+          #minecraft-title-custom-texture {
+            position: relative;
+          }
+          #minecraft-title-custom-texture > i {
+            position: absolute;
+            top: 7px;
+            right: 7px;
+            cursor: pointer;
+          }
         </style>`],
         component: {
           data: {
@@ -778,6 +793,14 @@
             brightness: 100,
             contrast: 100,
             colour: "#ffffff",
+            customBorderColour: "#000000",
+            customEdgeColour: "#000000",
+            gradientColour0: "#FFCF76",
+            gradientColour1: "#FFA3A3",
+            gradientColour2: "#F4C1A4",
+            gradientColour3: "#E19A3E",
+            gradientColour4: "#DA371E",
+            overlayColour: "#ffffff",
             blend: "multiply",
             blends: {
               multiply: "Multiply",
@@ -792,7 +815,6 @@
               "source-over": "Source Over"
             },
             customBorder: false,
-            customBorderColour: "#000000",
             fadeToBorder: false,
             characterSpacing: 0,
             rowSpacing: 0,
@@ -803,20 +825,14 @@
             update: false,
             terminators: false,
             customEdge: false,
-            customEdgeColour: "#000000",
             textureSource: "premade",
             overlaySource: "premade",
-            gradientColour0: "#FFCF76 ",
-            gradientColour1: "#FFA3A3",
-            gradientColour2: "#F4C1A4",
-            gradientColour3: "#E19A3E",
-            gradientColour4: "#DA371E",
             gradientColour1Enabled: false,
             gradientColour2Enabled: false,
             gradientColour3Enabled: false,
-            overlayColour: "#ffffff",
             overlayBlend: "overlay",
-            overlayColourBlend: "multiply"
+            overlayColourBlend: "multiply",
+            customTexture: null
           },
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
@@ -830,6 +846,70 @@
             $(this.$refs.overlayColour).spectrum(colourInput(dialog, "overlayColour"))
           },
           methods: {
+            async reset() {
+              if (this.tab === 0) {
+                if (this.font !== Object.keys(fonts)[0]) {
+                  this.font = Object.keys(fonts)[0]
+                  await this.updateFont()
+                }
+                this.textType = "top"
+                this.row = 0
+              } else if (this.tab === 1) {
+                this.texture = Object.keys(fonts["minecraft-ten"].textures)[1] ?? Object.keys(fonts["minecraft-ten"].textures)[0]
+                this.variant = null
+                this.textureSource = "premade"
+                this.gradientColour1Enabled = false
+                this.gradientColour2Enabled = false
+                this.gradientColour3Enabled = false
+                this.gradientColour0 = "#FFCF76"
+                this.gradientColour1 = "#FFA3A3"
+                this.gradientColour2 = "#F4C1A4"
+                this.gradientColour3 = "#E19A3E"
+                this.gradientColour4 = "#DA371E"
+                $(this.$refs.gradientColour0).spectrum("set", "#FFCF76")
+                $(this.$refs.gradientColour1).spectrum("set", "#FFA3A3")
+                $(this.$refs.gradientColour2).spectrum("set", "#F4C1A4")
+                $(this.$refs.gradientColour3).spectrum("set", "#E19A3E")
+                $(this.$refs.gradientColour4).spectrum("set", "#DA371E")
+              } else if (this.tab === 2) {
+                this.overlaySource = "premade"
+              } else if (this.tab === 3) {
+                this.terminators = false
+              } else if (this.tab === 4) {
+                this.characterSpacing = 0
+                this.rowSpacing = 0
+                this.scaleX = 1
+                this.scaleY = 1
+                this.scaleZ = 1
+              }
+              this.resetTexture()
+              this.makePreview()
+            },
+            resetTexture(force) {
+              if (force || this.tab === 2) {
+                this.overlay = Object.keys(fonts["minecraft-ten"].overlays)[0]
+                this.overlayBlend = "overlay"
+                this.overlayColourBlend = "multiply"
+                this.overlayColour = "#ffffff"
+                $(this.$refs.overlayColour).spectrum("set", "#ffffff")
+              }
+              if (force || this.tab === 3) {
+                this.hue = 0
+                this.saturation = 100
+                this.brightness = 100
+                this.contrast = 100
+                this.blend = "multiply"
+                this.customBorder = false
+                this.fadeToBorder = false
+                this.customEdge = false
+                this.colour = "#ffffff"
+                this.customBorderColour = "#000000"
+                this.customEdgeColour = "#000000"
+                $(this.$refs.colour).spectrum("set", "#ffffff")
+                $(this.$refs.customBorderColour).spectrum("set", "#000000")
+                $(this.$refs.customEdgeColour).spectrum("set", "#000000")
+              }
+            },
             finish: () => dialog.onConfirm(),
             async updateFont() {
               await getFontTextures(this.font)
@@ -1055,7 +1135,7 @@
               this.customTextureCanvas.height = texture.image.height
               this.customTextureCanvas.getContext("2d").drawImage(texture.image, 0, 0, this.customTextureCanvas.width, this.customTextureCanvas.height)
               this.customTexture = this.customTextureCanvas.toDataURL()
-              this.makePreview()
+              this.updatePreview()
             },
             async selectCustomOverlay() {
               const texture = await getTextureFromFile()
@@ -1064,7 +1144,12 @@
               this.customOverlayCanvas.height = texture.image.height
               this.customOverlayCanvas.getContext("2d").drawImage(texture.image, 0, 0, this.customOverlayCanvas.width, this.customOverlayCanvas.height)
               this.customOverlay = this.customOverlayCanvas.toDataURL()
-              this.makePreview()
+              this.updatePreview()
+            },
+            deleteCustomTexture() {
+              this.customTexture = null
+              this.customTextureCanvas.getContext("2d").clearRect(0, 0, this.customTextureCanvas.width, this.customTextureCanvas.height)
+              this.updatePreview()
             },
             saveTexture: async (font, type, texture, variant) => Blockbench.export({
               type: "PNG Texture",
@@ -1090,6 +1175,25 @@
                   this.$refs.textureVariants.scrollIntoView({ behavior: "smooth" })
                 }
               }, 0)
+            },
+            importTextureAsFile() {
+              Blockbench.showMessageBox({
+                title: "Import current texture as file",
+                message: "Are you sure you want to import the current texture as a file?\n\nAny settings applied to it will be baked into the texture and cannot be removed.\n\nThis action cannot be undone.",
+                buttons: ["dialog.confirm", "dialog.cancel"]
+              }, async button => {
+                if (button === 0) {
+                  const args = getArgs(this)
+                  args.canvas = true
+                  const texture = await makeTexture(args)
+                  this.customTextureCanvas.width = texture.width
+                  this.customTextureCanvas.height = texture.height
+                  this.customTextureCanvas.getContext("2d").drawImage(texture, 0, 0, this.customTextureCanvas.width, this.customTextureCanvas.height)
+                  this.customTexture = texture.toDataURL()
+                  this.resetTexture(true)
+                  this.updatePreview()
+                }
+              })
             }
           },
           computed: {
@@ -1105,6 +1209,9 @@
           },
           template: `
             <div id="${id}">
+              <div class="dialog_close_button" style="right:30px;z-index:3;" @click="reset" title="Reset values back to their defaults">
+                <i class="material-icons">replay</i>
+              </div>
               <div id="minecraft-title-tabs">
                 <div @click="tab = 0" :class="{ selected: tab === 0 }">Text</div>
                 <div @click="tab = 1" :class="{ selected: tab === 1 }">Texture</div>
@@ -1222,9 +1329,13 @@
                     </div>
                   </div>
                 </div>
-                <div :class="{ hidden: textureSource !== 'file' }" id="minecraft-title-custom-texture" class="minecraft-title-file" @click="selectCustomTexture">
-                  <canvas class="checkerboard" width="500" height="160" />
-                  <button>Select File</button>
+                <div :class="{ hidden: textureSource !== 'file' }" id="minecraft-title-custom-texture" class="minecraft-title-file">
+                  <canvas class="checkerboard" width="500" height="160"  @click="selectCustomTexture" />
+                  <i v-if="customTexture" class="material-icons" title="Delete custom texture" @click="deleteCustomTexture">delete</i>
+                  <div>
+                    <button @click="selectCustomTexture">Select file</button>
+                    <button @click="importTextureAsFile" title="Import the current selected texture as a custom texture, with its overlay and styles applied">Import current texture as file</button>
+                  </div>
                 </div>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 2 }">
@@ -1252,7 +1363,7 @@
                 </div>
                 <div :class="{ hidden: overlaySource !== 'file' }" id="minecraft-title-custom-overlay" class="minecraft-title-file" @click="selectCustomOverlay">
                   <canvas class="checkerboard" width="500" height="160" />
-                  <button>Select File</button>
+                  <button>Select file</button>
                   <br>
                 </div>
                 <p>The blend method to use when applying the overlay</p>
@@ -1703,7 +1814,7 @@
         ctx.fillRect(0, row[2] * m, canvas.width, (row[3] - row[2]) * m)
       }
     }
-    if (args.overlay && args.overlay !== "none") {
+    if (args.customOverlay || (args.overlay && args.overlay !== "none")) {
       const overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(args.customOverlay ?? await getTexture(fonts[args.font].overlays, args.overlay), fulfill, null, fulfill))).image
       const overlayCanvas = new CanvasFrame(overlay.width, overlay.height)
       overlayCanvas.ctx.drawImage(overlay, 0, 0)
@@ -1732,7 +1843,7 @@
     if (args.fadeToBorder) {
       ctx.globalCompositeOperation = "source-atop"
       const height = fonts[args.font].ends[fonts[args.font].ends.length - 1][3]
-      const border = ctx.getImageData(0, fonts[font].border * m, 1, 1).data
+      const border = ctx.getImageData(0, fonts[args.font].border * m, 1, 1).data
       const gradient = ctx.createLinearGradient(0, 0, 0, height * m)
       for (const stop of fonts[args.font].ends) {
         gradient.addColorStop(stop[0] / height, `rgb(${border[0]},${border[1]},${border[2]})`)
@@ -1743,6 +1854,7 @@
       ctx.fillStyle = gradient
       ctx.fillRect(0, 0, canvas.width * m, height * m)
     }
+    if (args.canvas) return canvas
     if (args.three) {
       const texture = await new Promise(fulfil => new THREE.TextureLoader().load(canvas.toDataURL(), fulfil))
       texture.colorSpace = THREE.SRGBColorSpace
