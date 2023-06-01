@@ -27,7 +27,7 @@
       terminatorSpace: true
     }
   }
-  let format, action, dialog, mode, panel, styles, preview, debug, aboutAction
+  let format, action, dialog, mode, panel, styles, preview, debug, aboutAction, stats
   const id = "minecraft_title_generator"
   const name = "Minecraft Title Generator"
   const icon = "text_fields"
@@ -233,14 +233,6 @@
           })
         }
       })
-      await getFontTextures("minecraft-ten", true)
-      const fontData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts.json").then(e => e.json()).catch(() => [])
-      for (const font of fontData) {
-        font.name ??= titleCase(font.id)
-        font.characters = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/characters.json`
-        font.textures = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/textures.json`
-        fonts[font.id] = font
-      }
       action = new Action("minecraft_title_add_text", {
         name: "Add Minecraft Title Text",
         icon,
@@ -778,6 +770,7 @@
             text: "",
             font: Object.keys(fonts)[0],
             fonts,
+            fontList: [],
             textType: "top",
             textTypes: {
               "top": 'Top - The "Minecraft" text',
@@ -786,7 +779,9 @@
             },
             row: 0,
             texture: Object.keys(fonts["minecraft-ten"].textures)[1] ?? Object.keys(fonts["minecraft-ten"].textures)[0],
+            textures: [],
             overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
+            overlays: [],
             variant: null,
             hue: 0,
             saturation: 100,
@@ -913,6 +908,22 @@
             finish: () => dialog.onConfirm(),
             async updateFont() {
               await getFontTextures(this.font)
+              if (!this.textures.find(e => e[0] === `${this.font}.flat`)) {
+                const textures = Object.entries(fonts[this.font].textures).map(e => e.concat([this.font]))
+                const overlays = Object.entries(fonts[this.font].overlays).map(e => e.concat([this.font]))
+                textures.sort((a, b) => {
+                  const statsA = stats.find(e => e.id === `${a[2]}.${a[0]}`)?.count ?? 0
+                  const statsB = stats.find(e => e.id === `${a[2]}.${b[0]}`)?.count ?? 0
+                  return statsB - statsA
+                })
+                overlays.sort((a, b) => {
+                  const statsA = stats.find(e => e.id === `${a[2]}.${a[0]}`)?.count ?? 0
+                  const statsB = stats.find(e => e.id === `${a[2]}.${b[0]}`)?.count ?? 0
+                  return statsB - statsA
+                })
+                this.textures.push(...textures)
+                this.overlays.push(...overlays)
+              }
               this.texture = Object.keys(fonts[this.font].textures)[1] ?? Object.keys(fonts[this.font].textures)[0]
               this.overlay = Object.keys(fonts[this.font].overlays)[0]
               this.makePreview()
@@ -1184,6 +1195,21 @@
               }, async button => {
                 if (button === 0) {
                   const args = getArgs(this)
+                  const chosenTexture = args.customTexture || args.gradientColour0 ? undefined : args.texture
+                  const chosenOverlay = args.customOverlay || args.overlay === "none" ? undefined : args.overlay
+                  if (chosenTexture || chosenOverlay) fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", {
+                    method: "POST",
+                    headers: {
+                      source: "blockbench",
+                      "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                      font: args.font,
+                      ignoreFont: true,
+                      texture: chosenTexture,
+                      overlay: chosenOverlay
+                    })
+                  }).catch(() => {})
                   args.canvas = true
                   const texture = await makeTexture(args)
                   this.customTextureCanvas.width = texture.width
@@ -1232,7 +1258,7 @@
                 <h2>Font</h2>
                 <p>The font to use for the text</p>
                 <div class="minecraft-title-list small">
-                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="font = id; variant = null; updateFont()" :class="{ selected: font === id }">
+                  <div class="minecraft-title-item" v-for="[id, data] of fontList" @click="font = id; variant = null; updateFont()" :class="{ selected: font === id }">
                     <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + id + '/thumbnails/flat.png'" />
                     <div>{{ data.name }}</div>
                     <div class="minecraft-title-item-buttons">
@@ -1267,7 +1293,7 @@
                 </ul>
                 <div v-if="textureSource === 'premade'" >
                   <div class="minecraft-title-list">
-                    <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures)" v-if="fonts[font].textures[id]" @click="texture = id; variant = null; updatePreview(); scrollToVariants()" :class="{ selected: texture === id }">
+                    <div class="minecraft-title-item" v-for="[id, data, type] of textures" v-if="font === type" @click="texture = id; variant = null; updatePreview(); scrollToVariants()" :class="{ selected: texture === id }">
                       <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                       <div>{{ data.category ?? data.name }}</div>
                       <div class="minecraft-title-item-buttons">
@@ -1346,7 +1372,7 @@
                   <li @click="overlaySource = 'file'; updatePreview()" :class="{ selected: overlaySource === 'file' }">File</li>
                 </ul>
                 <div v-if="overlaySource === 'premade'" class="minecraft-title-list small">
-                  <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].overlays)" v-if="fonts[font].overlays[id]" @click="overlay = id; updatePreview()" :class="{ selected: overlay === id }">
+                  <div class="minecraft-title-item" v-for="[id, data, type] of overlays" v-if="font === type" @click="overlay = id; updatePreview()" :class="{ selected: overlay === id }">
                     <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                     <div>{{ data.name }}</div>
                     <div class="minecraft-title-item-buttons">
@@ -1486,6 +1512,42 @@
           addText(text, getArgs(this.content_vue))
         },
         async onBuild() {
+          stats = await fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", { headers: { source: "blockbench" } }).then(e => e.json()).catch(() => [])
+          const ten = stats.find(e => e.id === "minecraft-ten")
+          if (ten) ten.count = Infinity
+          else stats.push({
+            id: "minecraft-ten",
+            count: Infinity
+          })
+          await getFontTextures("minecraft-ten", true)
+          const fontData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts.json").then(e => e.json()).catch(() => [])
+          for (const font of fontData) {
+            font.name ??= titleCase(font.id)
+            font.characters = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/characters.json`
+            font.textures = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/textures.json`
+            fonts[font.id] = font
+          }
+          this.content_vue.fontList = Object.entries(fonts)
+          this.content_vue.textures = Object.entries(fonts["minecraft-ten"].textures).map(e => e.concat(["minecraft-ten"]))
+          this.content_vue.overlays = Object.entries(fonts["minecraft-ten"].overlays).map(e => e.concat(["minecraft-ten"]))
+          if (Object.keys(fonts["minecraft-ten"].textures)[1]) this.content_vue.texture = Object.keys(fonts["minecraft-ten"].textures)[1]
+          this.content_vue.fontList.sort((a, b) => {
+            const statsA = stats.find(e => e.id === a[0])?.count ?? 0
+            const statsB = stats.find(e => e.id === b[0])?.count ?? 0
+            return statsB - statsA
+          })
+          this.content_vue.textures.sort((a, b) => {
+            const statsA = stats.find(e => e.id === `${a[2]}.${a[0]}`)?.count ?? 0
+            const statsB = stats.find(e => e.id === `${a[2]}.${b[0]}`)?.count ?? 0
+            return statsB - statsA
+          })
+          this.content_vue.overlays.sort((a, b) => {
+            const statsA = stats.find(e => e.id === `${a[2]}.${a[0]}`)?.count ?? 0
+            const statsB = stats.find(e => e.id === `${a[2]}.${b[0]}`)?.count ?? 0
+            return statsB - statsA
+          })
+          this.content_vue.$forceUpdate()
+
           this.content_vue.canvas = dialog.content_vue.$el.querySelector("#minecraft-title-preview")
           this.content_vue.customTextureCanvas = dialog.content_vue.$el.querySelector("#minecraft-title-custom-texture > canvas")
           this.content_vue.customOverlayCanvas = dialog.content_vue.$el.querySelector("#minecraft-title-custom-overlay > canvas")
@@ -1747,6 +1809,18 @@
     })
     Undo.finishEdit("Add Minecraft title text")
     updateSelection()
+    fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", {
+      method: "POST",
+      headers: {
+        source: "blockbench",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        font: args.font,
+        texture: args.customTexture || args.gradientColour0 ? undefined : args.texture,
+        overlay: args.customOverlay || args.overlay === "none" ? undefined : args.overlay
+      })
+    }).catch(() => {})
   }
 
   async function makeTexture(args) {
@@ -2039,6 +2113,25 @@
       overlay.name ??= titleCase(id)
       overlay.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/overlays/${id}.png`
       fonts[font].overlays[id] = overlay
+    }
+    const flat = stats.find(e => e.id === `${font}.flat`)
+    if (flat) flat.count = Infinity
+    else stats.push({
+      id: `${font}.flat`,
+      count: Infinity
+    })
+    stats.push({
+      id: `${font}.none`,
+      count: Infinity
+    })
+    const mainId = Object.keys(fonts[font].textures)[1]
+    if (mainId) {
+      const main = stats.find(e => e.id === `${font}.${mainId}`)
+      if (main) main.count = 999999999
+      else stats.push({
+        id: `${font}.${mainId}`,
+        count: 999999999
+      })
     }
   }
 
