@@ -701,7 +701,7 @@
           .minecraft-title-file > div > button {
             flex: 1;
           }
-          #custom-gradient {
+          #custom-gradient-customiser {
             display: flex;
             gap: 5px;
           }
@@ -827,7 +827,8 @@
             gradientColour3Enabled: false,
             overlayBlend: "overlay",
             overlayColourBlend: "multiply",
-            customTexture: null
+            customTexture: null,
+            smoothGradient: true
           },
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
@@ -856,6 +857,7 @@
                 this.gradientColour1Enabled = false
                 this.gradientColour2Enabled = false
                 this.gradientColour3Enabled = false
+                this.smoothGradient = true
                 this.gradientColour0 = "#FFCF76"
                 this.gradientColour1 = "#FFA3A3"
                 this.gradientColour2 = "#F4C1A4"
@@ -1224,13 +1226,27 @@
           },
           computed: {
             linearGradient() {
-              return `linear-gradient(${[
-                `${this.gradientColour0} 0%`,
-                this.gradientColour1Enabled ? `${this.gradientColour1} 25%` : null,
-                this.gradientColour2Enabled ? `${this.gradientColour2} 50%` : null,
-                this.gradientColour3Enabled ? `${this.gradientColour3} 75%` : null,
-                `${this.gradientColour4} 100%`
-              ].filter(e => e).join(",")})`
+              const gradient = [
+                [this.gradientColour0, 0],
+                this.gradientColour1Enabled ? [this.gradientColour1, 25] : null,
+                this.gradientColour2Enabled ? [this.gradientColour2, 50] : null,
+                this.gradientColour3Enabled ? [this.gradientColour3, 75] : null,
+                [this.gradientColour4, 100]
+              ].filter(e => e)
+              if (this.smoothGradient) return `linear-gradient(${gradient.map(e => `${e[0]} ${e[1]}%`)})`
+              const gradient2 = []
+              for (let i = 0; i < gradient.length - 1; i++) {
+                const [color1, stop1] = gradient[i]
+                const [color2, stop2] = gradient[i + 1]
+                const stopDiff = stop2 - stop1
+                if (stopDiff > 0.1) {
+                  const midStop = stop1 + stopDiff / 2
+                  gradient2.push([color1, midStop])
+                  gradient2.push([color2, midStop])
+                }
+                gradient2.push([color2, stop2])
+              }
+              return `linear-gradient(${gradient2.map(e => `${e[0]} ${e[1]}%`)})`
             }
           },
           template: `
@@ -1333,26 +1349,33 @@
                   </div>
                 </div>
                 <div :class="{ hidden: textureSource !== 'gradient' }" id="custom-gradient">
-                  <div id="gradient-preview" :style="{ background: linearGradient }"></div>
-                  <div id="gradient-colours">
-                    <div>
-                      <input ref="gradientColour0" />
+                  <div id="custom-gradient-customiser">
+                    <div id="gradient-preview" :style="{ background: linearGradient }"></div>
+                    <div id="gradient-colours">
+                      <div>
+                        <input ref="gradientColour0" />
+                      </div>
+                      <div>
+                        <input type="checkbox" :checked="gradientColour1Enabled" v-model="gradientColour1Enabled" @input="updatePreview">
+                        <input ref="gradientColour1" :class="{ disabled: !gradientColour1Enabled }" />
+                      </div>
+                      <div>
+                        <input type="checkbox" :checked="gradientColour2Enabled" v-model="gradientColour2Enabled" @input="updatePreview">
+                        <input ref="gradientColour2" :class="{ disabled: !gradientColour2Enabled }" />
+                      </div>
+                      <div>
+                        <input type="checkbox" :checked="gradientColour3Enabled" v-model="gradientColour3Enabled" @input="updatePreview">
+                        <input ref="gradientColour3" :class="{ disabled: !gradientColour3Enabled }" />
+                      </div>
+                      <div>
+                        <input ref="gradientColour4" />
+                      </div>
                     </div>
-                    <div>
-                      <input type="checkbox" :checked="gradientColour1Enabled" v-model="gradientColour1Enabled" @input="updatePreview">
-                      <input ref="gradientColour1" :class="{ disabled: !gradientColour1Enabled }" />
-                    </div>
-                    <div>
-                      <input type="checkbox" :checked="gradientColour2Enabled" v-model="gradientColour2Enabled" @input="updatePreview">
-                      <input ref="gradientColour2" :class="{ disabled: !gradientColour2Enabled }" />
-                    </div>
-                    <div>
-                      <input type="checkbox" :checked="gradientColour3Enabled" v-model="gradientColour3Enabled" @input="updatePreview">
-                      <input ref="gradientColour3" :class="{ disabled: !gradientColour3Enabled }" />
-                    </div>
-                    <div>
-                      <input ref="gradientColour4" />
-                    </div>
+                  </div>
+                  <br>
+                  <div class="checkbox-row">
+                    <input type="checkbox" :checked="smoothGradient" v-model="smoothGradient" @input="updatePreview">
+                    <div>Smooth gradient</div>
                   </div>
                 </div>
                 <div :class="{ hidden: textureSource !== 'file' }" id="minecraft-title-custom-texture" class="minecraft-title-file">
@@ -1832,33 +1855,85 @@
     let ctx = canvas.getContext("2d")
     ctx.drawImage(img, 0, 0)
     if (args.gradientColour0) {
-      ctx.globalCompositeOperation = "source-atop"
+      const colours = [
+        [args.gradientColour0, 0],
+        args.gradientColour1 ? [args.gradientColour1, 0.25] : null,
+        args.gradientColour2 ? [args.gradientColour2, 0.50] : null,
+        args.gradientColour3 ? [args.gradientColour3, 0.75] : null,
+        [args.gradientColour4, 1]
+      ].filter(e => e)
       const height = fonts[args.font].ends[fonts[args.font].ends.length - 1][3]
-      const gradient = ctx.createLinearGradient(0, 0, 0, height * m)
-      gradient.addColorStop(0, "transparent")
-      for (let i = 0; i < fonts[args.font].faces.length; i++) {
-        const face = fonts[args.font].faces[i]
-        const end = fonts[args.font].ends[i]
-        gradient.addColorStop(end[0] / height, args.gradientColour0)
-        if (face.length === 2) {
-          gradient.addColorStop(face[0] / height, args.gradientColour0)
-          if (args.gradientColour1) gradient.addColorStop(Math.lerp(face[0], face[1], 0.25) / height, args.gradientColour1)
-          if (args.gradientColour2) gradient.addColorStop((face[0] + face[1]) / 2 / height, args.gradientColour2)
-          if (args.gradientColour3) gradient.addColorStop(Math.lerp(face[0], face[1], 0.75) / height, args.gradientColour3)
-          gradient.addColorStop(face[1] / height, args.gradientColour4)
-        } else {
-          gradient.addColorStop(face[0] / height, args.gradientColour0)
-          gradient.addColorStop(face[1] / height, args.gradientColour0)
-          if (args.gradientColour1) gradient.addColorStop(Math.lerp(face[1], face[2], 0.25) / height, args.gradientColour1)
-          if (args.gradientColour2) gradient.addColorStop((face[1] + face[2]) / 2 / height, args.gradientColour2)
-          if (args.gradientColour3) gradient.addColorStop(Math.lerp(face[1], face[2], 0.75) / height, args.gradientColour3)
-          gradient.addColorStop(face[2] / height, args.gradientColour4)
-          gradient.addColorStop(face[3] / height, args.gradientColour4)
+      if (args.smoothGradient) {
+        if (canvas.width < 4000) {
+          const newCanvas = new CanvasFrame(4000, 1280)
+          newCanvas.ctx.imageSmoothingEnabled = false
+          newCanvas.ctx.drawImage(canvas, 0, 0, 4000, 1280)
+          canvas = newCanvas.canvas
+          ctx = newCanvas.ctx
+          m = canvas.width / 1000
         }
-        gradient.addColorStop(end[3] / height, args.gradientColour4)
+        ctx.globalCompositeOperation = "source-atop"
+        const gradient = ctx.createLinearGradient(0, 0, 0, height * m)
+        for (let i = 0; i < fonts[args.font].faces.length; i++) {
+          const face = fonts[args.font].faces[i]
+          const end = fonts[args.font].ends[i]
+          gradient.addColorStop(end[0] / height, args.gradientColour0)
+          if (face.length === 2) {
+            gradient.addColorStop(face[0] / height, args.gradientColour0)
+            for (const stop of colours) {
+              gradient.addColorStop(Math.lerp(face[0], face[1], stop[1]) / height, stop[0])
+            }
+            gradient.addColorStop(face[1] / height, args.gradientColour4)
+          } else {
+            gradient.addColorStop(face[0] / height, args.gradientColour0)
+            gradient.addColorStop(face[1] / height, args.gradientColour0)
+            for (const stop of colours) {
+              gradient.addColorStop(Math.lerp(face[1], face[2], stop[1]) / height, stop[0])
+            }
+            gradient.addColorStop(face[2] / height, args.gradientColour4)
+            gradient.addColorStop(face[3] / height, args.gradientColour4)
+          }
+          gradient.addColorStop(end[3] / height, args.gradientColour4)
+        }
+        ctx.fillStyle = gradient
+        ctx.fillRect(0, 0, canvas.width * m, height * m)
+      } else {
+        const colourStops = []
+        for (let i = 0; i < colours.length - 1; i++) {
+          const [color1, stop1] = colours[i]
+          const [color2, stop2] = colours[i + 1]
+          const stopDiff = stop2 - stop1
+          if (stopDiff > 0.1) {
+            const midStop = stop1 + stopDiff / 2
+            colourStops.push([color1, midStop])
+            colourStops.push([color2, midStop])
+          }
+          colourStops.push([color2, stop2])
+        }
+        ctx.globalCompositeOperation = "source-atop"
+        for (let i = 0; i < fonts[args.font].faces.length; i++) {
+          const face = fonts[args.font].faces[i]
+          const end = fonts[args.font].ends[i]
+          ctx.fillStyle = args.gradientColour0
+          if (face.length === 2) {
+            ctx.fillRect(0, end[0], canvas.width, Math.lerp(face[0], face[1], colourStops[0][1]) - end[0])
+            for (let i = 1; i < colourStops.length - 1; i++) {
+              ctx.fillStyle = colourStops[i][0]
+              const start = Math.lerp(face[0], face[1], colourStops[i][1])
+              ctx.fillRect(0, start, canvas.width, Math.lerp(face[0], face[1], colourStops[i + 1][1]) - start)
+            }
+            ctx.fillRect(0, face[1], canvas.width, end[3] - face[1])
+          } else {
+            ctx.fillRect(0, end[0], canvas.width, Math.lerp(face[1], face[2], colourStops[0][1]) - end[0])
+            for (let i = 1; i < colourStops.length - 1; i++) {
+              ctx.fillStyle = colourStops[i][0]
+              const start = Math.lerp(face[1], face[2], colourStops[i][1])
+              ctx.fillRect(0, start, canvas.width, Math.lerp(face[1], face[2], colourStops[i + 1][1]) - start)
+            }
+            ctx.fillRect(0, face[2], canvas.width, end[3] - face[2])
+          }
+        }
       }
-      ctx.fillStyle = gradient
-      ctx.fillRect(0, 0, canvas.width * m, height * m)
       ctx.fillStyle = "#0006"
       for (const end of fonts[args.font].ends) {
         ctx.fillRect(0, end[0] * m, canvas.width, end[1] * m - end[0] * m)
@@ -2316,6 +2391,7 @@
       overlayBlend: vue.overlayBlend,
       overlayColourBlend: vue.overlayColourBlend,
       overlayColour: vue.overlayColour,
+      smoothGradient: vue.smoothGradient,
       three
     }
   }
