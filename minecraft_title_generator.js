@@ -850,7 +850,7 @@
                 this.textType = "top"
                 this.row = 0
               } else if (this.tab === 1) {
-                this.texture = Object.keys(fonts["minecraft-ten"].textures)[1] ?? Object.keys(fonts["minecraft-ten"].textures)[0]
+                this.texture = Object.keys(fonts[this.font].textures)[1] ?? Object.keys(fonts[this.font].textures)[0]
                 this.variant = null
                 this.textureSource = "premade"
                 this.gradientColour1Enabled = false
