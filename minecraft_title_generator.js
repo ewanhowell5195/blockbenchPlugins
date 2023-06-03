@@ -38,6 +38,16 @@
     discord: "https://discord.ewanhowell.com/",
     github: "https://github.com/ewanhowell5195/MinecraftTitleGenerator/"
   }
+  const stopConfigs = [
+    [0.5],
+    [0.4, 0.8],
+    [1/3, 2/3],
+    [0.3, 0.6, 0.8],
+    [0.2, 0.6],
+    [0.2, 0.5, 0.8],
+    [0.2, 0.4, 0.7],
+    [0.2, 0.4, 0.6, 0.8]
+  ]
   Plugin.register(id, {
     title: name,
     icon,
@@ -1227,27 +1237,28 @@
           },
           computed: {
             linearGradient() {
-              const gradient = [
+              if (this.smoothGradient) return `linear-gradient(${[
                 [this.gradientColour0, 0],
                 this.gradientColour1Enabled ? [this.gradientColour1, 25] : null,
                 this.gradientColour2Enabled ? [this.gradientColour2, 50] : null,
                 this.gradientColour3Enabled ? [this.gradientColour3, 75] : null,
                 [this.gradientColour4, 100]
-              ].filter(e => e)
-              if (this.smoothGradient) return `linear-gradient(${gradient.map(e => `${e[0]} ${e[1]}%`)})`
-              const gradient2 = []
-              for (let i = 0; i < gradient.length - 1; i++) {
-                const [color1, stop1] = gradient[i]
-                const [color2, stop2] = gradient[i + 1]
-                const stopDiff = stop2 - stop1
-                if (stopDiff > 0.1) {
-                  const midStop = stop1 + stopDiff / 2
-                  gradient2.push([color1, midStop])
-                  gradient2.push([color2, midStop])
-                }
-                gradient2.push([color2, stop2])
+              ].filter(e => e).map(e => `${e[0]} ${e[1]}%`)})`
+              const states = [
+                this.gradientColour1Enabled,
+                this.gradientColour2Enabled,
+                this.gradientColour3Enabled
+              ]
+              const stops = stopConfigs[states[0] << 2 | states[1] << 1 | states[2]]
+              let prev = 0
+              const colourStops = []
+              for (let i = 0, j = 0; i < 5; i++) if (states[i-1] ?? true) {
+                colourStops.push([this[`gradientColour${i}`], prev * 100])
+                colourStops.push([this[`gradientColour${i}`], (stops[j] ?? 1) * 100])
+                prev = stops[j] ?? 1
+                j++
               }
-              return `linear-gradient(${gradient2.map(e => `${e[0]} ${e[1]}%`)})`
+              return `linear-gradient(${colourStops.map(e => `${e[0]} ${e[1]}%`)})`
             }
           },
           template: `
@@ -1856,15 +1867,15 @@
     let ctx = canvas.getContext("2d")
     ctx.drawImage(img, 0, 0)
     if (args.gradientColour0) {
-      const colours = [
-        [args.gradientColour0, 0],
-        args.gradientColour1 ? [args.gradientColour1, 0.25] : null,
-        args.gradientColour2 ? [args.gradientColour2, 0.50] : null,
-        args.gradientColour3 ? [args.gradientColour3, 0.75] : null,
-        [args.gradientColour4, 1]
-      ].filter(e => e)
-      const height = fonts[args.font].ends[fonts[args.font].ends.length - 1][3]
       if (args.smoothGradient) {
+        const colours = [
+          [args.gradientColour0, 0],
+          args.gradientColour1 ? [args.gradientColour1, 0.25] : null,
+          args.gradientColour2 ? [args.gradientColour2, 0.50] : null,
+          args.gradientColour3 ? [args.gradientColour3, 0.75] : null,
+          [args.gradientColour4, 1]
+        ].filter(e => e)
+        const height = fonts[args.font].ends[fonts[args.font].ends.length - 1][3]
         if (canvas.width < 4000) {
           const newCanvas = new CanvasFrame(4000, 1280)
           newCanvas.ctx.imageSmoothingEnabled = false
@@ -1899,40 +1910,29 @@
         ctx.fillStyle = gradient
         ctx.fillRect(0, 0, canvas.width * m, height * m)
       } else {
-        const colourStops = []
-        for (let i = 0; i < colours.length - 1; i++) {
-          const [color1, stop1] = colours[i]
-          const [color2, stop2] = colours[i + 1]
-          const stopDiff = stop2 - stop1
-          if (stopDiff > 0.1) {
-            const midStop = stop1 + stopDiff / 2
-            colourStops.push([color1, midStop])
-            colourStops.push([color2, midStop])
-          }
-          colourStops.push([color2, stop2])
-        }
-        ctx.globalCompositeOperation = "source-atop"
+        const charHeight = fonts[args.font].faces[0][3] ? fonts[args.font].faces[0][2] - fonts[args.font].faces[0][1] : fonts[args.font].faces[0][1] - fonts[args.font].faces[0][0]
+        const states = [
+          !!args.gradientColour1,
+          !!args.gradientColour2,
+          !!args.gradientColour3
+        ]
+        const stops = stopConfigs[states[0] << 2 | states[1] << 1 | states[2]]
         for (let i = 0; i < fonts[args.font].faces.length; i++) {
           const face = fonts[args.font].faces[i]
           const end = fonts[args.font].ends[i]
-          ctx.fillStyle = args.gradientColour0
-          if (face.length === 2) {
-            ctx.fillRect(0, end[0], canvas.width, Math.lerp(face[0], face[1], colourStops[0][1]) - end[0])
-            for (let i = 1; i < colourStops.length - 1; i++) {
-              ctx.fillStyle = colourStops[i][0]
-              const start = Math.lerp(face[0], face[1], colourStops[i][1])
-              ctx.fillRect(0, start, canvas.width, Math.lerp(face[0], face[1], colourStops[i + 1][1]) - start)
-            }
-            ctx.fillRect(0, face[1], canvas.width, end[3] - face[1])
-          } else {
-            ctx.fillRect(0, end[0], canvas.width, Math.lerp(face[1], face[2], colourStops[0][1]) - end[0])
-            for (let i = 1; i < colourStops.length - 1; i++) {
-              ctx.fillStyle = colourStops[i][0]
-              const start = Math.lerp(face[1], face[2], colourStops[i][1])
-              ctx.fillRect(0, start, canvas.width, Math.lerp(face[1], face[2], colourStops[i + 1][1]) - start)
-            }
-            ctx.fillRect(0, face[2], canvas.width, end[3] - face[2])
+          const offset = face[3] ? face[1] : face[0] 
+          let prev = 0
+          for (let i = 0, j = 0; i < 5; i++) if (states[i-1] ?? true) {
+            const end = Math.floor((stops[j] ?? 1) * charHeight)
+            ctx.fillStyle = args[`gradientColour${i}`]
+            ctx.fillRect(0, offset + prev, canvas.width, end - prev)
+            prev = end
+            j++
           }
+          ctx.fillStyle = args.gradientColour0
+          ctx.fillRect(0, end[0], canvas.width, (face[3] ? face[1] : end[1]) - end[0])
+          ctx.fillStyle = args.gradientColour4
+          ctx.fillRect(0, (face[2] ?? end[2]), canvas.width, end[3] - (face[2] ?? end[2]))
         }
       }
       ctx.fillStyle = "#0006"
