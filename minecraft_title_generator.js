@@ -828,7 +828,8 @@
             overlayBlend: "overlay",
             overlayColourBlend: "multiply",
             customTexture: null,
-            smoothGradient: true
+            smoothGradient: true,
+            lastTextureSource: null
           },
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
@@ -1305,7 +1306,7 @@
                 <ul class="form_inline_select">
                   <li @click="textureSource = 'premade'; updatePreview()" :class="{ selected: textureSource === 'premade' }">Pre-made</li>
                   <li @click="textureSource = 'gradient'; updatePreview()" :class="{ selected: textureSource === 'gradient' }">Gradient</li>
-                  <li @click="textureSource = 'file'; updatePreview()" :class="{ selected: textureSource === 'file' }">File</li>
+                  <li @click="lastTextureSource = textureSource; textureSource = 'file'; updatePreview()" :class="{ selected: textureSource === 'file' }">File</li>
                 </ul>
                 <div v-if="textureSource === 'premade'" >
                   <div class="minecraft-title-list">
@@ -2363,7 +2364,7 @@
       font: vue.font,
       type: vue.textType,
       row: vue.row,
-      texture: vue.textureSource === "gradient" ? "flat" : vue.texture,
+      texture: vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient") ? "flat" : vue.texture,
       variant: vue.variant,
       characterSpacing: vue.characterSpacing,
       rowSpacing: vue.rowSpacing,
@@ -2382,11 +2383,11 @@
       customEdgeColour: vue.customEdgeColour,
       customTexture: vue.textureSource === "file" ? vue.customTexture : null,
       customOverlay: vue.overlaySource === "file" ? vue.customOverlay : null,
-      gradientColour0: vue.textureSource === "gradient" ? vue.gradientColour0 : null,
-      gradientColour1: vue.textureSource === "gradient" && vue.gradientColour1Enabled ? vue.gradientColour1 : null,
-      gradientColour2: vue.textureSource === "gradient" && vue.gradientColour2Enabled ? vue.gradientColour2 : null,
-      gradientColour3: vue.textureSource === "gradient" && vue.gradientColour3Enabled ? vue.gradientColour3 : null,
-      gradientColour4: vue.textureSource === "gradient" ? vue.gradientColour4 : null,
+      gradientColour0: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour0 : null,
+      gradientColour1: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour1Enabled ? vue.gradientColour1 : null,
+      gradientColour2: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour2Enabled ? vue.gradientColour2 : null,
+      gradientColour3: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour3Enabled ? vue.gradientColour3 : null,
+      gradientColour4: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour4 : null,
       overlay: vue.overlay,
       overlayBlend: vue.overlayBlend,
       overlayColourBlend: vue.overlayColourBlend,
