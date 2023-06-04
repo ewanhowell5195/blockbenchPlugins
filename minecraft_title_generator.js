@@ -32,12 +32,34 @@
   const name = "Minecraft Title Generator"
   const icon = "text_fields"
   const author = "Ewan Howell"
+  const description = "Create Minecraft styled title models!"
   const about = "This plugin adds a new format that allows you to create Minecraft styled title models that you can render in high quality."
   const links = {
-    website: "https://ewanhowell.com/",
-    discord: "https://discord.ewanhowell.com/",
-    github: "https://github.com/ewanhowell5195/MinecraftTitleGenerator/"
+    website: {
+      text: "By Ewan Howell",
+      link: "https://ewanhowell.com/",
+      icon: "language",
+      colour: "#33E38E"
+    },
+    discord: {
+      text: "Discord Server",
+      link: "https://discord.ewanhowell.com/",
+      icon: "fab.fa-discord",
+      colour: "#727FFF"
+    },
+    github: {
+      text: "Submit Textures and Fonts",
+      link: "https://github.com/ewanhowell5195/MinecraftTitleGenerator/",
+      icon: "fab.fa-github",
+      colour: "#6E40C9"
+    }
   }
+  const aboutLinks = `<div class="minecraft-title-links">${Object.values(links).map(e => `
+    <a href="${e.link}">
+      ${Blockbench.getIconNode(e.icon, e.colour).outerHTML}
+      <label>${e.text}</label>
+    </a>
+  `).join("")}</div>`
   const stopConfigs = [
     [0.5],
     [0.4, 0.8],
@@ -52,7 +74,7 @@
     title: name,
     icon,
     author,
-    description: "Create Minecraft style title models!",
+    description,
     about,
     tags: ["Minecraft", "Title", "Logo"],
     version: "1.0.0",
@@ -191,6 +213,36 @@
           right: 4px;
           z-index: 1;
         }
+        .minecraft-title-links {
+          display: flex;
+          justify-content: space-around;
+          margin: 20px 40px 0;
+        }
+        .minecraft-title-links > a {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+          padding: 5px;
+          text-decoration: none;
+          flex-grow: 1;
+          flex-basis: 0;
+          color: var(--color-subtle_text);
+        }
+        .minecraft-title-links > a:hover {
+          background-color: var(--color-accent);
+          color: var(--color-light);
+        }
+        .minecraft-title-links > a > i {
+          font-size: 32px;
+          width: 100%;
+          max-width: initial;
+          height: 32px;
+          text-align: center;
+        }
+        .minecraft-title-links > a:hover > i {
+          color: var(--color-light) !important;
+        }
       `)
       let shadeState
       BarItems.toggle_shading.condition = () => Project.format.id !== format.id
@@ -218,6 +270,40 @@
         },
         onDeactivation() {
           if (shadeState) BarItems.toggle_shading.click()
+          dialog.close()
+        },
+        format_page: {
+          component: {
+            methods: { 
+              create: () => format.new()
+            },
+            template: `
+              <div style="display:flex;flex-direction:column;height:100%">
+                <p class="format_description">${description}</p>
+                <p class="format_target"><b>Target</b> : <span>Logos</span> <span>Renders</span> <span>Thumbnails</span></p>
+                <content>
+                  <h3 class="markdown">Good to know:</h3>
+                  <p class="markdown">
+                    <ul>
+                      <li>This format is designed to create Minecraft styled title models.</li>
+                      <li>New text can be added with the <strong>Add Minecraft Title Text<strong> button <i class="icon material-icons" style="font-size:20px">text_fields</i>.</li>
+                      <li>There are automatic presets for text position and text angles, make sure to check all the text options!</li>
+                      <li>To render your title, you can use the <strong>Render<strong> mode at the top right.</li>
+                      <li>The camera can be automatically positioned in the render mode using the <strong>Position camera<strong> button <i class="icon material-icons" style="font-size:20px">auto_mode</i>.</li>
+                    </ul>
+                  </p>
+                </content>
+                <div class="spacer"></div>
+                ${aboutLinks}
+                <div class="button_bar">
+                  <button id="create_new_model_button" style="margin-top:20px" @click="create">
+                    <i class="material-icons">${icon}</i>
+                    Create New Minecraft Title
+                  </button>
+                </div>
+              </div>
+            `
+          }
         }
       })
       mode = new Mode("minecraft_title_render", {
@@ -262,208 +348,309 @@
             render() {
               if (this.rendering) return
               this.rendering = true
+              const args = this
               const dialog = new Dialog({
-                id: "minecraft_title_rendering",
-                title: "Rendering...",
+                id: "minecraft_title_render_result",
+                title: "Rendering…",
                 buttons: [],
-                lines: [`<h1 style="text-align:center;">Rendering...</h1>`]
-              }).show()
-              setTimeout(() => {
-                preview.renderer.render(
-                  Canvas.scene,
-                  preview.camera
-                )
-                let minX = Infinity
-                let maxX = -Infinity
-                let minY = Infinity
-                let maxY = -Infinity
-                Canvas.scene.traverseVisible(cube => {
-                  if (cube.type === "cube") {
-                    for (let i = 0; i < 72; i += 3) {
-                      const vec = new THREE.Vector3(...cube.geometry.attributes.position.array.slice(i, i + 3))
-                        .applyMatrix4(cube.matrixWorld).project(Preview.selected.camera)
-                      const x = (vec.x + 1) / 2
-                      const y = (-vec.y + 1) / 2
-                      minX = Math.min(minX, x)
-                      maxX = Math.max(maxX, x)
-                      minY = Math.min(minY, y)
-                      maxY = Math.max(maxY, y)
-                    }
+                lines: [`<style>
+                  #minecraft_title_render_result .dialog_content {
+                    margin: 0;
                   }
-                })
-                if (minX === Infinity) {
-                  dialog.close()
-                  Blockbench.showQuickMessage("Nothing in frame")
-                  this.rendering = false
-                  return
-                }
-                minX = Math.max(minX, 0)
-                maxX = Math.min(maxX, 1)
-                minY = Math.max(minY, 0)
-                maxY = Math.min(maxY, 1)
-                const aspect = (maxX - minX) / ((maxY - minY) * Preview.selected.height / Preview.selected.width)
-                let outWidth, outHeight
-                const resolution = this.antialias ? Math.min(this.resolution * 2, 4096) : this.resolution
-                if (aspect > 1) {
-                  outWidth = resolution
-                  outHeight = resolution / aspect
-                } else {
-                  outWidth = resolution * aspect
-                  outHeight = resolution
-                }
-                preview.resize(outWidth, outHeight)
-                preview.camera.position.fromArray(Preview.selected.camera.position.toArray())
-                preview.controls.target.fromArray(Preview.selected.controls.target.toArray())
-                const fullWidth = outWidth / (maxX - minX)
-                const fullHeight = outHeight / (maxY - minY)
-                preview.camera.setViewOffset(fullWidth, fullHeight, minX * fullWidth, minY * fullHeight, outWidth, outHeight)
-                preview.render()
-                const img = new CanvasFrame(preview.canvas)
-                img.autoCrop()
-                const imageData = img.ctx.getImageData(0, 0, img.width, img.height)
-                const data = imageData.data
-                const length = data.length
-                const width = img.width
-                const height = img.height
-                const width1 = width - 1
-                const height1 = height - 1
-                for (let i = length - 4; i >= 0; i -= 4) {
-                  const x = i / 4 % img.width
-                  const y = Math.floor(i / (4 * height))
-                  if (data[i + 3] === 0) {
-                    if (
-                      (x === 0 || data[i - 1] !== 0) &&
-                      (x === width1 || data[i + 7] !== 0) &&
-                      (y === 0 || data[i - width * 4 + 3] !== 0) &&
-                      (y === height1 || data[i + width * 4 + 3] !== 0)
-                    ) {
-                      let count = 0
-                      let sr, sg, sb, sa
-                      sr = sg = sb = sa = 0
-                      if (x !== 0) {
-                        count++
-                        sr += data[i - 4]
-                        sg += data[i - 3]
-                        sb += data[i - 2]
-                        sa += data[i - 1]
+                  #minecraft-title-output {
+                    max-width: 100%;
+                    max-height: calc(100vh - 180px - 24px - 40px - 20px - 40px);
+                    min-height: 32px;
+                    border: 1px solid var(--color-accent);
+                  }
+                  #minecraft-title-render-content {
+                    margin: 20px;
+                  }
+                  #minecraft-title-render-content, #minecraft-title-render-output, #minecraft-title-render-image {
+                    display: flex;
+                    align-items: center;
+                    flex-direction: column;
+                  }
+                  #minecraft-title-render-button-row {
+                    width: 100%;
+                    display: flex;
+                    gap: 10px;
+                  }
+                  #minecraft-title-render-button-row > button {
+                    flex: 1;
+                    display: flex;
+                    gap: 10px;
+                    justify-content: center;
+                    align-items: center;
+                    text-decoration: none;
+                    height: 40px;
+                    min-width: 200px;
+                  }
+                  #minecraft-title-render-button-row > button:focus > div {
+                    text-decoration: underline;
+                  }
+                  #render-detail-row {
+                    display: flex;
+                    justify-content: space-between;
+                    width: 100%;
+                    gap: 10px;
+                    margin: 10px 0;
+                  }
+                </style>`],
+                component: {
+                  data: {
+                    rendering: true,
+                    render: null,
+                    dimensions: null,
+                    size: null
+                  },
+                  methods: {
+                    async copy() {
+                      const r = await fetch(this.render)
+                      navigator.clipboard.write([new ClipboardItem({ "image/png": await r.blob() })])
+                      Blockbench.showQuickMessage("Copied to clipboard")
+                    },
+                    save() {
+                      Blockbench.export({
+                        extensions: ["png"],
+                        type: tl("data.image"),
+                        savetype: "image",
+                        name: Project.name || "minecraft_title",
+                        content: this.render
+                      })
+                    }
+                  },
+                  template: `
+                    <div id="minecraft-title-render-content">
+                      <h1 v-if="rendering" style="text-align:center">Rendering…</h1>
+                      <div v-if="!rendering" id="minecraft-title-render-output">
+                        <div id="minecraft-title-render-image">
+                          <img id="minecraft-title-output" class="checkerboard" :src="render" />
+                          <div id="render-detail-row">
+                            <div>{{ dimensions }}</div>
+                            <div>{{ size }}</div>
+                          </div>
+                        </div>
+                        <div id="minecraft-title-render-button-row">
+                          <button @click="copy">
+                            <i class="material-icons icon">file_copy</i>
+                            <div>Copy render</div>
+                          </button>
+                          <button @click="save">
+                            <i class="material-icons icon">save</i>
+                            <div>Export render</div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  `
+                },
+                onOpen() {
+                  setTimeout(() => Canvas.withoutGizmos(() => {
+                    preview.renderer.render(
+                      Canvas.scene,
+                      preview.camera
+                    )
+                    let minX = Infinity
+                    let maxX = -Infinity
+                    let minY = Infinity
+                    let maxY = -Infinity
+                    Canvas.scene.traverseVisible(cube => {
+                      if (cube.type === "cube") {
+                        for (let i = 0; i < 72; i += 3) {
+                          const vec = new THREE.Vector3(...cube.geometry.attributes.position.array.slice(i, i + 3))
+                            .applyMatrix4(cube.matrixWorld).project(Preview.selected.camera)
+                          const x = (vec.x + 1) / 2
+                          const y = (-vec.y + 1) / 2
+                          minX = Math.min(minX, x)
+                          maxX = Math.max(maxX, x)
+                          minY = Math.min(minY, y)
+                          maxY = Math.max(maxY, y)
+                        }
                       }
-                      if (x !== width1) {
-                        count++
-                        sr += data[i + 4]
-                        sg += data[i + 5]
-                        sb += data[i + 6]
-                        sa += data[i + 7]
-                      }
-                      if (y !== 0) {
-                        count++
-                        sr += data[i - width * 4]
-                        sg += data[i - width * 4 + 1]
-                        sb += data[i - width * 4 + 2]
-                        sa += data[i - width * 4 + 3]
-                      }
-                      if (y !== height1) {
-                        count++
-                        sr += data[i + width * 4]
-                        sg += data[i + width * 4 + 1]
-                        sb += data[i + width * 4 + 2]
-                        sa += data[i + width * 4 + 3]
-                      }
-                      data[i] = sr / count
-                      data[i + 1] = sg / count
-                      data[i + 2] = sb / count
-                      data[i + 3] = sa / count
+                    })
+                    if (minX === Infinity) {
+                      dialog.close()
+                      Blockbench.showQuickMessage("Nothing in frame")
+                      args.rendering = false
+                      return
+                    }
+                    minX = Math.max(minX, 0)
+                    maxX = Math.min(maxX, 1)
+                    minY = Math.max(minY, 0)
+                    maxY = Math.min(maxY, 1)
+                    const aspect = (maxX - minX) / ((maxY - minY) * Preview.selected.height / Preview.selected.width)
+                    let outWidth, outHeight
+                    const resolution = args.antialias ? Math.min(args.resolution * 2, 4096) : args.resolution
+                    if (aspect > 1) {
+                      outWidth = resolution
+                      outHeight = resolution / aspect
                     } else {
-                      const store = []
-                      const queue = [i]
-                      while (store.length < 6 && queue.length !== 0) {
-                        const j = queue.shift()
-                        store.push(j)
-                        const x = j / 4 % img.width
-                        if (x !== 0 && data[j - 1] === 0 && !store.includes(j - 4)) queue.push(j - 4)
-                        if (x !== width1 && data[j + 7] === 0 && !store.includes(j + 4)) queue.push(j + 4)
-                        if (Math.floor(j / (4 * height)) !== 0 && data[j - width * 4 + 3] === 0 && !store.includes(j - width * 4)) queue.push(j - width * 4)
-                      }
-                      if (store.length >= 6) continue
-                      for (const j of store) {
-                        const x = j / 4 % img.width
-                        const y = Math.floor(j / (4 * height))
-                        let count = 0
-                        let sr, sg, sb, sa
-                        sr = sg = sb = sa = 0
-                        if (x !== 0 && data[j - 1] !== 0) {
-                          count++
-                          sr += data[j - 4]
-                          sg += data[j - 3]
-                          sb += data[j - 2]
-                          sa += data[j - 1]
-                        }
-                        if (x !== width1 && data[j + 7] !== 0) {
-                          count++
-                          sr += data[j + 4]
-                          sg += data[j + 5]
-                          sb += data[j + 6]
-                          sa += data[j + 7]
-                        }
-                        if (y !== 0 && data[j - width * 4 + 3] !== 0) {
-                          count++
-                          sr += data[j - width * 4]
-                          sg += data[j - width * 4 + 1]
-                          sb += data[j - width * 4 + 2]
-                          sa += data[j - width * 4 + 3]
-                        }
-                        if (y !== height1 && data[j + width * 4 + 3] !== 0) {
-                          count++
-                          sr += data[j + width * 4]
-                          sg += data[j + width * 4 + 1]
-                          sb += data[j + width * 4 + 2]
-                          sa += data[j + width * 4 + 3]
-                        }
-                        data[j] = sr / count
-                        data[j + 1] = sg / count
-                        data[j + 2] = sb / count
-                        data[j + 3] = sa / count
-                      }
-                    } 
-                  } else if (
-                    (x === 0 || data[i - 1] === 0) &&
-                    (x === width1 || data[i + 7] === 0) &&
-                    (y === 0 || data[i - width * 4 + 3] === 0) &&
-                    (y === height1 || data[i + width * 4 + 3] === 0)
-                  ) {
-                    data[i + 3] = 0
-                  } else {
-                    const store = []
-                    const queue = [i]
-                    while (store.length < 6 && queue.length !== 0) {
-                      const j = queue.shift()
-                      store.push(j)
-                      const x = j / 4 % img.width
-                      if (x !== 0 && data[j - 1] !== 0 && !store.includes(j - 4)) queue.push(j - 4)
-                      if (x !== width1 && data[j + 7] !== 0 && !store.includes(j + 4)) queue.push(j + 4)
-                      if (Math.floor(j / (4 * height)) !== 0 && data[j - width * 4 + 3] !== 0 && !store.includes(j - width * 4)) queue.push(j - width * 4)
+                      outWidth = resolution * aspect
+                      outHeight = resolution
                     }
-                    if (store.length >= 6) continue
-                    for (const j of store) {
-                      data[j + 3] = 0
+                    preview.resize(outWidth, outHeight)
+                    preview.camera.position.fromArray(Preview.selected.camera.position.toArray())
+                    preview.controls.target.fromArray(Preview.selected.controls.target.toArray())
+                    const fullWidth = outWidth / (maxX - minX)
+                    const fullHeight = outHeight / (maxY - minY)
+                    preview.camera.setViewOffset(fullWidth, fullHeight, minX * fullWidth, minY * fullHeight, outWidth, outHeight)
+                    preview.render()
+                    const img = new CanvasFrame(preview.canvas)
+                    img.autoCrop()
+                    const imageData = img.ctx.getImageData(0, 0, img.width, img.height)
+                    const data = imageData.data
+                    const length = data.length
+                    const width = img.width
+                    const height = img.height
+                    const width1 = width - 1
+                    const height1 = height - 1
+                    for (let i = length - 4; i >= 0; i -= 4) {
+                      const x = i / 4 % img.width
+                      const y = Math.floor(i / (4 * height))
+                      if (data[i + 3] === 0) {
+                        if (
+                          (x === 0 || data[i - 1] !== 0) &&
+                          (x === width1 || data[i + 7] !== 0) &&
+                          (y === 0 || data[i - width * 4 + 3] !== 0) &&
+                          (y === height1 || data[i + width * 4 + 3] !== 0)
+                        ) {
+                          let count = 0
+                          let sr, sg, sb, sa
+                          sr = sg = sb = sa = 0
+                          if (x !== 0) {
+                            count++
+                            sr += data[i - 4]
+                            sg += data[i - 3]
+                            sb += data[i - 2]
+                            sa += data[i - 1]
+                          }
+                          if (x !== width1) {
+                            count++
+                            sr += data[i + 4]
+                            sg += data[i + 5]
+                            sb += data[i + 6]
+                            sa += data[i + 7]
+                          }
+                          if (y !== 0) {
+                            count++
+                            sr += data[i - width * 4]
+                            sg += data[i - width * 4 + 1]
+                            sb += data[i - width * 4 + 2]
+                            sa += data[i - width * 4 + 3]
+                          }
+                          if (y !== height1) {
+                            count++
+                            sr += data[i + width * 4]
+                            sg += data[i + width * 4 + 1]
+                            sb += data[i + width * 4 + 2]
+                            sa += data[i + width * 4 + 3]
+                          }
+                          data[i] = sr / count
+                          data[i + 1] = sg / count
+                          data[i + 2] = sb / count
+                          data[i + 3] = sa / count
+                        } else {
+                          const store = []
+                          const queue = [i]
+                          while (store.length < 6 && queue.length !== 0) {
+                            const j = queue.shift()
+                            store.push(j)
+                            const x = j / 4 % img.width
+                            if (x !== 0 && data[j - 1] === 0 && !store.includes(j - 4)) queue.push(j - 4)
+                            if (x !== width1 && data[j + 7] === 0 && !store.includes(j + 4)) queue.push(j + 4)
+                            if (Math.floor(j / (4 * height)) !== 0 && data[j - width * 4 + 3] === 0 && !store.includes(j - width * 4)) queue.push(j - width * 4)
+                          }
+                          if (store.length >= 6) continue
+                          for (const j of store) {
+                            const x = j / 4 % img.width
+                            const y = Math.floor(j / (4 * height))
+                            let count = 0
+                            let sr, sg, sb, sa
+                            sr = sg = sb = sa = 0
+                            if (x !== 0 && data[j - 1] !== 0) {
+                              count++
+                              sr += data[j - 4]
+                              sg += data[j - 3]
+                              sb += data[j - 2]
+                              sa += data[j - 1]
+                            }
+                            if (x !== width1 && data[j + 7] !== 0) {
+                              count++
+                              sr += data[j + 4]
+                              sg += data[j + 5]
+                              sb += data[j + 6]
+                              sa += data[j + 7]
+                            }
+                            if (y !== 0 && data[j - width * 4 + 3] !== 0) {
+                              count++
+                              sr += data[j - width * 4]
+                              sg += data[j - width * 4 + 1]
+                              sb += data[j - width * 4 + 2]
+                              sa += data[j - width * 4 + 3]
+                            }
+                            if (y !== height1 && data[j + width * 4 + 3] !== 0) {
+                              count++
+                              sr += data[j + width * 4]
+                              sg += data[j + width * 4 + 1]
+                              sb += data[j + width * 4 + 2]
+                              sa += data[j + width * 4 + 3]
+                            }
+                            data[j] = sr / count
+                            data[j + 1] = sg / count
+                            data[j + 2] = sb / count
+                            data[j + 3] = sa / count
+                          }
+                        } 
+                      } else if (
+                        (x === 0 || data[i - 1] === 0) &&
+                        (x === width1 || data[i + 7] === 0) &&
+                        (y === 0 || data[i - width * 4 + 3] === 0) &&
+                        (y === height1 || data[i + width * 4 + 3] === 0)
+                      ) {
+                        data[i + 3] = 0
+                      } else {
+                        const store = []
+                        const queue = [i]
+                        while (store.length < 6 && queue.length !== 0) {
+                          const j = queue.shift()
+                          store.push(j)
+                          const x = j / 4 % img.width
+                          if (x !== 0 && data[j - 1] !== 0 && !store.includes(j - 4)) queue.push(j - 4)
+                          if (x !== width1 && data[j + 7] !== 0 && !store.includes(j + 4)) queue.push(j + 4)
+                          if (Math.floor(j / (4 * height)) !== 0 && data[j - width * 4 + 3] !== 0 && !store.includes(j - width * 4)) queue.push(j - width * 4)
+                        }
+                        if (store.length >= 6) continue
+                        for (const j of store) {
+                          data[j + 3] = 0
+                        }
+                      }
                     }
-                  }
+                    img.ctx.putImageData(imageData, 0, 0)
+                    img.autoCrop()
+                    let out
+                    if (args.antialias) {
+                      const canvas = new CanvasFrame(img.width, img.height)
+                      canvas.ctx.filter = "blur(0.75px)"
+                      canvas.ctx.drawImage(img.canvas, 0, 0)
+                      out = new CanvasFrame(Math.floor(img.width / 2), Math.floor(img.height / 2))
+                      out.ctx.drawImage(canvas.canvas, 0, 0, out.width, out.height)
+                    } else {
+                      out = img
+                    }
+                    this.content_vue.render = out.canvas.toDataURL()
+                    const size = this.content_vue.render.slice(22).length * 0.75
+                    this.content_vue.dimensions = `${out.canvas.width} x ${out.canvas.height}`
+                    this.content_vue.size = `${size > 1048576 ? `${Math.roundTo(size / 1048576, 2)} MB` : `${Math.round(size / 1024)} KB`}`
+                    args.rendering = false
+                    this.content_vue.rendering = false
+                    dialog.object.style.width = `${Math.max(450, out.canvas.width)}px`
+                    dialog.object.querySelector(".dialog_title").textContent = "Minecraft Title Render"
+                    dialog.object.style.left = `${Math.clamp((window.innerWidth - dialog.object.clientWidth) / 2, 0, 2000)}px`
+                  }), 10)
                 }
-                img.ctx.putImageData(imageData, 0, 0)
-                img.autoCrop()
-                let out
-                if (this.antialias) {
-                  const canvas = new CanvasFrame(img.width, img.height)
-                  canvas.ctx.filter = "blur(0.75px)"
-                  canvas.ctx.drawImage(img.canvas, 0, 0)
-                  out = new CanvasFrame(Math.floor(img.width / 2), Math.floor(img.height / 2))
-                  out.ctx.drawImage(canvas.canvas, 0, 0, out.width, out.height)
-                } else {
-                  out = img
-                }
-                dialog.close()
-                Screencam.returnScreenshot(out.canvas.toDataURL())
-                this.rendering = false
-              }, 10)
+              })
+              dialog.show()
             },
             position: () => Preview.selected.loadAnglePreset({
               position: [0, -170, -320],
@@ -506,7 +693,7 @@
                   <i class="material-icons icon">photo_camera</i>
                 </div>
                 <div class="minecraft-title-render-controls-row">
-                  <i style="margin-left:10px;" class="material-icons icon minecraft-title-button" title="Position camera" @click="position">auto_mode</i>
+                  <i style="margin-left:10px" class="material-icons icon minecraft-title-button" title="Position camera" @click="position">auto_mode</i>
                   <div id="resolutions">
                     <div class="resolution minecraft-title-button" @click="resolution = 480" :class="{ selected: resolution === 480 }" title="Around 480 pixels">
                       <i class="material-icons icon">sd</i>
@@ -523,11 +710,11 @@
                     <div v-if="!antialias" class="resolution minecraft-title-button" @click="resolution = 4096" :class="{ selected: resolution === 4096 }" title="Around 4096 pixels">
                       <i class="material-icons icon">4k</i>
                     </div>
-                    <div class="resolution minecraft-title-button" @click="custom" :class="{ selected: ![480, 720, 1024, 2048, 4096].includes(resolution) }" title="Custom size" style="display:flex;align-items:center;justify-content:center;">
-                      <i style="font-size:24px;margin-left:-3px;" class="material-icons icon">tag</i>
+                    <div class="resolution minecraft-title-button" @click="custom" :class="{ selected: ![480, 720, 1024, 2048, 4096].includes(resolution) }" title="Custom size" style="display:flex;align-items:center;justify-content:center">
+                      <i style="font-size:24px;margin-left:-3px" class="material-icons icon">tag</i>
                     </div>
                   </div>
-                  <div style="margin-right:-20px;">Antialiasing:</div>
+                  <div style="margin-right:-20px">Antialiasing:</div>
                   <input type="checkbox" :checked="antialias" v-model="antialias" @input="if (resolution > 2048) resolution = 2048">
                 </div>
               </div>
@@ -582,7 +769,7 @@
             flex-direction: column;
           }
           #minecraft_title_generator .visible {
-            display: flex!important;
+            display: flex !important;
           }
           #minecraft-title-buttons {
             display: flex;
@@ -649,7 +836,7 @@
             font-size: 1.25rem;
           }
           .minecraft-title-item:hover i{
-            display: flex!important;
+            display: flex !important;
           }
           .minecraft-title-item-buttons > i:hover, #minecraft-title-preview-container > i:hover, .minecraft-title-button:hover, #minecraft-title-custom-texture > i:hover {
             color: var(--color-light);
@@ -1263,7 +1450,7 @@
           },
           template: `
             <div id="${id}">
-              <div class="dialog_close_button" style="right:30px;z-index:3;" @click="reset" title="Reset values back to their defaults">
+              <div class="dialog_close_button" style="right:30px;z-index:3" @click="reset" title="Reset values back to their defaults">
                 <i class="material-icons">replay</i>
               </div>
               <div id="minecraft-title-tabs">
@@ -1295,7 +1482,7 @@
                   </div>
                 </div>
                 <div class="github-link">
-                  <a href="${links.github}">
+                  <a href="${links.github.link}">
                     <i class="icon fab fa-github"></i>
                     <div>Submit fonts</div>
                   </a>
@@ -1354,7 +1541,7 @@
                     </div>
                   </div>
                   <div class="github-link">
-                    <a href="${links.github}">
+                    <a href="${links.github.link}">
                       <i class="icon fab fa-github"></i>
                       <div>Submit textures</div>
                     </a>
@@ -1417,7 +1604,7 @@
                   </div>
                 </div>
                 <div v-if="overlaySource === 'premade'" class="github-link">
-                  <a href="${links.github}">
+                  <a href="${links.github.link}">
                     <i class="icon fab fa-github"></i>
                     <div>Submit overlays</div>
                   </a>
@@ -2257,66 +2444,48 @@
 
   function showAbout(banner) {
     new Dialog({
-      id: "about",
+      id: `about-${id}`,
       title: name,
       width: 780,
       buttons: [],
       lines: [`
         <style>
-          dialog#about .dialog_title {
-            padding-left: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+          #about-${id} .dialog_title {
+            margin-left: 16px;
           }
-          dialog#about .dialog_content {
-            text-align: left!important;
-            margin: 0!important;
+          #about-${id}-icon {
+            position: absolute;
+            top: 4px;
+            left: 8px;
+            pointer-events: none;
           }
-          dialog#about .socials {
-            padding: 0!important;
+          #about-${id} .dialog_content {
+            margin: 0;
           }
-          dialog#about code {
-            padding: 0 2px;
-          }
-          dialog#about #banner {
+          #about-${id}-banner {
             background-color: var(--color-accent);
             color: var(--color-accent_text);
-            width: 100%;
-            padding: 0 8px
+            padding: 0 8px;
           }
-          dialog#about #content {
+          #about-${id}-content {
             margin: 24px;
           }
         </style>
-        ${banner ? `<div id="banner">This window can be reopened at any time from <strong>Help > About Plugins > ${name}</strong></div>` : ""}
-        <div id="content">
+        <i id="about-${id}-icon" class="icon material-icons">${icon}</i>
+        ${banner ? `<div id="about-${id}-banner">This window can be reopened at any time from <strong>Help > About Plugins > ${name}</strong></div>` : ""}
+        <div id="about-${id}-content">
           <h1 style="margin-top:-10px">${name}</h1>
           <p>${about}</p>
           <br>
           <h2>Getting started</h2>
-          <p>To use this plugin, start by creating a new Minecraft Title project from the start screen, or go to <strong>File > New > Minecraft Title</strong> and select <strong>${name}</strong>. From here, use the dialog to add some text to the project. Don't forget to set the text type! You can add more text by using the add text button <i class="icon material-icons" style="translate:0 5px;">text_fields</i> in the outliner.</p>
+          <p>To use this plugin, start by creating a new Minecraft Title project from the start screen, or go to <strong>File > New > Minecraft Title</strong> and select <strong>${name}</strong>. From here, use the dialog to add some text to the project. Don't forget to set the text type! You can add more text by using the add text button <i class="icon material-icons" style="translate:0 5px">text_fields</i> in the outliner.</p>
           <br>
-          <p>Once you are done adding text, you can go to the <strong>Render</strong> tab at the top right to render your title. The positon camera button <i class="icon material-icons" style="translate:0 5px;">auto_mode</i> will set the correct camera position for you.</p>
-          <br>
-          <div class="socials">
-            <a href="${links.website}" class="open-in-browser">
-              <i class="icon material-icons" style="color:#33E38E">language</i>
-              <label>By ${author}</label>
-            </a>
-            <a href="${links.discord}" class="open-in-browser">
-              <i class="icon fab fa-discord" style="color:#727FFF"></i>
-              <label>Discord Server</label>
-            </a>
-            <a href="${links.github}" class="open-in-browser">
-              <i class="icon fab fa-github" style="color:#6E40C9"></i>
-              <label>Submit Textures / Fonts</label>
-            </a>
-          </div>
+          <p>Once you are done adding text, you can go to the <strong>Render</strong> tab at the top right to render your title. The positon camera button <i class="icon material-icons" style="translate:0 5px">auto_mode</i> will set the correct camera position for you.</p>
+          ${aboutLinks}
         </div>
       `]
     }).show()
-    $("dialog#about .dialog_title").html(`
+    $("#about .dialog_title").html(`
       <i class="icon material-icons">${icon}</i>
       ${name}
     `)
