@@ -245,7 +245,7 @@
         }
       `)
       let shadeState
-      BarItems.toggle_shading.condition = () => Project.format.id !== format.id
+      BarItems.toggle_shading.condition = () => Project.format?.id !== format.id
       format = new ModelFormat({
         id: "minecraft_title",
         name: "Minecraft Title",
@@ -447,10 +447,6 @@
                 },
                 onOpen() {
                   setTimeout(() => Canvas.withoutGizmos(() => {
-                    preview.renderer.render(
-                      Canvas.scene,
-                      preview.camera
-                    )
                     let minX = Infinity
                     let maxX = -Infinity
                     let minY = Infinity
@@ -458,8 +454,7 @@
                     Canvas.scene.traverseVisible(cube => {
                       if (cube.type === "cube") {
                         for (let i = 0; i < 72; i += 3) {
-                          const vec = new THREE.Vector3(...cube.geometry.attributes.position.array.slice(i, i + 3))
-                            .applyMatrix4(cube.matrixWorld).project(Preview.selected.camera)
+                          const vec = new THREE.Vector3(...cube.geometry.attributes.position.array.slice(i, i + 3)).applyMatrix4(cube.matrixWorld).project(Preview.selected.camera)
                           const x = (vec.x + 1) / 2
                           const y = (-vec.y + 1) / 2
                           minX = Math.min(minX, x)
@@ -960,6 +955,25 @@
             right: 7px;
             cursor: pointer;
           }
+          #text-type-input {
+            text-decoration: none;
+          }
+          body:has(#text-type-input:focus) > .contextMenu > li > span::after {
+            opacity: 0.8;
+            font-size: 12px;
+          }
+          body:has(#text-type-input:focus) > .contextMenu > li:first-child > span::after {
+            content: 'The "Minecraft" text';
+            margin-left: 35px;
+          }
+          body:has(#text-type-input:focus) > .contextMenu > li:nth-child(2) > span::after {
+            content: 'The update text';
+            margin-left: 10px;
+          }
+          body:has(#text-type-input:focus) > .contextMenu > li:last-child > span::after {
+            content: 'The edition text';
+            margin-left: 22px;
+          }
         </style>`],
         component: {
           data: {
@@ -970,9 +984,9 @@
             fontList: [],
             textType: "top",
             textTypes: {
-              "top": 'Top - The "Minecraft" text',
-              "bottom": "Bottom - The update text",
-              "small": "Small - The edition text"
+              "top": 'Top',
+              "bottom": "Bottom",
+              "small": "Small"
             },
             row: 0,
             texture: Object.keys(fonts["minecraft-ten"].textures)[1] ?? Object.keys(fonts["minecraft-ten"].textures)[0],
@@ -1487,9 +1501,11 @@
                     <div>Submit fonts</div>
                   </a>
                 </div>
-                <h2>Text Type</h2>
+                <h2>Text Type / Angle</h2>
                 <p>The type of text to add</p>
-                <select-input v-model="textType" :options="textTypes" />
+                <a href="#0" id="text-type-input">
+                  <select-input v-model="textType" :options="textTypes" />
+                </a>
                 <br>
                 <h2>Text Row</h2>
                 <p>The vertical row that the text will appear on</p>
