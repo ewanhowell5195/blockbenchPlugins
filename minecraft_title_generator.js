@@ -346,6 +346,14 @@
         component: {
           methods: {
             render() {
+              if (Preview.selected.camera instanceof THREE.OrthographicCamera) return Blockbench.showMessageBox({
+                title: "Orthographic not supported",
+                message: "Orthographic perspectives are not supported for render mode.\n\nIf you wish to render with an orthographic perspective, use the built-in Blockbench screenshot options.",
+                buttons: ["Disable orthographic perspective", "dialog.close"],
+                width: 500
+              }, async button => {
+                if (button === 0) Preview.selected.setProjectionMode(false)
+              })
               if (this.rendering) return
               this.rendering = true
               const args = this
@@ -451,10 +459,13 @@
                     let maxX = -Infinity
                     let minY = Infinity
                     let maxY = -Infinity
+                    const direction = Preview.selected.controls.target.clone().sub(Preview.selected.camera.position).normalize()
                     Canvas.scene.traverseVisible(cube => {
                       if (cube.type === "cube") {
                         for (let i = 0; i < 72; i += 3) {
-                          const vec = new THREE.Vector3(...cube.geometry.attributes.position.array.slice(i, i + 3)).applyMatrix4(cube.matrixWorld).project(Preview.selected.camera)
+                          const vertex = new THREE.Vector3(...cube.geometry.attributes.position.array.slice(i, i + 3))
+                          if (direction.dot(vertex.clone().sub(Preview.selected.camera.position).normalize()) <= 0) continue
+                          const vec = vertex.applyMatrix4(cube.matrixWorld).project(Preview.selected.camera)
                           const x = (vec.x + 1) / 2
                           const y = (-vec.y + 1) / 2
                           minX = Math.min(minX, x)
@@ -474,6 +485,12 @@
                     maxX = Math.min(maxX, 1)
                     minY = Math.max(minY, 0)
                     maxY = Math.min(maxY, 1)
+                    if (minX === maxX || minY === maxY) {
+                      dialog.close()
+                      Blockbench.showQuickMessage("Nothing in frame")
+                      args.rendering = false
+                      return
+                    }
                     const aspect = (maxX - minX) / ((maxY - minY) * Preview.selected.height / Preview.selected.width)
                     let outWidth, outHeight
                     const resolution = args.antialias ? Math.min(args.resolution * 2, 4096) : args.resolution
@@ -485,8 +502,8 @@
                       outHeight = resolution
                     }
                     preview.resize(outWidth, outHeight)
-                    preview.camera.position.fromArray(Preview.selected.camera.position.toArray())
-                    preview.controls.target.fromArray(Preview.selected.controls.target.toArray())
+                    preview.controls.target.copy(Preview.selected.controls.target)
+                    preview.camera.position.copy(Preview.selected.camera.position)
                     const fullWidth = outWidth / (maxX - minX)
                     const fullHeight = outHeight / (maxY - minY)
                     preview.camera.setViewOffset(fullWidth, fullHeight, minX * fullWidth, minY * fullHeight, outWidth, outHeight)
@@ -697,7 +714,7 @@
                       <i class="material-icons icon">hd</i>
                     </div>
                     <div class="resolution minecraft-title-button" @click="resolution = 1024" :class="{ selected: resolution === 1024 }" title="Around 1024 pixels">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" xmlns:v="https://vecta.io/nano"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2M8.808 15h-1.5v-2h-2v2h-1.5V9h1.5v2.5h2V9h1.5v6m.948-6h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4V9m1.5 4.5h2v-3h-2zm8.937-2.25v1.5h-1.5v1.5h-1.5v-1.5h-1.5v-1.5h1.5v-1.5h1.5v1.5"/></svg>
+                      <svg width="32" height="32" viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2M8.808 15h-1.5v-2h-2v2h-1.5V9h1.5v2.5h2V9h1.5v6m.948-6h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4V9m1.5 4.5h2v-3h-2zm8.937-2.25v1.5h-1.5v1.5h-1.5v-1.5h-1.5v-1.5h1.5v-1.5h1.5v1.5"/></svg>
                     </div>
                     <div class="resolution minecraft-title-button" @click="resolution = 2048" :class="{ selected: resolution === 2048 }" title="Around 2048 pixels">
                       <i class="material-icons icon">2k</i>
