@@ -1074,11 +1074,11 @@
             $(this.$refs.overlayColour).spectrum(colourInput(dialog, "overlayColour"))
           },
           methods: {
-            async reset(force) {
+            async reset(force, ignoreUpdate) {
               if (force || this.tab === 0) {
                 if (this.font !== Object.keys(fonts)[0]) {
                   this.font = Object.keys(fonts)[0]
-                  await this.updateFont()
+                  await this.updateFont(ignoreUpdate)
                 }
                 this.textType = "top"
                 this.row = 0
@@ -1116,7 +1116,7 @@
                 this.scaleZ = 1
               }
               this.resetTexture(force)
-              this.makePreview()
+              if (!ignoreUpdate) this.makePreview()
             },
             resetTexture(force) {
               if (force || this.tab === 2) {
@@ -1144,7 +1144,7 @@
               }
             },
             finish: () => dialog.onConfirm(),
-            async updateFont() {
+            async updateFont(ignoreUpdate) {
               await getFontTextures(this.font)
               if (!this.textures.find(e => e[0] === "flat" && e[2] === this.font)) {
                 const textures = Object.entries(fonts[this.font].textures).map(e => e.concat([this.font]))
@@ -1164,7 +1164,7 @@
               }
               this.texture = Object.keys(fonts[this.font].textures)[1] ?? Object.keys(fonts[this.font].textures)[0]
               this.overlay = Object.keys(fonts[this.font].overlays)[0]
-              this.makePreview()
+              if (!ignoreUpdate) this.makePreview()
             },
             async makePreview() {
               this.scene.remove(...this.scene.children)
@@ -1537,7 +1537,7 @@
                         onConfirm: result => {
                           const name = result.name.trim()
                           if (!name) return Blockbench.showQuickMessage("No name provided")
-                          if (name.length > 16) return Blockbench.showQuickMessage("Please keep names 16 characters or less", 3000)
+                          if (name.length > 24) return Blockbench.showQuickMessage("Please keep names 24 characters or less", 3000)
                           if (this.presets[name]) return Blockbench.showQuickMessage(`The name "${name}" is already in use`, 3000)
                           this.presets[name] = {
                             date: Date.now(),
@@ -1555,11 +1555,11 @@
                     },
                     async load(event, name) {
                       if (event.target.classList.contains("material-icons")) return
-                      settings.reset(true)
+                      settings.reset(true, true)
                       const args = this.presets[name].settings
                       if (fonts[args.font]) {
                         settings.font = args.font
-                        await settings.updateFont()
+                        await settings.updateFont(true)
                         if (fonts[args.font].textures[args.texture]) {
                           settings.texture = args.texture
                           if (args.variant && fonts[args.font].textures[args.texture].variants?.[args.variant]) {
@@ -1622,7 +1622,7 @@
                       $(settings.$refs.customBorderColour).spectrum("set", args.customBorderColour)
                       $(settings.$refs.customEdgeColour).spectrum("set", args.customEdgeColour)
                       $(settings.$refs.overlayColour).spectrum("set", args.overlayColour)
-                      settings.updatePreview()
+                      settings.makePreview()
                       presetDialog.close()
                       Blockbench.showQuickMessage(`Preset "${name}" loaded`, 3000)
                     },
@@ -1646,7 +1646,7 @@
                         onConfirm: result => {
                           const name = result.name.trim()
                           if (!name) return Blockbench.showQuickMessage("No name provided")
-                          if (name.length > 16) return Blockbench.showQuickMessage("Please keep names 16 characters or less", 3000)
+                          if (name.length > 24) return Blockbench.showQuickMessage("Please keep names 24 characters or less", 3000)
                           if (this.presets[name]) return Blockbench.showQuickMessage(`The name "${name}" is already in use`, 3000)
                           try {
                             const data = JSON.parse(result.data.trim())
