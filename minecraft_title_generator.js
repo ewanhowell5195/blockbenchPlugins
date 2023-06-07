@@ -243,6 +243,9 @@
         .minecraft-title-links > a:hover > i {
           color: var(--color-light) !important;
         }
+        .spacer, #minecraft_title_generator .sp-preview, #minecraft_title_generator .form_inline_select > li {
+          flex: 1;
+        }
       `)
       let shadeState
       BarItems.toggle_shading.condition = () => Project.format?.id !== format.id
@@ -886,9 +889,6 @@
             display: flex;
             margin-bottom: 10px;
           }
-          #minecraft_title_generator .sp-preview, #minecraft_title_generator .form_inline_select > li, .spacer {
-            flex: 1;
-          }
           #minecraft_title_generator .form_inline_select {
             margin: 10px 0;
           }
@@ -991,6 +991,9 @@
             content: 'The edition text';
             margin-left: 22px;
           }
+          #new_minecraft_title_text .dialog_close_button:nth-child(2):hover {
+            background-color: var(--color-accent);
+          }
         </style>`],
         component: {
           data: {
@@ -1071,15 +1074,16 @@
             $(this.$refs.overlayColour).spectrum(colourInput(dialog, "overlayColour"))
           },
           methods: {
-            async reset() {
-              if (this.tab === 0) {
+            async reset(force) {
+              if (force || this.tab === 0) {
                 if (this.font !== Object.keys(fonts)[0]) {
                   this.font = Object.keys(fonts)[0]
                   await this.updateFont()
                 }
                 this.textType = "top"
                 this.row = 0
-              } else if (this.tab === 1) {
+              }
+              if (force || this.tab === 1) {
                 this.texture = Object.keys(fonts[this.font].textures)[1] ?? Object.keys(fonts[this.font].textures)[0]
                 this.variant = null
                 this.textureSource = "premade"
@@ -1097,18 +1101,21 @@
                 $(this.$refs.gradientColour2).spectrum("set", "#F4C1A4")
                 $(this.$refs.gradientColour3).spectrum("set", "#E19A3E")
                 $(this.$refs.gradientColour4).spectrum("set", "#DA371E")
-              } else if (this.tab === 2) {
+              }
+              if (force || this.tab === 2) {
                 this.overlaySource = "premade"
-              } else if (this.tab === 3) {
+              }
+              if (force || this.tab === 3) {
                 this.terminators = false
-              } else if (this.tab === 4) {
+              }
+              if (force || this.tab === 4) {
                 this.characterSpacing = 0
                 this.rowSpacing = 0
                 this.scaleX = 1
                 this.scaleY = 1
                 this.scaleZ = 1
               }
-              this.resetTexture()
+              this.resetTexture(force)
               this.makePreview()
             },
             resetTexture(force) {
@@ -1451,6 +1458,305 @@
                   this.updatePreview()
                 }
               })
+            },
+            presets() {
+              const settings = this
+              const presetDialog = new Dialog({
+                id: "minecraft_title_presets",
+                title: "Minecraft Title Presets",
+                buttons: [],
+                lines: [`<style>
+                  #minecraft_title_presets .dialog_content {
+                    margin: 20px;
+                  }
+                  #minecraft-title-presets-container {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                  }
+                  .minecraft-title-preset {
+                    display: flex;
+                    gap: 10px;
+                    padding: 10px 15px;
+                    align-items: center;
+                    cursor: pointer;
+                  }
+                  .minecraft-title-preset:hover {
+                    background-color: var(--color-accent);
+                    color: var(--color-accent_text);
+                  }
+                  .minecraft-title-preset > * {
+                    cursor: pointer;
+                  }
+                  .minecraft-title-preset > i:hover {
+                    color: var(--color-ui);
+                  }
+                  .minecraft-title-preset-name {
+                    font-size: 1.5rem;
+                  }
+                  .minecraft-title-preset-date {
+                    margin-top: 4px;
+                    opacity: 0.75;
+                    font-size: 0.8rem;
+                  }
+                  #minecraft-title-preset-buttons {
+                    display: flex;
+                    gap: 10px;
+                  }
+                  #minecraft-title-preset-buttons > button {
+                    flex: 1;
+                  }
+                </style>`],
+                component: {
+                  data: {
+                    presets: JSON.parse(localStorage.getItem("minecraft_title_presets") ?? "{}")
+                  },
+                  methods: {
+                    add() {
+                      const args = getArgs(settings)
+                      args.textureSource = settings.textureSource
+                      args.overlaySource = settings.overlaySource
+                      if (args.textureSource === "file" || args.overlaySource === "file") {
+                        return Blockbench.showQuickMessage("Custom textures are not supported for presets", 3000)
+                      }
+                      const filtered = Object.fromEntries(Object.entries(args).filter(e => e[1]))
+                      for (const [key, obj] of Object.entries(this.presets)) {
+                        if (areObjectsEqual(filtered, obj.settings)) {
+                          return Blockbench.showQuickMessage(`Current settings are already saved under the preset "${key}"`, 3000)
+                        }
+                      }
+                      new Dialog({
+                        id: "minecraft_title_preset_name",
+                        title: "Minecraft Title Preset Name",
+                        form: {
+                          name: {
+                            label: "Preset Name",
+                            placeholder: "Minecraft Cracked"
+                          }
+                        },
+                        onConfirm: result => {
+                          const name = result.name.trim()
+                          if (!name) return Blockbench.showQuickMessage("No name provided")
+                          if (name.length > 16) return Blockbench.showQuickMessage("Please keep names 16 characters or less", 3000)
+                          if (this.presets[name]) return Blockbench.showQuickMessage(`The name "${name}" is already in use`, 3000)
+                          this.presets[name] = {
+                            date: Date.now(),
+                            settings: filtered
+                          }
+                          localStorage.setItem("minecraft_title_presets", JSON.stringify(this.presets))
+                          this.$forceUpdate()
+                        }
+                      }).show()
+                    },
+                    deletePreset(event, name) {
+                      delete this.presets[name]
+                      localStorage.setItem("minecraft_title_presets", JSON.stringify(this.presets))
+                      this.$forceUpdate()
+                    },
+                    async load(event, name) {
+                      if (event.target.classList.contains("material-icons")) return
+                      settings.reset(true)
+                      const args = this.presets[name].settings
+                      if (fonts[args.font]) {
+                        settings.font = args.font
+                        await settings.updateFont()
+                        if (fonts[args.font].textures[args.texture]) {
+                          settings.texture = args.texture
+                          if (args.variant && fonts[args.font].textures[args.texture].variants?.[args.variant]) {
+                            settings.variant = args.variant
+                          }
+                        }
+                        if (fonts[args.font].overlays[args.overlay]) {
+                          settings.overlay = args.overlay
+                        }
+                      }
+                      settings.textType = args.type
+                      if (args.row) settings.row = args.row
+                      settings.textureSource = args.textureSource
+                      settings.overlaySource = args.overlaySource
+                      if (args.gradientColour1Enabled) settings.gradientColour1Enabled = args.gradientColour1Enabled
+                      if (args.gradientColour2Enabled) settings.gradientColour2Enabled = args.gradientColour2Enabled
+                      if (args.gradientColour3Enabled) settings.gradientColour3Enabled = args.gradientColour3Enabled
+                      if (args.smoothGradient) settings.smoothGradient = args.smoothGradient
+                      if (args.gradientColour0) {
+                        settings.gradientColour0 = args.gradientColour0
+                        $(settings.$refs.gradientColour0).spectrum("set", args.gradientColour0)
+                      }
+                      if (args.gradientColour1) {
+                        settings.gradientColour1 = args.gradientColour1
+                        $(settings.$refs.gradientColour1).spectrum("set", args.gradientColour1)
+                      }
+                      if (args.gradientColour2) {
+                        settings.gradientColour2 = args.gradientColour2
+                        $(settings.$refs.gradientColour2).spectrum("set", args.gradientColour2)
+                      }
+                      if (args.gradientColour3) {
+                        settings.gradientColour3 = args.gradientColour3
+                        $(settings.$refs.gradientColour3).spectrum("set", args.gradientColour3)
+                      }
+                      if (args.gradientColour4) {
+                        settings.gradientColour4 = args.gradientColour4
+                        $(settings.$refs.gradientColour4).spectrum("set", args.gradientColour4)
+                      }
+                      if (args.terminators) settings.terminators = args.terminators
+                      if (args.characterSpacing) settings.characterSpacing = args.characterSpacing
+                      if (args.rowSpacing) settings.rowSpacing = args.rowSpacing
+                      settings.scaleX = args.scale[0]
+                      settings.scaleY = args.scale[1]
+                      settings.scaleZ = args.scale[2]
+                      settings.overlayBlend = args.overlayBlend
+                      settings.overlayColourBlend = args.overlayColourBlend
+                      if (args.hue) settings.hue = args.hue
+                      if (args.saturation) settings.saturation = args.saturation
+                      if (args.brightness) settings.brightness = args.brightness
+                      if (args.contrast) settings.contrast = args.contrast
+                      settings.blend = args.blend
+                      if (args.customBorder) settings.customBorder = args.customBorder
+                      if (args.fadeToBorder) settings.fadeToBorder = args.fadeToBorder
+                      if (args.customEdge) settings.customEdge = args.customEdge
+                      settings.colour = args.colour
+                      settings.customBorderColour = args.customBorderColour
+                      settings.customEdgeColour = args.customEdgeColour
+                      settings.overlayColour = args.overlayColour
+                      $(settings.$refs.colour).spectrum("set", args.colour)
+                      $(settings.$refs.customBorderColour).spectrum("set", args.customBorderColour)
+                      $(settings.$refs.customEdgeColour).spectrum("set", args.customEdgeColour)
+                      $(settings.$refs.overlayColour).spectrum("set", args.overlayColour)
+                      settings.updatePreview()
+                      presetDialog.close()
+                      Blockbench.showQuickMessage(`Preset "${name}" loaded`, 3000)
+                    },
+                    importText(name, text) {
+                      new Dialog({
+                        id: "minecraft_title_preset_import",
+                        title: "Minecraft Title Preset Import",
+                        form: {
+                          name: {
+                            label: "Preset Name",
+                            placeholder: "Minecraft Cracked",
+                            value: name
+                          },
+                          data: {
+                            type: "textarea",
+                            label: "Preset Data",
+                            placeholder: "{}",
+                            value: text
+                          }
+                        },
+                        onConfirm: result => {
+                          const name = result.name.trim()
+                          if (!name) return Blockbench.showQuickMessage("No name provided")
+                          if (name.length > 16) return Blockbench.showQuickMessage("Please keep names 16 characters or less", 3000)
+                          if (this.presets[name]) return Blockbench.showQuickMessage(`The name "${name}" is already in use`, 3000)
+                          try {
+                            const data = JSON.parse(result.data.trim())
+                            for (const [key, obj] of Object.entries(this.presets)) {
+                              if (areObjectsEqual(data, obj.settings)) {
+                                return Blockbench.showQuickMessage(`Current settings are already saved under the preset "${key}"`, 3000)
+                              }
+                            }
+                            this.presets[name] = {
+                              date: Date.now(),
+                              settings: data
+                            }
+                            localStorage.setItem("minecraft_title_presets", JSON.stringify(this.presets))
+                            this.$forceUpdate()
+                          } catch {
+                            Blockbench.showQuickMessage("Invalid json for preset data", 3000)
+                          }
+                        }
+                      }).show()
+                    },
+                    importFile() {
+                      Blockbench.import({
+                        extensions: ["json"],
+                        type: "Minecraft Title Preset",
+                      }, files => {
+                        this.importText(files[0].name.replace(/\.json$/, ""), files[0].content)
+                      })
+                    },
+                    exportPreset(event, name) {
+                      new Dialog({
+                        id: "minecraft_title_preset_export",
+                        title: "Minecraft Title Preset Export",
+                        buttons: [],
+                        lines: [`<style>
+                          #minecraft_title_preset_export .dialog_content {
+                            margin: 20px;
+                          }
+                          #minecraft-title-preset-export {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 20px;
+                          }
+                          #minecraft-title-preset-export-text {
+                            background-color: var(--color-back);
+                            padding: 10px;
+                            border: 1px solid var(--color-border);
+                            cursor: text;
+                            user-select: all;
+                            word-break: break-all;
+                            max-height: 256px;
+                            overflow-y: auto;
+                          }
+                          #minecraft-title-preset-export-buttons {
+                            display: flex;
+                            gap: 10px;
+                          }
+                          #minecraft-title-preset-export-buttons > button {
+                            flex: 1;
+                          }
+                        </style>`],
+                        component: {
+                          data: {
+                            preset: this.presets[name].settings
+                          },
+                          methods: {
+                            copy() {
+                              navigator.clipboard.writeText(JSON.stringify(this.preset))
+                              Blockbench.showQuickMessage("Copied to clipboard")
+                            },
+                            save() {
+                              Blockbench.export({
+                                extensions: ["json"],
+                                name: `${name.replace(/\s/g, "_")}.json`,
+                                content: JSON.stringify(this.preset, null, 2)
+                              })
+                            }
+                          },
+                          template: `
+                            <div id="minecraft-title-preset-export">
+                              <div id="minecraft-title-preset-export-text">{{ JSON.stringify(preset) }}</div>
+                              <div id="minecraft-title-preset-export-buttons">
+                                <button @click="copy">Copy</button>
+                                <button @click="save">Save</button>
+                              </div>
+                            </div>
+                          `
+                        }
+                      }).show()
+                    }
+                  },
+                  template: `
+                    <div id="minecraft-title-presets-container">
+                      <div v-if="Object.keys(this.presets).length" id="minecraft-title-presets">
+                        <div v-for="[name, data] of Object.entries(presets)" class="minecraft-title-preset" @click="load(event, name)">
+                          <div class="minecraft-title-preset-name">{{ name }}</div>
+                          <div class="minecraft-title-preset-date">{{ new Date(data.date).toLocaleString() }}</div>
+                          <div class="spacer"></div>
+                          <i class="material-icons" @click="exportPreset(event, name)" title="Share preset">ios_share</i>
+                          <i class="material-icons" @click="deletePreset(event, name)" title="Delete preset">delete</i>
+                        </div>
+                      </div>
+                      <button @click="add">Create new preset</button>
+                      <div id="minecraft-title-preset-buttons">
+                        <button @click="importText" title="Import preset">Import from text</button>
+                        <button @click="importFile" title="Import preset">Import from file</button>
+                      </div>
+                    </div>
+                  `
+                }
+              }).show()
             }
           },
           computed: {
@@ -1483,6 +1789,9 @@
             <div id="${id}">
               <div class="dialog_close_button" style="right:30px;z-index:3" @click="reset" title="Reset values back to their defaults">
                 <i class="material-icons">replay</i>
+              </div>
+              <div class="dialog_close_button" style="right:60px;z-index:3" @click="presets" title="Load and save presets">
+                <i class="material-icons">tune</i>
               </div>
               <div id="minecraft-title-tabs">
                 <div @click="tab = 0" :class="{ selected: tab === 0 }">Text</div>
@@ -2602,5 +2911,13 @@
       smoothGradient: vue.smoothGradient,
       three
     }
+  }
+
+  function areObjectsEqual(obj1, obj2) {
+    const keys1 = Object.keys(obj1)
+    const keys2 = Object.keys(obj2)
+    if (keys1.length !== keys2.length) return false
+    for (let key of keys1) if (!obj2.hasOwnProperty(key) || obj1[key].toString() !== obj2[key].toString()) return false
+    return true
   }
 })()
