@@ -1893,14 +1893,16 @@
                 font: this.content_vue.font,
                 texture: texture[0],
                 variant: texture[1],
-                row: Object.keys(fonts[this.content_vue.font].textures).length - i - 1,
+                row: textures.length - i - 1,
                 characterSpacing: 8,
                 rowSpacing: 8,
                 blend: "multiply",
                 colour: "#fff",
                 scale,
                 customBorder: false,
-                spacerWidth: fonts[this.content_vue.font].width - 1
+                spacerWidth: fonts[this.content_vue.font].width - 1,
+                name: texture[1] ?? texture[0],
+                ignoreStats: true
               })
             }
           } else {
@@ -1922,6 +1924,7 @@
                 debug: true,
                 font: this.content_vue.font,
                 texture: this.content_vue.texture,
+                variant: this.content_vue.variant,
                 row: parts.length - i - 1,
                 characterSpacing: 8,
                 rowSpacing: 8,
@@ -1930,7 +1933,8 @@
                 scale,
                 customBorder: false,
                 spacerWidth: fonts[this.content_vue.font].width - 1,
-                variant: this.content_vue.variant
+                name: this.content_vue.variant ?? this.content_vue.texture,
+                ignoreStats: true
               })
             }
           }
@@ -2023,10 +2027,11 @@
         spacerWidth: args.spacerWidth,
         rowSpacing: args.rowSpacing,
         scale: args.scale,
+        name: args.name,
         elements
       })
     } else {
-      group = new Group(makeName(text)).init()
+      group = new Group(args.name ?? makeName(text)).init()
       for (const part of words) {
         const [word, newOffset] = makeWord(part, offset, group, {
           font: args.font,
@@ -2064,7 +2069,7 @@
     })
     Undo.finishEdit("Add Minecraft title text")
     updateSelection()
-    fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", {
+    if (!args.ignoreStats) fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", {
       method: "POST",
       headers: {
         source: "blockbench",
@@ -2231,11 +2236,11 @@
       texture.magFilter = THREE.NearestFilter
       return texture
     }
-    return new Texture({ name: `${makeName(args.text)}.png` }).fromDataURL(canvas.toDataURL())
+    return new Texture({ name: `${args.name ?? makeName(args.text)}.png` }).fromDataURL(canvas.toDataURL())
   }
 
   function makeWord(text, offset, parent, args) {
-    const word = new Group(makeName(text))
+    const word = new Group(args.name ?? makeName(text))
     word.addTo(parent).init()
     for (const char of text) {
       if (fonts[args.font].characters[char]) {
