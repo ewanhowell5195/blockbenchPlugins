@@ -994,6 +994,22 @@
           #new_minecraft_title_text .dialog_close_button:nth-child(2):hover {
             background-color: var(--color-accent);
           }
+          .minecraft-texture-search {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            position: relative;
+          }
+          .minecraft-texture-search > input {
+            flex: 1;
+            padding-right: 30px;
+          }
+          .minecraft-texture-search > i {
+            position: absolute;
+            right: 6px;
+            top: 5px;
+            pointer-events: none;
+          }
         </style>`],
         component: {
           data: {
@@ -1060,7 +1076,8 @@
             overlayColourBlend: "multiply",
             customTexture: null,
             smoothGradient: true,
-            lastTextureSource: null
+            lastTextureSource: null,
+            textureSearch: ""
           },
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
@@ -1570,10 +1587,10 @@
                           settings.overlay = args.overlay
                         }
                       }
-                      settings.textType = args.type
+                      if (args.type) settings.textType = args.type
                       if (args.row) settings.row = args.row
-                      settings.textureSource = args.textureSource
-                      settings.overlaySource = args.overlaySource
+                      if (args.textureSource) settings.textureSource = args.textureSource
+                      if (args.overlaySource) settings.overlaySource = args.overlaySource
                       if (args.gradientColour1Enabled) settings.gradientColour1Enabled = args.gradientColour1Enabled
                       if (args.gradientColour2Enabled) settings.gradientColour2Enabled = args.gradientColour2Enabled
                       if (args.gradientColour3Enabled) settings.gradientColour3Enabled = args.gradientColour3Enabled
@@ -1601,27 +1618,37 @@
                       if (args.terminators) settings.terminators = args.terminators
                       if (args.characterSpacing) settings.characterSpacing = args.characterSpacing
                       if (args.rowSpacing) settings.rowSpacing = args.rowSpacing
-                      settings.scaleX = args.scale[0]
-                      settings.scaleY = args.scale[1]
-                      settings.scaleZ = args.scale[2]
-                      settings.overlayBlend = args.overlayBlend
-                      settings.overlayColourBlend = args.overlayColourBlend
+                      if (args.scale) {
+                        settings.scaleX = args.scale[0]
+                        settings.scaleY = args.scale[1]
+                        settings.scaleZ = args.scale[2]
+                      }
+                      if (args.overlayBlend) settings.overlayBlend = args.overlayBlend
+                      if (args.overlayColourBlend) settings.overlayColourBlend = args.overlayColourBlend
                       if (args.hue) settings.hue = args.hue
-                      if (args.saturation) settings.saturation = args.saturation
-                      if (args.brightness) settings.brightness = args.brightness
-                      if (args.contrast) settings.contrast = args.contrast
-                      settings.blend = args.blend
+                      if (args.saturation !== undefined) settings.saturation = args.saturation
+                      if (args.brightness !== undefined) settings.brightness = args.brightness
+                      if (args.contrast !== undefined) settings.contrast = args.contrast
+                      if (args.blend) settings.blend = args.blend
                       if (args.customBorder) settings.customBorder = args.customBorder
                       if (args.fadeToBorder) settings.fadeToBorder = args.fadeToBorder
                       if (args.customEdge) settings.customEdge = args.customEdge
-                      settings.colour = args.colour
-                      settings.customBorderColour = args.customBorderColour
-                      settings.customEdgeColour = args.customEdgeColour
-                      settings.overlayColour = args.overlayColour
-                      $(settings.$refs.colour).spectrum("set", args.colour)
-                      $(settings.$refs.customBorderColour).spectrum("set", args.customBorderColour)
-                      $(settings.$refs.customEdgeColour).spectrum("set", args.customEdgeColour)
-                      $(settings.$refs.overlayColour).spectrum("set", args.overlayColour)
+                      if (args.colour) {
+                        settings.colour = args.colour
+                        $(settings.$refs.colour).spectrum("set", args.colour)
+                      }
+                      if (args.customBorderColour) {
+                        settings.customBorderColour = args.customBorderColour
+                        $(settings.$refs.customBorderColour).spectrum("set", args.customBorderColour)
+                      }
+                      if (args.customEdgeColour) {
+                        settings.customEdgeColour = args.customEdgeColour
+                        $(settings.$refs.customEdgeColour).spectrum("set", args.customEdgeColour)
+                      }
+                      if (args.overlayColour) {
+                        settings.overlayColour = args.overlayColour
+                        $(settings.$refs.overlayColour).spectrum("set", args.overlayColour)
+                      }
                       settings.makePreview()
                       presetDialog.close()
                       Blockbench.showQuickMessage(`Preset "${name}" loaded`, 3000)
@@ -1650,14 +1677,17 @@
                           if (this.presets[name]) return Blockbench.showQuickMessage(`The name "${name}" is already in use`, 3000)
                           try {
                             const data = JSON.parse(result.data.trim())
+                            if (!data.preset || data.type !== "minecraft_title_generator_preset") {
+                              return Blockbench.showQuickMessage("Invalid preset")
+                            }
                             for (const [key, obj] of Object.entries(this.presets)) {
-                              if (areObjectsEqual(data, obj.settings)) {
+                              if (areObjectsEqual(data.preset, obj.settings)) {
                                 return Blockbench.showQuickMessage(`Current settings are already saved under the preset "${key}"`, 3000)
                               }
                             }
                             this.presets[name] = {
                               date: Date.now(),
-                              settings: data
+                              settings: data.preset
                             }
                             localStorage.setItem("minecraft_title_presets", JSON.stringify(this.presets))
                             this.$forceUpdate()
@@ -1709,7 +1739,11 @@
                         </style>`],
                         component: {
                           data: {
-                            preset: this.presets[name].settings
+                            preset: {
+                              type: "minecraft_title_generator_preset",
+                              version: 1,
+                              preset: this.presets[name].settings
+                            }
                           },
                           methods: {
                             copy() {
@@ -1750,7 +1784,7 @@
                       </div>
                       <button @click="add">Create new preset</button>
                       <div id="minecraft-title-preset-buttons">
-                        <button @click="importText" title="Import preset">Import from text</button>
+                        <button @click="importText()" title="Import preset">Import from text</button>
                         <button @click="importFile" title="Import preset">Import from file</button>
                       </div>
                     </div>
@@ -1808,7 +1842,7 @@
               <div class="minecraft-title-contents" :class="{ visible: tab === 0 }">
                 <h2>Minecraft Title Text</h2>
                 <p>The text you want to add to the scene</p>
-                <input id="minecraft-title-text-input" class="dark_bordered" v-model="text"/>
+                <input id="minecraft-title-text-input" class="dark_bordered" v-model="text" placeholder="Minecraft"/>
                 <br>
                 <h2>Font</h2>
                 <p>The font to use for the text</p>
@@ -1849,8 +1883,12 @@
                   <li @click="lastTextureSource = textureSource; textureSource = 'file'; updatePreview()" :class="{ selected: textureSource === 'file' }">File</li>
                 </ul>
                 <div v-if="textureSource === 'premade'" >
+                  <div v-if="textures.filter(e => e[2] === font).length > 16" class="minecraft-texture-search">
+                    <input type="text" placeholder="Search…" class="dark_bordered" v-model="textureSearch">
+                    <i class="material-icons">search</i>
+                  </div>
                   <div class="minecraft-title-list">
-                    <div class="minecraft-title-item" v-for="[id, data, type] of textures" v-if="font === type" @click="texture = id; variant = null; updatePreview(); scrollToVariants()" :class="{ selected: texture === id }">
+                    <div class="minecraft-title-item" v-for="[id, data, type] of textures" v-if="font === type && (textures.filter(e => e[2] === font).length <= 16 || id.includes(textureSearch) || id === texture || Object.keys(fonts[font].textures[id]?.variants ?? {}).some(e => e.includes(textureSearch)))" @click="texture = id; variant = null; updatePreview(); scrollToVariants()" :class="{ selected: texture === id }">
                       <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                       <div>{{ data.category ?? data.name }}</div>
                       <div class="minecraft-title-item-buttons">
