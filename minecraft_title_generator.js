@@ -137,9 +137,6 @@
           cursor: pointer;
           border-radius: 4px;
         }
-        .minecraft-title-button:hover > svg {
-          fill: var(--color-light);
-        }
         .minecraft-title-button.selected {
           background-color: var(--color-accent);
           color: var(--color-accent_text);
@@ -182,9 +179,6 @@
           cursor: pointer;
           flex: 1;
           position: relative;
-        }
-        .minecraft-title-item * {
-          cursor: pointer;
         }
         .minecraft-title-item:hover {
           background-color: var(--color-button);
@@ -245,6 +239,12 @@
         }
         .spacer, #minecraft_title_generator .sp-preview, #minecraft_title_generator .form_inline_select > li {
           flex: 1;
+        }
+        .minecraft-title-item-buttons > i:hover, #minecraft-title-preview-container > i:hover, .minecraft-title-button:hover, #minecraft-title-custom-texture > i:hover, .text-input-row > i:hover, .minecraft-title-button:hover > svg {
+          color: var(--color-light);
+        }
+        .minecraft-title-preset > *, .minecraft-title-item *, .text-input-row > i:hover {
+          cursor: pointer;
         }
       `)
       let shadeState
@@ -853,9 +853,6 @@
           .minecraft-title-item:hover i{
             display: flex !important;
           }
-          .minecraft-title-item-buttons > i:hover, #minecraft-title-preview-container > i:hover, .minecraft-title-button:hover, #minecraft-title-custom-texture > i:hover {
-            color: var(--color-light);
-          }
           .minecraft-title-item-author:hover::after {
             content: attr(data-author);
             font-family: var(--font-main);
@@ -1009,6 +1006,14 @@
             right: 6px;
             top: 5px;
             pointer-events: none;
+          }
+          .text-input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+          }
+          .text-input-row > input {
+            flex: 1;
           }
         </style>`],
         component: {
@@ -1502,9 +1507,6 @@
                     background-color: var(--color-accent);
                     color: var(--color-accent_text);
                   }
-                  .minecraft-title-preset > * {
-                    cursor: pointer;
-                  }
                   .minecraft-title-preset > i:hover {
                     color: var(--color-ui);
                   }
@@ -1791,6 +1793,31 @@
                   `
                 }
               }).show()
+            },
+            textInfo() {
+              new Blockbench.Dialog({
+                id: "minecraft_title_info",
+                title: "Minecraft Title Info",
+                lines: [`<style>
+                  #minecraft_title_info code {
+                    padding: 0 2px;
+                    border: 1px solid var(--color-border);
+                    font-family: var(--font-code);
+                    background-color: var(--color-back);
+                    cursor: text;
+                    user-select: text;
+                  }
+                </style>`],
+                component: { template: `
+                  <p class="markdown">
+                    <ul>
+                      <li>Available characters:<br><code>${Object.keys(fonts[this.font].characters).sort().join("").replace(/[😩😳┣┫]/g, "")}</code></li>
+                      <li>You can use a lowercase <code>a</code> for a normal <code>a</code>, or an uppercase <code>A</code> for a creeper face <code>a</code></li>
+                    </ul>
+                  </p>
+                ` },
+                buttons: ["dialog.close"]
+              }).show()
             }
           },
           computed: {
@@ -1842,7 +1869,10 @@
               <div class="minecraft-title-contents" :class="{ visible: tab === 0 }">
                 <h2>Minecraft Title Text</h2>
                 <p>The text you want to add to the scene</p>
-                <input id="minecraft-title-text-input" class="dark_bordered" v-model="text" placeholder="Minecraft"/>
+                <div class="text-input-row">
+                  <input id="minecraft-title-text-input" class="dark_bordered" v-model="text" placeholder="Minecraft"/>
+                  <i class="material-icons" title="More info" @click="textInfo">info</i>
+                </div>
                 <br>
                 <h2>Font</h2>
                 <p>The font to use for the text</p>
