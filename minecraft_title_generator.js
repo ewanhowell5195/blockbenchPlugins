@@ -2153,7 +2153,7 @@
             count: Infinity
           })
           await getFontTextures("minecraft-ten", true)
-          const fontData = await fetch("https://raw.githubusercontent.com/${repo}/main/fonts.json").then(e => e.json()).catch(() => [])
+          const fontData = await fetch(`https://raw.githubusercontent.com/${repo}/main/fonts.json`).then(e => e.json()).catch(() => [])
           for (const font of fontData) {
             font.name ??= titleCase(font.id)
             font.characters = `https://raw.githubusercontent.com/${repo}/main/fonts/${font.id}/characters.json`
