@@ -1,4 +1,5 @@
 (() => {
+  const repo = "ewanhowell5195/MinecraftTitleGenerator"
   const fonts = {
     "minecraft-ten": {
       name: "Minecraft Ten",
@@ -49,7 +50,7 @@
     },
     github: {
       text: "Submit Textures and Fonts",
-      link: "https://github.com/ewanhowell5195/MinecraftTitleGenerator/",
+      link: `https://github.com/${repo}/`,
       icon: "fab.fa-github",
       colour: "#6E40C9"
     }
@@ -1878,7 +1879,7 @@
                 <p>The font to use for the text</p>
                 <div class="minecraft-title-list small">
                   <div class="minecraft-title-item" v-for="[id, data] of fontList" @click="font = id; variant = null; updateFont()" :class="{ selected: font === id }">
-                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + id + '/thumbnails/flat.png'" />
+                    <img :src="'https://raw.githubusercontent.com/${repo}/main/fonts/' + id + '/thumbnails/flat.png'" />
                     <div>{{ data.name }}</div>
                     <div class="minecraft-title-item-buttons">
                       <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
@@ -1919,7 +1920,7 @@
                   </div>
                   <div class="minecraft-title-list">
                     <div class="minecraft-title-item" v-for="[id, data, type] of textures" v-if="font === type && (textures.filter(e => e[2] === font).length <= 16 || id.includes(textureSearch) || id === texture || Object.keys(fonts[font].textures[id]?.variants ?? {}).some(e => e.includes(textureSearch)))" @click="texture = id; variant = null; updatePreview(); scrollToVariants()" :class="{ selected: texture === id }">
-                      <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                      <img :src="'https://raw.githubusercontent.com/${repo}/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                       <div>{{ data.category ?? data.name }}</div>
                       <div class="minecraft-title-item-buttons">
                         <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
@@ -1933,7 +1934,7 @@
                     <h2>Texture Variants</h2>
                     <div class="minecraft-title-list" ref="textureVariants">
                       <div class="minecraft-title-item" @click="variant = null; updatePreview()" :class="{ selected: !variant }">
-                        <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + texture + '.png'" />
+                        <img :src="'https://raw.githubusercontent.com/${repo}/main/fonts/' + font + '/thumbnails/' + texture + '.png'" />
                         <div>{{ fonts[font].textures[texture].name }}</div>
                         <div class="minecraft-title-item-buttons">
                           <i v-if="fonts[font].textures[texture].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + fonts[font].textures[texture].author">person</i>
@@ -1941,7 +1942,7 @@
                         </div>
                       </div>
                       <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures[texture].variants)" @click="variant = id; updatePreview()" :class="{ selected: variant === id }">
-                        <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                        <img :src="'https://raw.githubusercontent.com/${repo}/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                         <div>{{ data.name }}</div>
                         <div class="minecraft-title-item-buttons">
                           <i v-if="fonts[font].textures[texture].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + (data.author ?? fonts[font].textures[texture].author)">person</i>
@@ -2005,7 +2006,7 @@
                 </ul>
                 <div v-if="overlaySource === 'premade'" class="minecraft-title-list small">
                   <div class="minecraft-title-item" v-for="[id, data, type] of overlays" v-if="font === type" @click="overlay = id; updatePreview()" :class="{ selected: overlay === id }">
-                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                    <img :src="'https://raw.githubusercontent.com/${repo}/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                     <div>{{ data.name }}</div>
                     <div class="minecraft-title-item-buttons">
                       <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
@@ -2152,11 +2153,11 @@
             count: Infinity
           })
           await getFontTextures("minecraft-ten", true)
-          const fontData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts.json").then(e => e.json()).catch(() => [])
+          const fontData = await fetch("https://raw.githubusercontent.com/${repo}/main/fonts.json").then(e => e.json()).catch(() => [])
           for (const font of fontData) {
             font.name ??= titleCase(font.id)
-            font.characters = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/characters.json`
-            font.textures = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font.id}/textures.json`
+            font.characters = `https://raw.githubusercontent.com/${repo}/main/fonts/${font.id}/characters.json`
+            font.textures = `https://raw.githubusercontent.com/${repo}/main/fonts/${font.id}/textures.json`
             fonts[font.id] = font
           }
           this.content_vue.fontList = Object.entries(fonts)
@@ -2220,7 +2221,7 @@
               <h2>Font</h2>
               <div class="minecraft-title-list small">
                 <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts)" @click="selectFont(id)" :class="{ selected: font === id }">
-                  <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + id + '/thumbnails/flat.png'" />
+                  <img :src="'https://raw.githubusercontent.com/${repo}/main/fonts/' + id + '/thumbnails/flat.png'" />
                   <div>{{ data.name }}</div>
                 </div>
               </div>
@@ -2231,7 +2232,7 @@
                   <div>All</div>
                 </div>
                 <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures)" v-if="fonts[font].textures[id]" @click="texture = id; variant = null" :class="{ selected: texture === id }">
-                  <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                  <img :src="'https://raw.githubusercontent.com/${repo}/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                   <div>{{ data.category ?? data.name }}</div>
                   <i v-if="fonts[font].textures[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(fonts[font].textures[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(fonts[font].textures[id].variants).length > 9 ? '9_plus' : Object.keys(fonts[font].textures[id].variants).length + 1 }}</i>
                 </div>
@@ -2241,11 +2242,11 @@
                 <h2>Texture Variants</h2>
                 <div class="minecraft-title-list">
                   <div class="minecraft-title-item" @click="variant = null" :class="{ selected: !variant }">
-                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + texture + '.png'" />
+                    <img :src="'https://raw.githubusercontent.com/${repo}/main/fonts/' + font + '/thumbnails/' + texture + '.png'" />
                     <div>{{ fonts[font].textures[texture].name }}</div>
                   </div>
                   <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures[texture].variants)" @click="variant = id" :class="{ selected: variant === id }">
-                    <img :src="'https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
+                    <img :src="'https://raw.githubusercontent.com/${repo}/main/fonts/' + font + '/thumbnails/' + id + '.png'" />
                     <div>{{ data.name }}</div>
                   </div>
                 </div>
@@ -2544,7 +2545,7 @@
       }
       if (fonts[args.font].overlay) {
         if (typeof fonts[args.font].overlay === "boolean") {
-          fonts[args.font].overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(null, null, null, `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${args.font}/textures/overlay.png`), fulfill, null, fulfill))).image
+          fonts[args.font].overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(null, null, null, `https://raw.githubusercontent.com/${repo}/main/fonts/${args.font}/textures/overlay.png`), fulfill, null, fulfill))).image
         }
         ctx.drawImage(fonts[args.font].overlay, 0, 0)
       }
@@ -2777,19 +2778,19 @@
       fonts[font].textures = {}
     }
     fonts[font].overlays = { none: { name: "None" } }
-    const data = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/textures.json`).then(e => e.json())
+    const data = await fetch(`https://raw.githubusercontent.com/${repo}/main/fonts/${font}/textures.json`).then(e => e.json())
     for (const [id, texture] of Object.entries(data.textures)) {
       texture.name ??= titleCase(id)
-      texture.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/textures/${id}.png`
+      texture.texture = `https://raw.githubusercontent.com/${repo}/main/fonts/${font}/textures/${id}.png`
       if (texture.variants) for (const [id, variant] of Object.entries(texture.variants)) {
         variant.name ??= titleCase(id)
-        variant.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/textures/${id}.png`
+        variant.texture = `https://raw.githubusercontent.com/${repo}/main/fonts/${font}/textures/${id}.png`
       }
       fonts[font].textures[id] = texture
     }
     for (const [id, overlay] of Object.entries(data.overlays)) {
       overlay.name ??= titleCase(id)
-      overlay.texture = `https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${font}/overlays/${id}.png`
+      overlay.texture = `https://raw.githubusercontent.com/${repo}/main/fonts/${font}/overlays/${id}.png`
       fonts[font].overlays[id] = overlay
     }
     const flat = stats.find(e => e.id === `${font}.flat`)
@@ -2815,7 +2816,7 @@
 
   async function getFontCharacters(id) {
     if (typeof fonts[id].characters === "object") return
-    fonts[id].characters = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/MinecraftTitleGenerator/main/fonts/${id}/characters.json`).then(e => e.json()).catch(() => {})
+    fonts[id].characters = await fetch(`https://raw.githubusercontent.com/${repo}/main/fonts/${id}/characters.json`).then(e => e.json()).catch(() => {})
   }
 
   function titleCase(str) {
