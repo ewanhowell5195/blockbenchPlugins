@@ -244,7 +244,7 @@
         .minecraft-title-item-buttons > i:hover, #minecraft-title-preview-container > i:hover, .minecraft-title-button:hover, #minecraft-title-custom-texture > i:hover, .text-input-row > i:hover, .minecraft-title-button:hover > svg {
           color: var(--color-light);
         }
-        .minecraft-title-preset > *, .minecraft-title-item *, .text-input-row > i:hover {
+        .minecraft-title-preset > *, .minecraft-title-item *, .text-input-row > i:hover, #minecraft-title-render-button-row * {
           cursor: pointer;
         }
       `)
