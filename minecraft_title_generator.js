@@ -33,8 +33,8 @@
   const name = "Minecraft Title Generator"
   const icon = "text_fields"
   const author = "Ewan Howell"
-  const description = "Create Minecraft styled title models!"
-  const about = "This plugin adds a new format that allows you to create Minecraft styled title models that you can render in high quality."
+  const description = "Create Minecraft-styled title models!"
+  const about = "This plugin adds a new format that allows you to create Minecraft-styled title models that you can render in high quality."
   const links = {
     website: {
       text: "By Ewan Howell",
@@ -53,6 +53,12 @@
       link: `https://github.com/${repo}/`,
       icon: "fab.fa-github",
       colour: "#6E40C9"
+    },
+    tutorial: {
+      text: "Tutorial",
+      link: "https://youtu.be/iGaufrACVj4",
+      icon: "fab.fa-youtube",
+      colour: "#FF4444"
     }
   }
   const aboutLinks = `<div class="minecraft-title-links">${Object.values(links).map(e => `
@@ -223,6 +229,7 @@
           flex-grow: 1;
           flex-basis: 0;
           color: var(--color-subtle_text);
+          text-align: center;
         }
         .minecraft-title-links > a:hover {
           background-color: var(--color-accent);
