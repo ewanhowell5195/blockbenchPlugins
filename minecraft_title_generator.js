@@ -297,10 +297,10 @@
                   <p class="markdown">
                     <ul>
                       <li>This format is designed to create Minecraft styled title models.</li>
-                      <li>New text can be added with the <strong>Add Minecraft Title Text<strong> button <i class="icon material-icons" style="font-size:20px">text_fields</i>.</li>
-                      <li>There are automatic presets for text position and text angles, make sure to check all the text options!</li>
-                      <li>To render your title, you can use the <strong>Render<strong> mode at the top right.</li>
-                      <li>The camera can be automatically positioned in the render mode using the <strong>Position camera<strong> button <i class="icon material-icons" style="font-size:20px">auto_mode</i>.</li>
+                      <li>New text can be added with the <strong>Add Minecraft Title Text</strong> button (<i class="icon material-icons" style="font-size:20px">text_fields</i>).</li>
+                      <li>There are automatic presets for text positions and text angles, so make sure to check out all of the text options!</li>
+                      <li>To render your title, you can use the <strong>Render</strong> mode found at the top right.</li>
+                      <li>The camera can be automatically positioned in the render mode using the <strong>Position camera</strong> button (<i class="icon material-icons" style="font-size:20px">auto_mode</i>).</li>
                     </ul>
                   </p>
                 </content>
@@ -2093,7 +2093,7 @@
                   <input type="checkbox" :checked="terminators" v-model="terminators" @input="makePreview">
                   <div>Enable line terminators</div>
                 </div>
-                <p v-if="!fonts[font].forcedTerminators">Line terminators are special characters that appear at the start and end of the text</p>
+                <p v-if="!fonts[font].forcedTerminators">Line terminators are special characters that appear at the start and end of the text.</p>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 4 }">
                 <h2>Character Spacing</h2>
@@ -2111,7 +2111,7 @@
                 </div>
                 <br>
                 <h2>Text Scale</h2>
-                <p>The scale to render the text<br>For advanced scaling, use <strong>Transform > Scale</strong> after adding the text</p>
+                <p>The scale to render the text<br>For advanced scaling, use <strong>Transform > Scale</strong> after adding the text.</p>
                 <div class="bar slider_input_combo">
                   <div class="slider-label">X</div>
                   <input type="range" class="tool disp_range" v-model.number="scaleX" min="0.05" max="4" step="0.05" value="{{ scaleX }}" style="--color-thumb:var(--color-axis-x)" />
@@ -2901,9 +2901,9 @@
           <p>${about}</p>
           <br>
           <h2>Getting started</h2>
-          <p>To use this plugin, start by creating a new Minecraft Title project from the start screen, or go to <strong>File > New > Minecraft Title</strong> and select <strong>${name}</strong>. From here, use the dialog to add some text to the project. Don't forget to set the text type! You can add more text by using the add text button <i class="icon material-icons" style="translate:0 5px">text_fields</i> in the outliner.</p>
+          <p>To use this plugin, start by creating a new <strong>Minecraft Title</strong> project from the start screen, or go to <strong>File > New > Minecraft Title</strong>. You can then use the pop-up dialog to add some text to the project. Don't forget to set the text type! You can add more text by using the <strong>Add Text</strong> button (<i class="icon material-icons" style="translate:0 5px">text_fields</i>) in the outliner.</p>
           <br>
-          <p>Once you are done adding text, you can go to the <strong>Render</strong> tab at the top right to render your title. The positon camera button <i class="icon material-icons" style="translate:0 5px">auto_mode</i> will set the correct camera position for you.</p>
+          <p>Once you are done configuring your text, you can go to the <strong>Render</strong> tab at the top right to produce a high-quality render of your title. The <strong>Position Camera</strong> button (<i class="icon material-icons" style="translate:0 5px">auto_mode</i>) will set the camera angle for you.</p>
           ${aboutLinks}
         </div>
       `]
