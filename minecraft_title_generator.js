@@ -2093,7 +2093,7 @@
                   <input type="checkbox" :checked="terminators" v-model="terminators" @input="makePreview">
                   <div>Enable line terminators</div>
                 </div>
-                <p v-if="!fonts[font].forcedTerminators">Line terminators are special characters that appear at the start and end of the text.</p>
+                <p v-if="!fonts[font].forcedTerminators">Line terminators are special characters that appear at the start and end of the text</p>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 4 }">
                 <h2>Character Spacing</h2>
@@ -2111,7 +2111,7 @@
                 </div>
                 <br>
                 <h2>Text Scale</h2>
-                <p>The scale to render the text<br>For advanced scaling, use <strong>Transform > Scale</strong> after adding the text.</p>
+                <p>The scale to render the text<br>For advanced scaling, use <strong>Transform > Scale</strong> after adding the text</p>
                 <div class="bar slider_input_combo">
                   <div class="slider-label">X</div>
                   <input type="range" class="tool disp_range" v-model.number="scaleX" min="0.05" max="4" step="0.05" value="{{ scaleX }}" style="--color-thumb:var(--color-axis-x)" />
