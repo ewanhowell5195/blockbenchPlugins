@@ -84,7 +84,7 @@
     description,
     about,
     tags: ["Minecraft", "Title", "Logo"],
-    version: "1.0.2",
+    version: "1.0.3",
     min_version: "4.7.2",
     variant: "both",
     oninstall: () => showAbout(true),
