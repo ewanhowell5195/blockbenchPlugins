@@ -28,13 +28,12 @@
       terminatorSpace: true
     }
   }
-  let format, action, dialog, mode, panel, styles, preview, debug, aboutAction, stats
+  let format, action, dialog, mode, panel, styles, preview, debug, stats
   const id = "minecraft_title_generator"
   const name = "Minecraft Title Generator"
   const icon = "text_fields"
   const author = "Ewan Howell"
   const description = "Create Minecraft-styled title models!"
-  const about = "This plugin adds a new format that allows you to create Minecraft-styled title models that you can render in high quality."
   const links = {
     website: {
       text: "By Ewan Howell",
@@ -64,7 +63,7 @@
   const aboutLinks = `<div class="minecraft-title-links">${Object.values(links).map(e => `
     <a href="${e.link}">
       ${Blockbench.getIconNode(e.icon, e.colour).outerHTML}
-      <label>${e.text}</label>
+      <p>${e.text}</p>
     </a>
   `).join("")}</div>`
   const stopConfigs = [
@@ -79,15 +78,13 @@
   ]
   Plugin.register(id, {
     title: name,
-    icon,
+    icon: "icon.png",
     author,
     description,
-    about,
     tags: ["Minecraft", "Title", "Logo"],
     version: "1.2.0",
-    min_version: "4.7.2",
+    min_version: "4.8.0",
     variant: "both",
-    oninstall: () => showAbout(true),
     async onload() {
       styles = Blockbench.addCSS(`
         body:not(.is_mobile) #work_screen:has(#panel_minecraft_title_render_panel:not(.hidden)) {
@@ -248,6 +245,11 @@
         }
         .minecraft-title-links > a:hover > i {
           color: var(--color-light) !important;
+        }
+        .minecraft-title-links > a > p {
+          flex: 1;
+          display: flex;
+          align-items: center;
         }
         .spacer, #minecraft_title_generator .sp-preview, #minecraft_title_generator .form_inline_select > li {
           flex: 1;
@@ -2443,7 +2445,6 @@
       })
       MenuBar.addAction(debug, "help.developer.1")
       Blockbench.on("update_selection", selectHandler)
-      addAbout()
     },
     onunload() {
       Blockbench.removeListener("update_selection", selectHandler)
@@ -2455,7 +2456,6 @@
       styles.delete()
       preview.delete()
       debug.delete()
-      aboutAction.delete()
       dialog.close()
       debugDialog.close()
     }
@@ -2963,73 +2963,6 @@
       change: c => updateColour(dialog, v, c),
       hide: c => updateColour(dialog, v, c)
     }
-  }
-
-  function addAbout() {
-    let about = MenuBar.menus.help.structure.find(e => e.id === "about_plugins")
-    if (!about) {
-      about = new Action("about_plugins", {
-        name: "About Plugins...",
-        icon: "info",
-        children: []
-      })
-      MenuBar.addAction(about, "help")
-    }
-    aboutAction = new Action(`about_${id}`, {
-      name: `About ${name}...`,
-      icon,
-      click: () => showAbout()
-    })
-    about.children.push(aboutAction)
-  }
-
-  function showAbout(banner) {
-    new Dialog({
-      id: `about-${id}`,
-      title: name,
-      width: 780,
-      buttons: [],
-      lines: [`
-        <style>
-          #about-${id} .dialog_title {
-            margin-left: 16px;
-          }
-          #about-${id}-icon {
-            position: absolute;
-            top: 4px;
-            left: 8px;
-            pointer-events: none;
-          }
-          #about-${id} .dialog_content {
-            margin: 0;
-          }
-          #about-${id}-banner {
-            background-color: var(--color-accent);
-            color: var(--color-accent_text);
-            padding: 0 8px;
-          }
-          #about-${id}-content {
-            margin: 24px;
-          }
-        </style>
-        <i id="about-${id}-icon" class="icon material-icons">${icon}</i>
-        ${banner ? `<div id="about-${id}-banner">This window can be reopened at any time from <strong>Help > About Plugins > ${name}</strong></div>` : ""}
-        <div id="about-${id}-content">
-          <h1 style="margin-top:-10px">${name}</h1>
-          <p>${about}</p>
-          <br>
-          <h2>Getting started</h2>
-          <p>To use this plugin, start by creating a new <strong>Minecraft Title</strong> project from the start screen, or go to <strong>File > New > Minecraft Title</strong>. You can then use the pop-up dialog to add some text to the project. Don't forget to set the text type! You can add more text by using the <strong>Add Text</strong> button <i class="icon material-icons" style="translate:0 5px">text_fields</i> in the outliner.</p>
-          <br>
-          <p>Once you are done configuring your text, you can go to the <strong>Render</strong> tab at the top right to produce a high-quality render of your title. The <strong>Position Camera</strong> button <i class="icon material-icons" style="translate:0 5px">auto_mode</i> will set the camera angle for you.</p>
-          ${aboutLinks}
-        </div>
-      `]
-    }).show()
-    $("#about .dialog_title").html(`
-      <i class="icon material-icons">${icon}</i>
-      ${name}
-    `)
   }
 
   async function getTextureFromFile() {
