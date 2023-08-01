@@ -85,6 +85,7 @@
     version: "1.2.0",
     min_version: "4.8.0",
     variant: "both",
+    creation_date: "2023-06-10",
     async onload() {
       styles = Blockbench.addCSS(`
         body:not(.is_mobile) #work_screen:has(#panel_minecraft_title_render_panel:not(.hidden)) {
