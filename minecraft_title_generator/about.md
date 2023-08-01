@@ -13,14 +13,6 @@ Once you are done configuring your text, you can go to the **Render** tab at the
     display: flex;
     flex-direction: column;
   }
-  .spacer {
-    flex: 1;
-  }
-  .about-markdown-links {
-    display: flex;
-    justify-content: space-around;
-    margin: 20px 20px 0;
-  }
   .about-markdown-links > a {
     display: flex;
     flex-direction: column;
@@ -54,8 +46,8 @@ Once you are done configuring your text, you can go to the **Render** tab at the
     margin: 0;
   }
 </style>
-<div class="spacer"></div>
-<div class="about-markdown-links">
+<div style="flex:1"></div>
+<div class="about-markdown-links" style="display:flex;justify-content:space-around;margin:20px 20px 0">
   <a href="https://ewanhowell.com/">
     <i class="material-icons icon" style="color:rgb(51, 227, 142)">language</i>
     <p>By Ewan Howell</p>
