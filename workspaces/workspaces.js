@@ -16,14 +16,14 @@
   fs.mkdirSync(thumbnailCache, { recursive: true })
   Plugin.register(id, {
     title: name,
-    icon,
+    icon: "icon.png",
     author: "Ewan Howell",
-    description: "placeholder",
-    about: "placeholder",
-    tags: ["placeholder"],
+    description: "Organise your recent projects into workspaces that you can switch between.",
+    tags: ["Files", "Management", "Blockbench"],
     version: "1.0.0",
-    min_version: "4.5.2",
+    min_version: "4.8.0",
     variant: "desktop",
+    creation_date: "2023-08-08",
     onload() {
       styles = Blockbench.addCSS(`
         #workspace-details {
@@ -33,6 +33,7 @@
           display: flex;
           gap: 10px;
           align-items: center;
+          cursor: pointer;
         }
         .workspace {
           display: flex;
@@ -40,7 +41,7 @@
           gap: 10px;
           cursor: pointer;
         }
-        .workspace *, #workspace-details *{
+        .workspace *, #workspace-details *, #workspace-add * {
           cursor: pointer;
         }
         .workspace i:hover, .workspace input:hover, #workspace-details:hover, #workspace-add:hover {
@@ -54,36 +55,18 @@
         }
         #workspace-add {
           display: flex;
-          gap: 10px;
           align-items: center;
           margin-top: 10px;
           justify-content: flex-end;
+        }
+        #workspace-add > i {
+          padding-right: 10px;
+          min-width: 32px;
         }
         .start_screen_format_page > #workspace-details {
           display: none;
         }
       `)
-      newDialog = new Dialog({
-        id: "new_workspace",
-        title: "New Workspace",
-        buttons: ["Confirm"],
-        form: {
-          name: {
-            label: "Workspace name"
-          }
-        },
-        onConfirm(form) {
-          if (!form.name) return
-          const m = form.name.match(/[\\/*?"<>|]/)
-          if (m) return Blockbench.showQuickMessage(`Unsupported character "${m}"`, 2000)
-          if (workspaces.find(e => e.name === form.name)) return Blockbench.showQuickMessage("Workspace already exists", 2000)
-          workspaces.push({
-            name: form.name,
-            projects: []
-          })
-          switchToWorkspace(form.name)
-        }
-      })
       dialog = new Dialog({
         id,
         title: name,
@@ -95,7 +78,28 @@
             switchToWorkspace
           },
           methods: {
-            addWorkspace: () => newDialog.show(),
+            addWorkspace() {
+              newDialog = new Dialog({
+                id: "new_workspace",
+                title: "New Workspace",
+                form: {
+                  name: {
+                    label: "Workspace name"
+                  }
+                },
+                onConfirm(form) {
+                  if (!form.name) return
+                  const m = form.name.match(/[\\/*?"<>|]/)
+                  if (m) return Blockbench.showQuickMessage(`Unsupported character "${m}"`, 2000)
+                  if (workspaces.find(e => e.name === form.name)) return Blockbench.showQuickMessage("Workspace already exists", 2000)
+                  workspaces.push({
+                    name: form.name,
+                    projects: []
+                  })
+                  switchToWorkspace(form.name)
+                }
+              }).show()
+            },
             editWorkspace(e) {
               e.stopPropagation()
               const name = e.currentTarget.dataset.name
@@ -107,7 +111,7 @@
                 form: {
                   name: {
                     label: "Workspace name",
-                    placeholder: e.currentTarget.dataset.name,
+                    placeholder: name,
                     condition: () => allow
                   },
                   clear: {
@@ -154,15 +158,22 @@
             },
             deleteWorkspace(e) {
               e.stopPropagation()
-              if (confirm(`Are you sure you want to delete the workspace: ${e.currentTarget.dataset.name}\n\nIts recent projects list will be lost`, "Delete workspace?")) {
-                if (workspaces.find(f => f.name === e.currentTarget.dataset.name).active) switchToWorkspace("Default")
-                workspaces.splice(workspaces.findIndex(i => i.name === e.currentTarget.dataset.name), 1)
-                localStorage.setItem("workspaces", JSON.stringify(workspaces))
-                const oldPath = path.join(thumbnailCache, e.currentTarget.dataset.name)
-                if (fs.existsSync(oldPath)) {
-                  fs.rmSync(oldPath, { recursive: true, force: true })
+              const target = e.currentTarget
+              Blockbench.showMessageBox({
+                title: "Delete workspace",
+                message: `Are you sure you want to delete the workspace: ${target.dataset.name}\n\nIts recent projects list will be lost.`,
+                buttons: ["dialog.confirm", "dialog.cancel"]
+              }, async button => {
+                if (button === 0) {
+                  if (workspaces.find(f => f.name === target.dataset.name).active) switchToWorkspace("Default")
+                  workspaces.splice(workspaces.findIndex(i => i.name === target.dataset.name), 1)
+                  localStorage.setItem("workspaces", JSON.stringify(workspaces))
+                  const oldPath = path.join(thumbnailCache, target.dataset.name)
+                  if (fs.existsSync(oldPath)) {
+                    fs.rmSync(oldPath, { recursive: true, force: true })
+                  }
                 }
-              }
+              })
             }
           },
           template: `
@@ -189,8 +200,10 @@
         id,
         description: "Manage workspaces",
         icon,
-        click: () => dialog.show()
+        click: () => dialog.show(),
+        condition: () => !Format
       })
+      MenuBar.addAction(action, "file")
       $("#start_files > .start_screen_right").append(
         E("div").attr("id", "workspace-details").append(
           E("i").addClass("material-icons").text(icon),
