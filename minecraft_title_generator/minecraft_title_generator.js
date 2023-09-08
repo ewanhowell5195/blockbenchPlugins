@@ -265,6 +265,12 @@
         #format_page_minecraft_title {
           padding-bottom: 0;
         }
+        #format_page_minecraft_title .format_target {
+          margin-bottom: 6px;
+        }
+        #format_page_minecraft_title div:nth-child(3), #format_page_minecraft_title content {
+          overflow-y: auto;
+        }
       `)
       let shadeState
       BarItems.toggle_shading.condition = () => Project.format?.id !== format.id
@@ -929,9 +935,10 @@
             display: none;
           }
           #minecraft-title-preview {
-            max-width: 540px;
+            width: 100%;
             height: 150px;
             image-rendering: auto;
+            object-fit: contain;
           }
           #minecraft-title-preview-container > .icon {
             position: absolute;
