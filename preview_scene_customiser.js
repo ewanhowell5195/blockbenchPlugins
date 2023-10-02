@@ -25,8 +25,8 @@
     description,
     about: `## Creating your own preview scenes\n\nWith this plugin, you can create your own preview scenes that you can use with any model in Blockbench. A new format has been added that allows you to create, export, and install your very own preview scenes.\n\n## Downloading preview scenes\n\nA preview scene store is included, that allows you to browse and download preview scenes created by other people. Any downloaded scenes can be edited and customised as you wish from the preview scene management menu. You can submit your own preview scenes to the [GitHub Repository](${links["github"]}).\n\n## How to use\n\nYou can find all the options to manage, import, and download custom preview scenes under the \n\`View > Preview Scene Customiser\` menu.\n\nTo create custom preview scenes, use the new **Preview Scene** model format, and then export or install them from the \n\`File > Export\` menu.`,
     tags: ["Preview Scenes", "Blockbench"],
-    version: "1.0.2",
-    min_version: "4.4.2",
+    version: "1.0.3",
+    min_version: "4.8.3",
     variant: "both",
     oninstall: () => showAbout(true),
     onload() {
@@ -266,12 +266,10 @@
           }
         },
         onActivation() {
-          BarItems.preview_scene.set("none")
-          PreviewScene.scenes[activePreviewScene]?.unselect()
+          BarItems.preview_scene.children().find(e => e.id === "none").click()
         },
         onDeactivation() {
-          BarItems.preview_scene.set(activePreviewScene)
-          PreviewScene.scenes[activePreviewScene]?.select()
+          BarItems.preview_scene.children().find(e => e.id === activePreviewScene).click()
         }
       })
       codec.format = format
@@ -514,8 +512,7 @@
       if (currentScene) {
         const scene = PreviewScene.scenes[currentScene]
         if (scene) {
-          scene.select()
-          BarItems.preview_scene.set(scene.id)
+          BarItems.preview_scene.children().find(e => e.id === scene.id).click()
         }
       }
       properties = [
@@ -560,9 +557,8 @@
       manageAction.delete()
       exportAction.delete()
       exportAction2.delete()
-      BarItems.preview_scene.set("none")
+      BarItems.preview_scene.children().find(e => e.id === "none").click()
       for (const scene of scenes) {
-        PreviewScene.scenes[scene].unselect()
         PreviewScene.scenes[scene].delete()
       }
       styles.delete()
@@ -769,9 +765,7 @@
         light_side: settings.lightSide
       })
       if (!args?.dontEnable) {
-        for (const scene in PreviewScene.scenes) PreviewScene.scenes[scene].unselect()
-        scene.select()
-        BarItems.preview_scene.set(id)
+        BarItems.preview_scene.children().find(e => e.id === id).click()
       }
       const stored = JSON.parse(localStorage.getItem("preview_scenes") ?? "[]")
       stored.push({
@@ -916,8 +910,7 @@
                   E("div").attr("id", "delete_warning_buttons").append(
                     E("button").text("Cancel").on("click", e => $("dialog#manage_preview_scenes_dialog #delete_warning").remove()),
                     E("button").addClass("danger-button").text("Delete").on("click", e => {
-                      BarItems.preview_scene.set("none")
-                      PreviewScene.scenes[scene[1].id].unselect()
+                      BarItems.preview_scene.children().find(e => e.id === "none").click()
                       PreviewScene.scenes[scene[1].id].delete()
                       scenes.splice(scenes.indexOf(scene[1].id), 1)
                       const stored = JSON.parse(localStorage.getItem("preview_scenes"))
