@@ -42,7 +42,6 @@
     icon,
     author,
     description,
-    about: `## Creating your own preview scenes\n\nWith this plugin, you can create your own preview scenes that you can use with any model in Blockbench. A new format has been added that allows you to create, export, and install your very own preview scenes.\n\n## Downloading preview scenes\n\nA preview scene store is included, that allows you to browse and download preview scenes created by other people. Any downloaded scenes can be edited and customised as you wish from the preview scene management menu. You can submit your own preview scenes to the [GitHub Repository](${links.github.link}).\n\n## How to use\n\nYou can find all the options to manage, import, and download custom preview scenes under the \n\`View > Preview Scene Customiser\` menu.\n\nTo create custom preview scenes, use the new **Preview Scene** model format, and then export or install them from the \n\`File > Export\` menu.`,
     tags: ["Preview Scenes", "Blockbench"],
     version: "1.1.0",
     min_version: "4.8.3",
@@ -326,21 +325,21 @@
                 <p class="format_description">${description}</p>
                 <p class="format_target"><b>Target</b> : <span>Blockbench</span></p>
                 <content>
-                  <h3 class="markdown"><strong>How to use:</strong></h3>
+                  <h3 class="markdown">How to use:</h3>
                   <p class="markdown">
                     <ul>
-                      <li><p>Press <code>Create New Preview Scene</code> and create a model.</p></li>
-                      <li><p>To export to a file, go to <code>File > Export > Export Preview Scene</code>.</p></li>
-                      <li><p>To install directly to Blockbench, go to <code>File > Export > Install Preview Scene in Blockbench</code>, and fill in the options.</p></li>
+                      <li><p>Press <strong>Create New Preview Scene</strong> and create a model.</p></li>
+                      <li><p>To export to a file, go to <strong>File > Export > Export Preview Scene</strong>.</p></li>
+                      <li><p>To install directly to Blockbench, go to <strong>File > Export > Install Preview Scene in Blockbench</strong>, and fill in the options.</p></li>
                     </ul>
                   </p>
-                  <h3 class="markdown"><strong>Managing scenes:</strong></h3>
-                  <p>Management options can be found under <code>View > Preview Scene Customiser</code>.</p>
+                  <h3 class="markdown">Managing scenes:</h3>
+                  <p>Management options can be found under <strong>View > Preview Scene Customiser</strong>.</p>
                   <p class="markdown">
                     <ul>
-                      <li><p>To manage installed scenes, go to <code>Manage Preview Scenes</code>.</p></li>
-                      <li><p>To import scene files, go to <code>Import Preview Scene</code>, select a scene file, and fill in the options.</p></li>
-                      <li><p>To download pre-made scenes, go to <code>Download Preview Scenes</code>.</p></li>
+                      <li><p>To manage installed scenes, go to <strong>Manage Preview Scenes</strong>.</p></li>
+                      <li><p>To import scene files, go to <strong>Import Preview Scene</strong>, select a scene file, and fill in the options.</p></li>
+                      <li><p>To download pre-made scenes, go to <strong>Download Preview Scenes</strong>.</p></li>
                     </ul>
                   </p>
                 </content>
@@ -354,7 +353,7 @@
                 <div class="button_bar">
                   <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="Formats.preview_scene_model.new()">
                     <i class="material-icons">${icon}</i>
-                    Create New Minecraft Title
+                    Create New Preview Scene
                   </button>
                 </div>
               </div>
