@@ -2,7 +2,7 @@
   let format, codec, exportAction, exportAction2, importAction, manageAction, styles, properties, ignoreChange
   const id = "preview_scene_customiser"
   const name = "Preview Scene Customiser"
-  const icon = "image"
+  const icon = "nature_people"
   const author = "Ewan Howell"
   const description = "Create your very own preview scenes. Download preview scenes from the Preview Scene Store. Edit and manage existing preview scenes."
   const links = {
@@ -39,13 +39,14 @@
   const scenes = []
   Plugin.register(id, {
     title: name,
-    icon,
+    icon: "icon.png",
     author,
     description,
     tags: ["Preview Scenes", "Blockbench"],
     version: "1.1.0",
     min_version: "4.8.3",
     variant: "both",
+    creation_date: "2022-10-14",
     onload() {
       styles = Blockbench.addCSS(`
         #format_page_preview_scene_model .socials {
