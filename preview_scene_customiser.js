@@ -1,42 +1,146 @@
 (async function () {
-  let aboutAction, format, codec, exportAction, exportAction2, importAction, manageAction, styles, properties
+  let format, codec, exportAction, exportAction2, importAction, manageAction, styles, properties, ignoreChange
   const id = "preview_scene_customiser"
   const name = "Preview Scene Customiser"
   const icon = "image"
   const author = "Ewan Howell"
   const description = "Create your very own preview scenes. Download preview scenes from the Preview Scene Store. Edit and manage existing preview scenes."
   const links = {
-    website: "https://ewanhowell.com/",
-    discord: "https://discord.com/invite/pkRxtGw/",
-    github: "https://github.com/ewanhowell5195/preview-scene-customiser/"
+    website: {
+      text: "By Ewan Howell",
+      link: "https://ewanhowell.com/",
+      icon: "language",
+      colour: "#33E38E"
+    },
+    discord: {
+      text: "Discord Server",
+      link: "https://discord.ewanhowell.com/",
+      icon: "fab.fa-discord",
+      colour: "#727FFF"
+    },
+    github: {
+      text: "Submit Preview Scenes",
+      link: "https://github.com/ewanhowell5195/previewSceneCustomiser/",
+      icon: "fab.fa-github",
+      colour: "#6E40C9"
+    }
   }
   const E = s => $(document.createElement(s))
   function setCurrentPreviewScene(data) {
+    console.log(data)
     localStorage.setItem("preview_scene", data.scene.id)
     activePreviewScene = data.scene.id
   }
-  const removeCurrentPreviewScene = data => localStorage.removeItem("preview_scene")
-  let activePreviewScene = BarItems.preview_scene.value
+  function removeCurrentPreviewScene() {
+    if (ignoreChange) return
+    localStorage.removeItem("preview_scene")
+  }
+  let activePreviewScene = PreviewScene.active?.id ?? "none"
   const scenes = []
   Plugin.register(id, {
     title: name,
     icon,
     author,
     description,
-    about: `## Creating your own preview scenes\n\nWith this plugin, you can create your own preview scenes that you can use with any model in Blockbench. A new format has been added that allows you to create, export, and install your very own preview scenes.\n\n## Downloading preview scenes\n\nA preview scene store is included, that allows you to browse and download preview scenes created by other people. Any downloaded scenes can be edited and customised as you wish from the preview scene management menu. You can submit your own preview scenes to the [GitHub Repository](${links["github"]}).\n\n## How to use\n\nYou can find all the options to manage, import, and download custom preview scenes under the \n\`View > Preview Scene Customiser\` menu.\n\nTo create custom preview scenes, use the new **Preview Scene** model format, and then export or install them from the \n\`File > Export\` menu.`,
+    about: `## Creating your own preview scenes\n\nWith this plugin, you can create your own preview scenes that you can use with any model in Blockbench. A new format has been added that allows you to create, export, and install your very own preview scenes.\n\n## Downloading preview scenes\n\nA preview scene store is included, that allows you to browse and download preview scenes created by other people. Any downloaded scenes can be edited and customised as you wish from the preview scene management menu. You can submit your own preview scenes to the [GitHub Repository](${links.github.link}).\n\n## How to use\n\nYou can find all the options to manage, import, and download custom preview scenes under the \n\`View > Preview Scene Customiser\` menu.\n\nTo create custom preview scenes, use the new **Preview Scene** model format, and then export or install them from the \n\`File > Export\` menu.`,
     tags: ["Preview Scenes", "Blockbench"],
-    version: "1.0.3",
+    version: "1.1.0",
     min_version: "4.8.3",
     variant: "both",
-    oninstall: () => showAbout(true),
     onload() {
-      addStyles()
-      addAbout()
+      styles = Blockbench.addCSS(`
+        #format_page_preview_scene_model .socials {
+          padding: 0!important;
+          display: flex;
+          max-width: 540px;
+          margin: auto;
+          width: 100%;
+        }
+        #format_page_preview_scene_model .socials a {
+          text-align: center;
+          flex-basis: 0;
+          flex-grow: 1;
+          text-decoration: none;
+          padding: 6px;
+          padding-top: 10px;
+        }
+        #format_page_preview_scene_model .socials a i {
+          display: block;
+          font-size: 2em;
+          max-width: none;
+          pointer-events: none;
+        }
+        #format_page_preview_scene_model .socials a label {
+          color: var(--color-subtle_text);
+          cursor: inherit;
+          pointer-events: none;
+        }
+        #format_page_preview_scene_model .socials a:hover {
+          background-color: var(--color-accent);
+        }
+        #format_page_preview_scene_model .socials a:hover * {
+          color: var(--color-light)!important;
+        }
+        #format_page_preview_scene_model code {
+          padding: 0 2px;
+          background-color: var(--color-back);
+          border: 1px solid var(--color-border);
+          user-select: text;
+          font-family: var(--font-code);
+        }
+        .preview-scene-links {
+          display: flex;
+          justify-content: space-around;
+          margin: 20px 40px 0;
+        }
+        .preview-scene-links > a {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+          padding: 5px;
+          text-decoration: none;
+          flex-grow: 1;
+          flex-basis: 0;
+          color: var(--color-subtle_text);
+          text-align: center;
+        }
+        .preview-scene-links > a:hover {
+          background-color: var(--color-accent);
+          color: var(--color-light);
+        }
+        .preview-scene-links > a > i {
+          font-size: 32px;
+          width: 100%;
+          max-width: initial;
+          height: 32px;
+          text-align: center;
+        }
+        .preview-scene-links > a:hover > i {
+          color: var(--color-light) !important;
+        }
+        .preview-scene-links > a > p {
+          flex: 1;
+          display: flex;
+          align-items: center;
+        }
+        #format_page_preview_scene_model {
+          padding-bottom: 0;
+        }
+        #format_page_preview_scene_model .format_target {
+          margin-bottom: 6px;
+        }
+        #format_page_preview_scene_model div:nth-child(3), #format_page_preview_scene_model content {
+          overflow-y: auto;
+        }
+      `)
       const stored = JSON.parse(localStorage.getItem("preview_scenes") ?? "[]")
       for (const scene of stored) {
         scenes.push(scene.id)
         new PreviewModel(scene.id, scene.model)
+        if (scene.category) PreviewScene.menu_categories[scene.category] ??= { _label: titleCase(scene.category) }
         new PreviewScene(scene.id, {
+          category: scene.category,
           name: scene.name,
           preview_models: [scene.id]
         })
@@ -87,7 +191,7 @@
             if (s.export == false) return
             const element = {}
             element_index_lut[Cube.all.indexOf(s)] = clear_elements.length
-            if (s.name !== "cube")  element.name = s.name
+            if (s.name !== "cube") element.name = s.name
             element.position = s.from.slice()
             let to = s.to.slice()
             if (s.inflate) for (let i = 0; i < 3; i++) {
@@ -160,7 +264,6 @@
             translateKey: "invalid_model",
             icon: "error"
           })
-          newProject(Formats[format.id])
           this.dispatchEvent("parse", {model})
           if (typeof model.credit === "string") Project.credit = model.credit
           if (Array.isArray(model.texture_size)) {
@@ -219,10 +322,10 @@
         format_page: {
           component: {
             template: `
-              <div style="display:flex;flex-direction:column;height:100%;">
-                <p class="format_description">Create your very own preview scenes.</p>
+              <div style="display:flex;flex-direction:column;height:100%">
+                <p class="format_description">${description}</p>
                 <p class="format_target"><b>Target</b> : <span>Blockbench</span></p>
-                <content style="flex:1;margin:-22px 0 20px">
+                <content>
                   <h3 class="markdown"><strong>How to use:</strong></h3>
                   <p class="markdown">
                     <ul>
@@ -241,36 +344,31 @@
                     </ul>
                   </p>
                 </content>
-                <div class="socials">
-                  <a href="${links["website"]}" class="open-in-browser">
-                    <i class="icon material-icons" style="color:#33E38E">language</i>
-                    <label>By ${author}</label>
+                <div class="spacer"></div>
+                <div class="preview-scene-links">${Object.values(links).map(e => `
+                  <a href="${e.link}">
+                    ${Blockbench.getIconNode(e.icon, e.colour).outerHTML}
+                    <p>${e.text}</p>
                   </a>
-                  <a href="${links["discord"]}" class="open-in-browser">
-                    <i class="icon fab fa-discord" style="color:#727FFF"></i>
-                    <label>Discord Server</label>
-                  </a>
-                  <a href="${links["github"]}" class="open-in-browser">
-                    <i class="icon fab fa-github"></i>
-                    <label>GitHub Repository</label>
-                  </a>
-                </div>
+                `).join("")}</div>
                 <div class="button_bar">
-                  <button id="create_new_model_button" style="margin-top:20px;" @click="Formats.preview_scene_model.new()">
+                  <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="Formats.preview_scene_model.new()">
                     <i class="material-icons">${icon}</i>
-                    Create New Preview Scene
+                    Create New Minecraft Title
                   </button>
                 </div>
               </div>
-            `,
+            `
           }
         },
         onActivation() {
-          BarItems.preview_scene.children().find(e => e.id === "none").click()
+          setTimeout(() => {
+            ignoreChange = true
+            PreviewScene.active?.unselect()
+            ignoreChange = false
+          }, 0)
         },
-        onDeactivation() {
-          BarItems.preview_scene.children().find(e => e.id === activePreviewScene).click()
-        }
+        onDeactivation: () => PreviewScene.scenes[activePreviewScene]?.select()
       })
       codec.format = format
       BarItems.preview_scene.condition = () => Project.format !== format
@@ -343,11 +441,11 @@
             name: "Download Preview Scenes",
             icon: "file_download",
             async click() {
-              const sceneData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/preview-scene-customiser/main/scenes.json").then(e => e.json()).catch(() => {})
+              const sceneData = await fetch("https://raw.githubusercontent.com/ewanhowell5195/previewSceneCustomiser/main/scenes.json").then(e => e.json()).catch(() => {})
               if (!sceneData) return new Dialog({
                 id: "download_preview_scene_models_connection_failure_dialog",
                 title: name,
-                lines: ['<h2>Connection failed</h2><span>Please check your internet connection and make sure that you can access <a href="https://raw.githubusercontent.com/ewanhowell5195/preview-scene-customiser/main/scenes.json">GitHub</a></span>'],
+                lines: ['<h2>Connection failed</h2><span>Please check your internet connection and make sure that you can access <a href="https://raw.githubusercontent.com/ewanhowell5195/previewSceneCustomiser/main/scenes.json">GitHub</a></span>'],
                 buttons: ["Okay"]
               }).show()
               const dialog = new Dialog({
@@ -356,8 +454,8 @@
                 width: 780,
                 buttons: [],
                 sidebar: {
-                  pages: Object.fromEntries(sceneData.map(e => [e.name, {
-                    label: e.name,
+                  pages: Object.fromEntries(sceneData.map(e => [e.id, {
+                    label: titleCase(e.id),
                     icon: e.icon
                   }])),
                   onPageSwitch(page) {
@@ -466,11 +564,11 @@
               const categories = $("dialog#download_preview_scene_dialog #scene_categories")
               let selected
               for (const category of sceneData) {
-                categories.append(E("div").attr("id", `scene_category_${category.name}`).addClass("hidden").append(
-                  E("h2").text(category.name),
+                categories.append(E("div").attr("id", `scene_category_${category.id}`).addClass("hidden").append(
+                  E("h2").text(titleCase(category.id)),
                   E("div").addClass("scenes_container").append(...category.scenes.map(e => E("div").addClass("scene").attr("data-scene", e.id).append(
-                    E("img").attr("src", `https://raw.githubusercontent.com/ewanhowell5195/preview-scene-customiser/main/scenes/${e.id}/scene.webp`),
-                    E("span").text(e.name),
+                    E("img").attr("src", `https://raw.githubusercontent.com/ewanhowell5195/previewSceneCustomiser/main/scenes/${e.id}/scene.webp`),
+                    E("span").text(e.name ?? titleCase(e.id)),
                     E("i").addClass("scene_author material-icons").attr("data-author", `By ${e.author}`).text("person")
                   ).on("click", f => {
                     $("dialog#download_preview_scene_dialog #scene_categories .selected").removeClass("selected")
@@ -479,18 +577,22 @@
                   })))
                 ))
               }
-              $(`dialog#download_preview_scene_dialog #scene_category_${sceneData[0].name}`).removeClass("hidden")
+              $(`dialog#download_preview_scene_dialog #scene_category_${sceneData[0].id}`).removeClass("hidden")
               $("dialog#download_preview_scene_dialog #close").on("click", e => dialog.close())
               $("dialog#download_preview_scene_dialog #download").on("click", async e => {
                 if (!selected) return Blockbench.showQuickMessage("Please select a preview scene")
-                const scene = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/preview-scene-customiser/main/scenes/${selected.id}/scene.bbscene`).then(e => e.json()).catch(() => {})
+                const scene = await fetch(`https://raw.githubusercontent.com/ewanhowell5195/previewSceneCustomiser/main/scenes/${selected.id}/scene.bbscene`).then(e => e.json()).catch(() => {})
                 if (!scene) return Blockbench.showQuickMessage("Unable to load preview scene")
+                importPreviewScene(scene, {
+                  name: selected.name ?? titleCase(selected.id),
+                  category: titleCase($("dialog#download_preview_scene_dialog #scene_categories > :not(.hidden)")[0].id.slice(15)),
+                  eula: selected.eula
+                })
                 dialog.close()
-                importPreviewScene(scene, {name: selected.name})
               })
               $("dialog#download_preview_scene_dialog .dialog_sidebar").append(
                 E("div").addClass("spacer"),
-                E("a").attr("href", links["github"]).css({
+                E("a").attr("href", links.github.link).css({
                   display: "flex",
                   gap: "10px",
                   "align-items": "center",
@@ -507,14 +609,12 @@
           })
         ]
       })
-      MenuBar.addAction(manageAction, "view.3")
+      MenuBar.addAction(manageAction, "view.11")
       const currentScene = localStorage.getItem("preview_scene")
-      if (currentScene) {
-        const scene = PreviewScene.scenes[currentScene]
-        if (scene) {
-          BarItems.preview_scene.children().find(e => e.id === scene.id).click()
-        }
-      }
+      if (currentScene) setTimeout(() => {
+        if (Project.format?.id !== format.id) PreviewScene.scenes[currentScene]?.select()
+        else activePreviewScene = currentScene
+      }, 0)
       properties = [
         new Property(ModelProject, "number", "preview_scene_render_side", {
           exposed: false,
@@ -545,22 +645,21 @@
       Blockbench.on("select_preview_scene", setCurrentPreviewScene)
       Blockbench.on("unselect_preview_scene", removeCurrentPreviewScene)
     },
-    onuninstall: () => localStorage.removeItem("preview_scenes"),
+    onuninstall() {
+      localStorage.removeItem("preview_scene")
+      localStorage.removeItem("preview_scenes")
+    },
     onunload() {
       Blockbench.removeListener("select_preview_scene", setCurrentPreviewScene)
       Blockbench.removeListener("unselect_preview_scene", removeCurrentPreviewScene)
-      aboutAction.delete()
-      MenuBar.removeAction(`help.about_plugins.about_${id}`)
       format.delete()
       codec.delete()
       manageAction.children.forEach(e => e.delete())
       manageAction.delete()
       exportAction.delete()
       exportAction2.delete()
-      BarItems.preview_scene.children().find(e => e.id === "none").click()
-      for (const scene of scenes) {
-        PreviewScene.scenes[scene].delete()
-      }
+      PreviewScene.active?.unselect()
+      for (const scene of scenes) PreviewScene.scenes[scene].delete()
       styles.delete()
       properties.forEach(e => e.delete())
     }
@@ -572,50 +671,61 @@
       icon: "warning"
     })
     let texture = await new Promise(fulfill => new THREE.TextureLoader().load(model.texture, fulfill, null, fulfill))
-    const form = {}
-    if (!args?.export) form.name = {
-      label: "Preview Scene Name",
-      type: "input",
-      placeholder: "Example Name",
-      value: args?.name
-    }
-    form.renderSide = {
-      label: "Render Side",
-      type: "select",
-      options: {
-        0: "Front Side",
-        1: "Back Side",
-        2: "Double Side"
+    const form = {
+      name: {
+        label: "Preview Scene Name",
+        type: "input",
+        placeholder: "Example Name",
+        value: args?.name
       },
-      value: model.settings?.renderSide ?? 2
-    }
-    form.lightSide = {
-      label: "Light side",
-      type: "select",
-      options: {
-        0: "Up",
-        1: "North",
-        2: "East",
-        3: "Down",
-        4: "South",
-        5: "West"
+      category: {
+        label: "Preview Scene Category",
+        type: "input",
+        placeholder: "Minecraft",
+        value: args?.category
       },
-      value: model.settings?.lightSide ?? 0
+      renderSide: {
+        label: "Render Side",
+        type: "select",
+        options: {
+          0: "Front Side",
+          1: "Back Side",
+          2: "Double Side"
+        },
+        value: model.settings?.renderSide ?? 2
+      },
+      lightSide: {
+        label: "Light side",
+        type: "select",
+        options: {
+          0: "Up",
+          1: "North",
+          2: "East",
+          3: "Down",
+          4: "South",
+          5: "West"
+        },
+        value: model.settings?.lightSide ?? 0
+      },
+      lightColour: {
+        label: "Light colour",
+        type: "color",
+        value: model.settings?.lightColour ?? "#ffffff"
+      },
+      tintColour: {
+        label: "Tint colour",
+        type: "color",
+        value: model.settings?.tintColour ?? "#ffffff"
+      },
+      shading: {
+        label: "Shading",
+        type: "checkbox",
+        value: model.settings?.shading ?? true
+      }
     }
-    form.lightColour = {
-      label: "Light colour",
-      type: "color",
-      value: model.settings?.lightColour ?? "#ffffff"
-    }
-    form.tintColour = {
-      label: "Tint colour",
-      type: "color",
-      value: model.settings?.tintColour ?? "#ffffff"
-    }
-    form.shading = {
-      label: "Shading",
-      type: "checkbox",
-      value: model.settings?.shading ?? true
+    if (args?.export) {
+      delete form.name
+      delete form.category
     }
     const dialog = new Dialog({
       id: "preview_scene_settings_dialog",
@@ -745,6 +855,7 @@
     $("dialog#preview_scene_settings_dialog #import").on("click", async e => {
       settings = await settings
       const name = dialog.form.name.bar.find("input").val().trim()
+      const category = dialog.form.category.bar.find("input").val().trim().replace(/\s/g, "_")
       if (!name) return Blockbench.showQuickMessage("Invalid name")
       const id = name.toLowerCase().replace(/\s/g, "_")
       if (PreviewScene.scenes[id]?.id) return Blockbench.showQuickMessage("Preview Scene already exists, please pick a different name", 2000) 
@@ -754,7 +865,9 @@
       scenes.push(id)
       new PreviewModel(id, model)
       const lightColour = tinycolor(settings.lightColour).toRgb()
+      PreviewScene.menu_categories[category] ??= { _label: titleCase(category) }
       const scene = new PreviewScene(id, {
+        category,
         name,
         preview_models: [id],
         light_color: {
@@ -762,15 +875,15 @@
           g: lightColour.g / 255,
           b: lightColour.b / 255
         },
-        light_side: settings.lightSide
+        light_side: settings.lightSide,
+        require_minecraft_eula: args.eula
       })
-      if (!args?.dontEnable) {
-        BarItems.preview_scene.children().find(e => e.id === id).click()
-      }
+      if (!args?.dontEnable) PreviewScene.scenes[id].select()
       const stored = JSON.parse(localStorage.getItem("preview_scenes") ?? "[]")
       stored.push({
         id,
-        name, 
+        category,
+        name,
         model: model
       })
       localStorage.setItem("preview_scenes", JSON.stringify(stored))
@@ -910,7 +1023,7 @@
                   E("div").attr("id", "delete_warning_buttons").append(
                     E("button").text("Cancel").on("click", e => $("dialog#manage_preview_scenes_dialog #delete_warning").remove()),
                     E("button").addClass("danger-button").text("Delete").on("click", e => {
-                      BarItems.preview_scene.children().find(e => e.id === "none").click()
+                      PreviewScene.active?.unselect()
                       PreviewScene.scenes[scene[1].id].delete()
                       scenes.splice(scenes.indexOf(scene[1].id), 1)
                       const stored = JSON.parse(localStorage.getItem("preview_scenes"))
@@ -974,131 +1087,7 @@
       })
     }
   }
-  function addStyles() {
-    styles = Blockbench.addCSS(`
-      #format_page_preview_scene_model .socials {
-        padding: 0!important;
-        display: flex;
-        max-width: 540px;
-        margin: auto;
-        width: 100%;
-      }
-      #format_page_preview_scene_model .socials a {
-        text-align: center;
-        flex-basis: 0;
-        flex-grow: 1;
-        text-decoration: none;
-        padding: 6px;
-        padding-top: 10px;
-      }
-      #format_page_preview_scene_model .socials a i {
-        display: block;
-        font-size: 2em;
-        max-width: none;
-        pointer-events: none;
-      }
-      #format_page_preview_scene_model .socials a label {
-        color: var(--color-subtle_text);
-        cursor: inherit;
-        pointer-events: none;
-      }
-      #format_page_preview_scene_model .socials a:hover {
-        background-color: var(--color-accent);
-      }
-      #format_page_preview_scene_model .socials a:hover * {
-        color: var(--color-light)!important;
-      }
-      #format_page_preview_scene_model code {
-        padding: 0 2px;
-        background-color: var(--color-back);
-        border: 1px solid var(--color-border);
-        user-select: text;
-        font-family: var(--font-code);
-      }
-    `)
-  }
-  function addAbout() {
-    let about = MenuBar.menus.help.structure.find(e => e.id === "about_plugins")
-    if (!about) {
-      about = new Action("about_plugins", {
-        name: "About Plugins...",
-        icon: "info",
-        children: []
-      })
-      MenuBar.addAction(about, "help")
-    }
-    aboutAction = new Action(`about_${id}`, {
-      name: `About ${name}...`,
-      icon,
-      click: () => showAbout()
-    })
-    about.children.push(aboutAction)
-  }
-  function showAbout(banner) {
-    const infoBox = new Dialog({
-      id: "about",
-      title: name,
-      width: 780,
-      buttons: [],
-      lines: [`
-        <style>
-          dialog#about .dialog_title {
-            padding-left: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          dialog#about .dialog_content {
-            text-align: left!important;
-            margin: 0!important;
-          }
-          dialog#about .socials {
-            padding: 20px 0 0!important;
-          }
-          dialog#about #banner {
-            background-color: var(--color-accent);
-            color: var(--color-accent_text);
-            width: 100%;
-            padding: 0 8px
-          }
-          dialog#about #content {
-            margin: 24px;
-          }
-          dialog#about code {
-            padding: 0 2px;
-          }
-        </style>
-        ${banner ? `<div id="banner">This window can be reopened at any time from <strong>Help > About Plugins > ${name}</strong></div>` : ""}
-        <div id="content">
-          <h1 style="margin-top:-10px">${name}</h1>
-          <p>${description}</p>
-          <h2>Creating your own preview scenes</h2>
-          <p>With this plugin, you can create your own preview scenes that you can use with any model in Blockbench. A new format has been added that allows you to create, export, and install your very own preview scenes.</p>
-          <h2>Downloading preview scenes</h2>
-          <p>A preview scene store is included, that allows you to browse and download preview scenes created by other people. Any downloaded scenes can be edited and customised as you wish from the preview scene management menu. You can submit your own preview scenes to the store with the GitHub link below.</p>
-          <h2>How to use</h2>
-          <p>You can find all the options to manage, import, and download custom preview scenes under the<br><code>View > ${name}</code> menu.</p>
-          <p>To create custom preview scenes, use the new <strong>Preview Scene</strong> model format, and then export or install them from the<br><code>File > Export</code> menu.</p>
-          <div class="socials">
-            <a href="${links["website"]}" class="open-in-browser">
-              <i class="icon material-icons" style="color:#33E38E">language</i>
-              <label>By ${author}</label>
-            </a>
-            <a href="${links["discord"]}" class="open-in-browser">
-              <i class="icon fab fa-discord" style="color:#727FFF"></i>
-              <label>Discord Server</label>
-            </a>
-            <a href="${links["github"]}" class="open-in-browser">
-              <i class="icon fab fa-github"></i>
-              <label>GitHub Repository</label>
-            </a>
-          </div>
-        </div>
-      `]
-    }).show()
-    $("dialog#about .dialog_title").html(`
-      <i class="icon material-icons">${icon}</i>
-      ${name}
-    `)
+  function titleCase(str) {
+    return str.replace(/_|-/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
   }
 })()
