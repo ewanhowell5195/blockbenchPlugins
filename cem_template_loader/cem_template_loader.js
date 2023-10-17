@@ -1,17 +1,31 @@
 (() => {
-  let generatorActions, reloadButton, entitySelector, loaderShown, entityData, entityCategories, groupObserver, animationEditorPanel, animationControlPanel, context, boolMap, rangeMap, specialMap, styles, stopAnimations, updateSelection, docShown, documentation, editorKeybinds, tabChange, loader, aboutAction, editCheck, originalJEMFormat
+  let generatorActions, entitySelector, loaderShown, entityData, entityCategories, groupObserver, animationEditorPanel, animationControlPanel, context, boolMap, rangeMap, specialMap, styles, stopAnimations, updateSelection, docShown, documentation, editorKeybinds, tabChange, loader, editCheck, originalJEMFormat
   const id = "cem_template_loader"
   const name = "CEM Template Loader"
   const icon = "keyboard_capslock"
   const author = "Ewan Howell"
   const description = "Load template Java Edition entity models for use with OptiFine CEM."
   const links = {
-    website: "https://ewanhowell.com/",
-    discord: "https://discord.com/invite/FcpnSjrP82",
-    tutorial: "https://youtu.be/arj2eim42KI"
+    website: {
+      text: "By Ewan Howell",
+      link: "https://ewanhowell.com/",
+      icon: "language",
+      colour: "#33E38E"
+    },
+    discord: {
+      text: "Discord Server",
+      link: "https://discord.ewanhowell.com/",
+      icon: "fab.fa-discord",
+      colour: "#727FFF"
+    },
+    tutorial: {
+      text: "CEM Modelling Tutorial",
+      link: "https://youtu.be/arj2eim42KI",
+      icon: "fab.fa-youtube",
+      colour: "#FF4444"
+    }
   }
   const E = s => $(document.createElement(s))
-  const imageNotFound = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAQAAABpN6lAAAAACXBIWXMAAAsTAAALEwEAmpwYAAAGumlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNy4wLWMwMDAgNzkuMjE3YmNhNiwgMjAyMS8wNi8xNC0xODoyODoxMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0RXZ0PSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VFdmVudCMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDIyLjQgKFdpbmRvd3MpIiB4bXA6Q3JlYXRlRGF0ZT0iMjAyMS0wOC0wNVQyMToxMTo1MCswMTowMCIgeG1wOk1vZGlmeURhdGU9IjIwMjEtMDgtMDVUMjE6NDQ6NDQrMDE6MDAiIHhtcDpNZXRhZGF0YURhdGU9IjIwMjEtMDgtMDVUMjE6NDQ6NDQrMDE6MDAiIGRjOmZvcm1hdD0iaW1hZ2UvcG5nIiBwaG90b3Nob3A6Q29sb3JNb2RlPSIxIiBwaG90b3Nob3A6SUNDUHJvZmlsZT0iRG90IEdhaW4gMjAlIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOmI4YzEwOTJhLWE5MmQtOWM0Yi1iM2VhLTFkOGRiZTI4NDkxMCIgeG1wTU06RG9jdW1lbnRJRD0iYWRvYmU6ZG9jaWQ6cGhvdG9zaG9wOmI1NWI1NTY0LTc5OGYtNDk0MS05ZWExLWRlNDk0OWI4MmU2OCIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ4bXAuZGlkOjMyYTJmNzZmLTE4NjMtNTM0Mi1hNzY2LWFmOTNkMmMwYmFiYyI+IDx4bXBNTTpIaXN0b3J5PiA8cmRmOlNlcT4gPHJkZjpsaSBzdEV2dDphY3Rpb249ImNyZWF0ZWQiIHN0RXZ0Omluc3RhbmNlSUQ9InhtcC5paWQ6MzJhMmY3NmYtMTg2My01MzQyLWE3NjYtYWY5M2QyYzBiYWJjIiBzdEV2dDp3aGVuPSIyMDIxLTA4LTA1VDIxOjExOjUwKzAxOjAwIiBzdEV2dDpzb2Z0d2FyZUFnZW50PSJBZG9iZSBQaG90b3Nob3AgMjIuNCAoV2luZG93cykiLz4gPHJkZjpsaSBzdEV2dDphY3Rpb249InNhdmVkIiBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOmQxNjJjMGQ0LTNhZGItMTU0Zi1hZTA5LTRkNjFmYmE2MGM2OSIgc3RFdnQ6d2hlbj0iMjAyMS0wOC0wNVQyMTo0NDo0NCswMTowMCIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIDIyLjQgKFdpbmRvd3MpIiBzdEV2dDpjaGFuZ2VkPSIvIi8+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJzYXZlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDpiOGMxMDkyYS1hOTJkLTljNGItYjNlYS0xZDhkYmUyODQ5MTAiIHN0RXZ0OndoZW49IjIwMjEtMDgtMDVUMjE6NDQ6NDQrMDE6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCAyMi40IChXaW5kb3dzKSIgc3RFdnQ6Y2hhbmdlZD0iLyIvPiA8L3JkZjpTZXE+IDwveG1wTU06SGlzdG9yeT4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7QCzIXAAAS+UlEQVR4nM2d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"
   const getBase64FromUrl = url => {
     return new Promise(async (resolve) => {
       const reader = new FileReader()
@@ -23,17 +37,19 @@
     })
   }
   const imageObserver = new IntersectionObserver(function(entries, observer) {
-    entries.forEach(function(entry) {
+    entries.forEach(async function(entry) {
       if ("src" in entry.target.dataset) {
         if (entry.isIntersecting) {
           imageObserver.unobserve(entry.target)
-          fetch(entry.target.dataset.src, {method: "HEAD"}).then(r => {
-            entry.target.style.backgroundImage = `url("${r.status < 400 ? entry.target.dataset.src : imageNotFound}")`
-            delete entry.target.dataset.src
+          await fetch(entry.target.dataset.src, { method: "HEAD" }).then(r => {
+            if (r.status >= 400) throw new Error
+            entry.target.style.backgroundImage = `url("${entry.target.dataset.src}")`
           }).catch(() => {
-            entry.target.style.backgroundImage = `url("${imageNotFound}")`
-            delete entry.target.dataset.src
+            entry.target.style.backgroundImage = 'url("assets/logo_cutout.svg")'
+            entry.target.style.filter = "invert(1)"
+            entry.target.style.opacity = 0.35
           })
+          delete entry.target.dataset.src
         }
       } else imageObserver.unobserve(entry.target)
     })
@@ -199,7 +215,6 @@
     if (!loaderShown) {
       loaderShown = true
       loadCEMTemplateModels(entityData, data)
-      $("#cem_template_discord").on("click", evt => openLink("discord"))
       $("#cem_template_load_button").on("click", async evt => {
         const selectedModel = $(".cem_template_model.selected")
         if (selectedModel.length === 0) return Blockbench.showQuickMessage("Please select a template model")
@@ -221,15 +236,172 @@
   async function setupPlugin(url, data) {
     try {
       entityData = await fetch(url + (data?.appendToURL ?? "")).then(e => e.json())
-      // entityData = JSON.parse(fs.readFileSync("F:/Programming/GitHub/wynemCode/src/assets/json/cem_template_models.json", "UTF-8"))
+      // entityData = JSON.parse(fs.readFileSync("F:/Programming/GitHub/wynem/src/assets/json/cem_template_models.json", "UTF-8"))
       entitySelector = new Dialog({
         id: "cem_template_selector",
         title: name,
         width: 980,
         buttons: [],
-        lines: [
-          '<div id="cem_template_wrapper"><ul id="cem_template_sidebar"><a id="cem_template_discord"><i class="material-icons">bug_report</i><span>Report issues</span></a></ul><div id="cem_template_page"><div id="cem_template_buttons"><div id="cem_template_check_wrapper"><input class="focusable_input" id="cem_template_texture_check" type="checkbox"><label for="cem_template_texture_check">Load vanilla texture</label><input class="focusable_input" id="cem_template_project_check" type="checkbox"><label for="cem_template_project_check">Load into current project</label></div><div class="bar_spacer"></div><button class="confirm_btn" id="cem_template_load_button">Load</button><button class="cancel_btn">Cancel</button></div></div></div>'
-        ]
+        lines: [`
+          <style>
+            #cem_template_selector {
+              max-width: 100% !important;
+            }
+            #cem_template_selector .dialog_content {
+              margin: 0 !important;
+            }
+            #cem_template_wrapper {
+              display: flex;
+              min-height: 541px;
+              min-width: 100%;
+              --color-subtle_text: #91949c;
+              overflow-y: auto;
+            }
+            #cem_template_sidebar {
+              background-color: var(--color-back);
+              flex: 0 0 160px;
+              padding: 16px 0;
+              position: relative;
+            }
+            #cem_template_sidebar li {
+              width: 100%;
+              padding: 6px 20px;
+              border-left: 4px solid transparent;
+              cursor: pointer;
+            }
+            #cem_template_sidebar li:hover {
+              color: var(--color-light);
+            }
+            #cem_template_sidebar li.selected {
+              background-color: var(--color-ui);
+              border-left: 4px solid var(--color-accent);
+            }
+            #cem_template_sidebar li .icon_wrapper {
+              margin: 0 10px 0 -10px;
+            }
+            #cem_template_page {
+              display: flex;
+              flex-direction: column;
+              flex-grow: 1;
+              padding: 5px 12px 45px 20px;
+              position: relative;
+              background-color: var(--color-ui);
+            }
+            #cem_template_page > content {
+              flex-grow: 1;
+            }
+            #cem_template_buttons {
+              flex: 40px 0 0;
+              padding: 8px 8px 8px 20px;
+              display: flex;
+              position: absolute;
+              bottom: 0;
+              right: 0;
+              left: 0;
+            }
+            #cem_template_check_wrapper {
+              display: flex;
+              align-items: center;
+              align-self: stretch;
+            }
+            #cem_template_check_wrapper label {
+              margin: 0 16px 0 8px;
+            }
+            #cem_template_project_check {
+              margin-left: 8px;
+            }
+            #cem_template_load_button {
+              background-color: var(--color-accent);
+              color: var(--color-light);
+              width: 112px;
+              margin-right: 4px;
+            }
+            #cem_template_discord {
+              display: flex;
+              position: absolute;
+              bottom: 12px;
+              left: 0;
+              right: 0;
+              justify-content: center;
+              gap: 5px;
+              text-decoration: none;
+              cursor: pointer;
+            }
+            #cem_template_discord:hover {
+              color: var(--color-light);
+            }
+            #cem_template_discord span {
+              text-decoration: underline;
+            }
+            .cem_template_list {
+              max-height: 384px;
+              width: 100%;
+              overflow-y: auto;
+            }
+            .cem_template_list > li {
+              display: flex;
+              flex-direction: column;
+              position: relative;
+              float: left;
+              width: 124px;
+              height: 92px;
+              margin: 2px;
+              background-color: var(--color-back);
+              cursor: pointer;
+              box-sizing: border-box;
+              padding: 2px 2px 20px;
+              border: 2px solid transparent;
+            }
+            .cem_template_list > li:hover {
+              background-color: var(--color-selected);
+              color: var(--color-light);
+            }
+            .cem_template_list > li.selected {
+              border-color: var(--color-accent);
+              background-color: var(--color-button);
+            }
+            .cem_template_list > li.selected:hover {
+              background-color: var(--color-selected);
+            }
+            .cem_template_image {
+              height: 86px;
+              background-size: contain;
+              background-position: 50%;
+              background-repeat: no-repeat;
+              image-rendering: auto;
+              cursor: pointer;
+            }
+            .cem_template_list > li label {
+              position: absolute;
+              bottom: 0;
+              text-align: center;
+              width: 100%;
+              pointer-events: none;
+              text-transform: capitalize;
+            }
+          </style>
+          <div id="cem_template_wrapper">
+            <ul id="cem_template_sidebar">
+              <a id="cem_template_discord" href="${links.discord.link}">
+                <i class="material-icons">bug_report</i>
+                <span>Report issues</span>
+              </a>
+            </ul>
+            <div id="cem_template_page">
+              <div id="cem_template_buttons">
+                <div id="cem_template_check_wrapper">
+                  <input class="focusable_input" id="cem_template_texture_check" type="checkbox">
+                  <label for="cem_template_texture_check">Load vanilla texture</label>
+                  <input class="focusable_input" id="cem_template_project_check" type="checkbox">
+                  <label for="cem_template_project_check">Load into current project</label>
+                </div>
+                <div class="spacer"></div>
+                <button class="confirm_btn" id="cem_template_load_button">Load</button>
+                <button class="cancel_btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        `]
       })
       loaderShown = false
       entityCategories = loadEntities(entityData)
@@ -247,8 +419,7 @@
       generatorActions.push("_", {
         name: `v${entityData.version}`,
         id: "cem_template_loader_version",
-        icon: "info",
-        click: () => showAbout()
+        icon: "info"
       })
       MenuBar.addAction({
         name: "Load CEM Template",
@@ -261,7 +432,6 @@
         name,
         description,
         icon,
-        target: ["Minecraft: Java Edition with OptiFine", "Texturing Templates"],
         onStart: () => loadInterface(entityData.categories[0].name, data),
         format_page: {
           component: {
@@ -269,53 +439,46 @@
               load: () => loadInterface(entityData.categories[0].name, data)
             },
             template: `
-              <div style="display:flex;flex-direction:column;height:100%;">
+              <div style="display:flex;flex-direction:column;height:100%">
                 <p class="format_description">${description}</p>
                 <p class="format_target"><b>Target</b> : <span>Minecraft: Java Edition with OptiFine</span> <span>Texturing Templates</span></p>
-                <content style="flex:1;margin:-22px 0 20px">
-                  <h3 class="markdown"><strong>How to use:</strong></h3>
+                <content>
+                  <h3 class="markdown">How to use:</h3>
                   <p class="markdown">
                     <ul>
-                      <li><p>Press <code>Load CEM Template</code> and select a model.</p></li>
+                      <li><p>Press <strong>Load CEM Template</strong> and select a model.</p></li>
                       <li><p>Select your load settings, load the model, then edit the model.</p></li>
-                      <li><p>Export your model as an <code>OptiFine JEM</code> to <code>assets/minecraft/optifine/cem</code>, using the provided name.</p></li>
+                      <li><p>Export your model as an <strong>OptiFine JEM</strong> to <code>assets/minecraft/optifine/cem</code>, using the provided name.</p></li>
                     </ul>
                   </p>
-                  <h3 class="markdown"><strong>Do:</strong></h3>
+                  <h3 class="markdown">Do:</h3>
                   <p class="markdown">
                     <ul>
                       <li><p>Edit any of the cubes that were loaded with the template, add your own cubes, and create your own subgroups.</p></li>
                     </ul>
                   </p>
-                  <h3 class="markdown"><strong>Do not:</strong></h3>
+                  <h3 class="markdown">Do not:</h3>
                   <p class="markdown">
                     <ul>
                       <li><p>Edit any of the groups that were loaded with the template, add your own root groups, or remove any built in animations.</p></li>
                     </ul>
                   </p>
                 </content>
-                <div class="socials">
-                  <a href="${links["website"]}" class="open-in-browser">
-                    <i class="icon material-icons" style="color:#33E38E">language</i>
-                    <label>By ${author}</label>
+                <div class="spacer"></div>
+                <div class="cem-template-loader-links">${Object.values(links).map(e => `
+                  <a href="${e.link}">
+                    ${Blockbench.getIconNode(e.icon, e.colour).outerHTML}
+                    <p>${e.text}</p>
                   </a>
-                  <a href="${links["discord"]}" class="open-in-browser">
-                    <i class="icon fab fa-discord" style="color:#727FFF"></i>
-                    <label>Discord Server</label>
-                  </a>
-                  <a href="${links["tutorial"]}" class="open-in-browser">
-                    <i class="icon fab fa-youtube" style="color:#FF4444"></i>
-                    <label>CEM Modelling Tutorial</label>
-                  </a>
-                </div>
+                `).join("")}</div>
                 <div class="button_bar">
-                  <button id="create_new_model_button" style="margin-top:20px;" @click="load()">
+                  <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="load()">
                     <i class="material-icons">${icon}</i>
                     Load CEM Template
                   </button>
                 </div>
               </div>
-            `,
+            `
           }
         }
       })
@@ -357,10 +520,6 @@
       }, "tools")
       return false
     }
-  }
-  function openLink(type) {
-    if (Blockbench.isWeb || Blockbench.isMobile) window.open(links[type], "_blank").focus()
-    else shell.openExternal(links[type])
   }
   let frameCount
   const constants = {
@@ -1435,190 +1594,10 @@
   }
   function addStyles() {
     styles = Blockbench.addCSS(`
-      #format_page_cem_template_loader .socials {
-        padding: 0!important;
-        display: flex;
-        max-width: 540px;
-        margin: auto;
-        width: 100%;
-      }
-      #format_page_cem_template_loader .socials a {
-        text-align: center;
-        flex-basis: 0;
-        flex-grow: 1;
-        text-decoration: none;
-        padding: 6px;
-        padding-top: 10px;
-      }
-      #format_page_cem_template_loader .socials a i {
-        display: block;
-        font-size: 2em;
-        max-width: none;
-        pointer-events: none;
-      }
-      #format_page_cem_template_loader .socials a label {
-        color: var(--color-subtle_text);
-        cursor: inherit;
-        pointer-events: none;
-      }
-      #format_page_cem_template_loader .socials a:hover {
-        background-color: var(--color-accent);
-      }
-      #format_page_cem_template_loader .socials a:hover * {
-        color: var(--color-light)!important;
-      }
-      #format_page_cem_template_loader code {
-        padding: 0 2px;
-        background-color: var(--color-back);
-        border: 1px solid var(--color-border);
-        user-select: text;
-        font-family: var(--font-code);
-      }
-      #cem_template_selector .dialog_content {
-        margin: 0!important
-      }
-      #cem_template_wrapper {
-        display: flex;
-        min-height: 541px;
-        min-width: 100%;
-        --color-subtle_text: #91949c;
-        overflow-y: auto
-      }
-      #cem_template_selector {
-        max-width: 100%!important
-      }
-      #cem_template_selector > .dialog_handle {
-        margin-bottom: 0
-      }
-      #cem_template_sidebar {
-        background-color: var(--color-back);
-        flex: 0 0 160px;
-        padding: 16px 0;
-        position: relative
-      }
-      #cem_template_sidebar li {
-        width: 100%;
-        padding: 6px 20px;
-        border-left: 4px solid transparent;
-        cursor: pointer
-      }
-      #cem_template_sidebar li:hover {
-        color: var(--color-light)
-      }
-      #cem_template_sidebar li.selected {
-        background-color: var(--color-ui);
-        border-left: 4px solid var(--color-accent)
-      }
-      #cem_template_sidebar li .icon_wrapper {
-        margin: 0 10px 0 -10px
-      }
-      .cem_template_list {
-        max-height: 384px;
-        width: 100%;
-        overflow-y: auto
-      }
-      .cem_template_list > li {
-        display: flex;
-        flex-direction: column;
-        position: relative;
-        float: left;
-        width: 124px;
-        height: 92px;
-        margin: 2px;
-        background-color: var(--color-back);
-        cursor: pointer;
-        box-sizing: border-box;
-        padding: 2px 2px 20px;
-        border: 2px solid transparent
-      }
-      .cem_template_list > li:hover {
-        background-color: var(--color-selected);
-        color: var(--color-light)
-      }
-      .cem_template_list > li.selected {
-        border-color: var(--color-accent);
-        background-color: var(--color-button)
-      }
-      .cem_template_list > li.selected:hover {
-        background-color: var(--color-selected)
-      }
-      .cem_template_image {
-        height: 86px;
-        background-size: contain;
-        background-position: 50%;
-        background-repeat: no-repeat;
-        image-rendering: auto;
-        cursor: pointer
-      }
-      .cem_template_list > li label {
-        position: absolute;
-        bottom: 0;
-        text-align: center;
-        width: 100%;
-        pointer-events: none;
-        text-transform: capitalize
-      }
-      #cem_template_page {
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-        padding: 5px 12px 45px 20px;
-        position: relative;
-        background-color: var(--color-ui)
-      }
-      #cem_template_page > content {
-        flex-grow: 1
-      }
-      #cem_template_buttons {
-        flex: 40px 0 0;
-        padding: 8px 8px 8px 20px;
-        display: flex;
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        left: 0
-      }
-      #cem_template_buttons .bar_spacer {
-        flex-grow: 1
-      }
-      #cem_template_check_wrapper {
-        display: flex;
-        align-items: center;
-        align-self: stretch
-      }
-      #cem_template_check_wrapper label {
-        margin: 0 16px 0 8px
-      }
-      #cem_template_project_check {
-        margin-left: 8px
-      }
-      #cem_template_load_button {
-        background-color: var(--color-accent);
-        color: var(--color-light);
-        width: 112px;
-        margin-right: 4px
-      }
-      #cem_template_discord {
-        display: flex;
-        position: absolute;
-        bottom: 12px;
-        left: 0;
-        right: 0;
-        justify-content: center;
-        gap: 5px;
-        text-decoration: none;
-        cursor: pointer
-      }
-      #cem_template_discord:hover {
-        color: var(--color-light)
-      }
-      #cem_template_discord span {
-        text-decoration: underline
-      }
       #panel_cem_animation .panel_vue_wrapper {
         flex: 1;
         padding: 8px;
-        overflow: auto!important;
+        overflow: auto !important;
         display: flex;
         flex-direction: column;
         max-height: 100%;
@@ -1628,7 +1607,7 @@
       }
       #panel_cem_animation .prism-editor__line-numbers {
         overflow: visible;
-        min-height: 100%!important;
+        min-height: 100% !important;
         position: sticky;
         left: 0;
       }
@@ -1636,7 +1615,7 @@
         background-color: var(--color-back);
       }
       #panel_cem_animation .prism-editor__code {
-        overflow: visible!important;
+        overflow: visible !important;
       }
       #cem_animation_editor_container {
         overflow: auto;
@@ -1651,7 +1630,7 @@
         display: flex;
         flex-direction: column;
         max-height: 100%;
-        overflow: auto!important;
+        overflow: auto !important;
       }
       #cem_animation_editor {
         cursor: text;
@@ -1677,9 +1656,9 @@
         align-items: center;
       }
       #cem_animation_part_name {
-        display: inline!important;
+        display: inline !important;
       }
-      .cem_animation_bar i {
+      .cem_animation_bar i, #cem_doc > div.selected {
         display: block;
       }
       .cem_animation_status {
@@ -1724,8 +1703,8 @@
         color: #a6e22e;
       }
       .cem_animation_error_line {
-        background-color: var(--color-close)!important;
-        color: var(--color-light)!important;
+        background-color: var(--color-close) !important;
+        color: var(--color-light) !important;
         position: relative;
         padding-right: 4px;
         margin-right: -4px;
@@ -1738,8 +1717,8 @@
         border-bottom: 12px solid transparent;
         border-left: 12px solid var(--color-close);
       }
-      .spacer {
-        flex: 1
+      .spacer, .cem_animation_range input {
+        flex: 1;
       }
       .cem_animation_bool {
         display: flex;
@@ -1751,12 +1730,9 @@
       .cem_animation_range {
         display: flex;
         align-items: center;
-        margin: 0!important;
+        margin: 0 !important;
         height: 30px;
         box-sizing: content-box;
-      }
-      .cem_animation_range input {
-        flex: 1;
       }
       .cem_animation_range p {
         margin: 0 8px 0 0;
@@ -1771,7 +1747,7 @@
         cursor: pointer;
         position: relative;
       }
-      .cem_animation_button:hover {
+      .cem_animation_button:hover, #cem_animation_doc_button:hover {
         color: var(--color-light);
       }
       .cem_animation_button i {
@@ -1789,7 +1765,7 @@
         min-width: 20px;
       }
       .cem_animation_button_disabled, .cem_animation_button_disabled div {
-        color: var(--color-subtle_text)!important;
+        color: var(--color-subtle_text) !important;
         cursor: default;
       }
       button.cem_animation_button_disabled {
@@ -1798,7 +1774,7 @@
       }
       button.cem_animation_button_disabled:hover {
         background-color: var(--color-button);
-        color: var(--color-subtle_text)!important;
+        color: var(--color-subtle_text) !important;
       }
       #panel_cem_animation>h3>label, #panel_cem_animation_controller>h3>label {
         white-space: nowrap;
@@ -1845,9 +1821,6 @@
       #cem_animation_doc_button {
         cursor: pointer;
       }
-      #cem_animation_doc_button:hover {
-        color: var(--color-light);
-      }
       #cem_animation_documentation .dialog_content {
         margin: 0;
         position: relative;
@@ -1857,9 +1830,6 @@
       }
       #cem_doc > div {
         display: none;
-      }
-      #cem_doc > div.selected {
-        display: block;
       }
       #cem_doc * {
         white-space: pre-wrap;
@@ -1889,7 +1859,7 @@
       }
       #cem_doc img {
         margin: 8px;
-        box-shadow: 0 3px 10px rgb(0 0 0 / 31%);
+        box-shadow: 0 3px 10px #0006;
       }
       #cem_doc_tabs {
         background-color: var(--color-frame);
@@ -1913,7 +1883,7 @@
       }
       .cem_doc_table_list td:first-child {
         font-weight: 600;
-        white-space: nowrap!important;
+        white-space: nowrap !important;
         display: list-item;
         list-style: inside;
         font-family: var(--font-code);
@@ -1923,44 +1893,69 @@
         cursor: pointer;
         color: var(--color-accent);
       }
+      .cem-template-loader-links {
+        display: flex;
+        justify-content: space-around;
+        margin: 20px 40px 0;
+      }
+      .cem-template-loader-links > a {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        padding: 5px;
+        text-decoration: none;
+        flex-grow: 1;
+        flex-basis: 0;
+        color: var(--color-subtle_text);
+        text-align: center;
+      }
+      .cem-template-loader-links > a:hover {
+        background-color: var(--color-accent);
+        color: var(--color-light);
+      }
+      .cem-template-loader-links > a > i {
+        font-size: 32px;
+        width: 100%;
+        max-width: initial;
+        height: 32px;
+        text-align: center;
+      }
+      .cem-template-loader-links > a:hover > i {
+        color: var(--color-light) !important;
+      }
+      .cem-template-loader-links > a > p {
+        flex: 1;
+        display: flex;
+        align-items: center;
+      }
+      #format_page_cem_template_loader {
+        padding-bottom: 0;
+      }
+      #format_page_cem_template_loader .format_target, #format_page_optifine_entity .format_target {
+        margin-bottom: 6px;
+      }
+      #format_page_cem_template_loader div:nth-child(3), #format_page_cem_template_loader content {
+        overflow-y: auto;
+      }
+      #format_page_optifine_entity h3.markdown {
+        margin-bottom: -10px;
+      }
     `)
   }
   Plugin.register(id, {
     title: name,
-    icon,
+    icon: "icon.png",
     author,
     description: description + " Also includes an animation editor, so that you can create custom entity animations.",
-    about: "CEM Template Loader can be used to load the vanilla entity models for Minecraft: Java Edition, so you can use them in OptiFine CEM, or as texturing templates.\n\nTo use this plugin, head to the **Tools** tab and select **CEM Template Loader**. From here, select the model that you would like to edit and load it.\n\nAfter editing your model, export it as an **OptiFine JEM** to the folder `assets/minecraft/optifine/cem`. If a texture is used in the model, make sure it saves with a valid file path.\n\n## Important\n\nWhen editing an entity model, you cannot rotate root groups (top level folders), or move the pivot points of root groups, as this can break your model. If you need to rotate a root group, use a subgroup. If you need to change a root group's pivot point, use CEM animations.\n\nCEM Template Loader also includes an animation editor, so that you can create custom entity animations.",
     tags: ["Minecraft: Java Edition", "OptiFine", "Templates"],
-    version: "7.1.0",
-    min_version: "4.7.2",
+    version: "7.8.0",
+    min_version: "4.8.0",
     variant: "both",
-    oninstall: () => showAbout(true),
+    creation_date: "2020-02-02",
     async onload() {
       addStyles()
-      addAbout()
       await setupPlugin("https://wynem.com/assets/json/cem_template_models.json")
-      reloadButton = new Action("cem_template_loader_reload", {
-        name: `Reload CEM Templates`,
-        description: "Reload the CEM Template Loader models",
-        icon: "sync",
-        click: async function() {
-          for (let action of generatorActions) if (typeof action.delete === "function") action.delete()
-          MenuBar.removeAction("tools.cem_template_loader")
-          loader.delete()
-          const result = await setupPlugin("https://wynem.com/assets/json/cem_template_models.json", {
-            appendToURL: `?rnd=${Math.random()}`
-          })
-          if (result) Blockbench.showQuickMessage("Reloaded CEM Templates", 2000)
-          else new Dialog({
-            id: "cem_template_loader_connection_failure_dialog",
-            title: name,
-            lines: ['<h2>Connection failed</h2><p>Please connect to the internet to use CEM Template Loader</p>'],
-            "buttons": ["Okay"]
-          }).show()
-        }
-      })
-      MenuBar.addAction(reloadButton, "help.developer.1")
       setupAnimationPanel()
       new Setting("jem_restrictions", {
         value: false,
@@ -2007,10 +2002,29 @@
         }
       }
       Blockbench.on("finished_edit", editCheck)
-      originalJEMFormat = Formats.optifine_entity.new
+      originalJEMFormat = {
+        new: Formats.optifine_entity.new,
+        format_page: Formats.optifine_entity.format_page,
+        convertTo: Formats.optifine_entity.convertTo
+      }
       Formats.optifine_entity.new = () => {
-        if (settings.jem_restrictions.value) originalJEMFormat.bind(Formats.optifine_entity)()
+        if (settings.jem_restrictions.value) originalJEMFormat.new.bind(Formats.optifine_entity)()
         else loadInterface()
+      }
+      Formats.optifine_entity.format_page = JSON.parse(JSON.stringify(Formats.optifine_entity.format_page))
+      Formats.optifine_entity.format_page.content.push({ type: "h3", text: "CEM Template Loader" }, { text: "Creating an OptiFine entity will open CEM Template Loader. It is extremely rare to need a blank OptiFine entity model. You can disable this behavour with **File > Preferences > Settings > Edit > Remove OptiFine Entity Restrictions**, however, this is not recommended." })
+      Formats.optifine_entity.convertTo = () => {
+        originalJEMFormat.convertTo.bind(Formats.optifine_entity)()
+        if (!settings.jem_restrictions.value) {
+          Blockbench.showMessageBox({
+            title: "Conversion Warning",
+            message: "Models converted into OptiFine entities are not valid entity models. If you are converting a model into an OptiFine entity to use in game, expect it to be broken. Instead load a new template entity model, and copy your elements across into the template model.",
+            buttons: ["Load Template", "Continue"],
+            icon: "warning"
+          }, button => {
+            if (button === 0) loadInterface()
+          })
+        }
       }
       if (Blockbench.isWeb) {
         const params = (new URL(location.href)).searchParams
@@ -2018,7 +2032,7 @@
       }
     },
     onunload() {
-      stopAnimations(true)
+      stopAnimations?.(true)
       Blockbench.removeListener("update_selection", updateSelection)
       Blockbench.removeListener("select_project", tabChange)
       Blockbench.removeListener("finished_edit", editCheck)
@@ -2027,102 +2041,16 @@
       loader.delete()
       $("[toggle='cem_animation_disable_rotations']").remove()
       for (const action of generatorActions) action.delete?.()
-      reloadButton.delete()
       MenuBar.removeAction("tools.cem_template_loader")
-      MenuBar.removeAction("help.developer.cem_template_loader_reload")
-      MenuBar.removeAction("help.about_plugins.about_cem_template_loader")
       animationEditorPanel.delete()
       animationControlPanel.delete()
-      aboutAction.delete()
       styles.delete()
-      Formats.optifine_entity.new = originalJEMFormat
+      Formats.optifine_entity.new = originalJEMFormat.new
+      Formats.optifine_entity.format_page = originalJEMFormat.format_page
+      Formats.optifine_entity.convertTo = originalJEMFormat.convertTo
+      entitySelector?.close()
+      documentation?.close()
       resizeWindow()
     }
   })
-  function addAbout() {
-    let about = MenuBar.menus.help.structure.find(e => e.id === "about_plugins")
-    if (!about) {
-      about = new Action("about_plugins", {
-        name: "About Plugins...",
-        icon: "info",
-        children: []
-      })
-      MenuBar.addAction(about, "help")
-    }
-    aboutAction = new Action(`about_${id}`, {
-      name: `About ${name}...`,
-      icon,
-      click: () => showAbout()
-    })
-    about.children.push(aboutAction)
-  }
-  function showAbout(banner) {
-    new Dialog({
-      id: "about",
-      title: name,
-      width: 780,
-      buttons: [],
-      lines: [`
-        <div></div>
-        <style>
-          dialog#about .dialog_title {
-            padding-left: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          dialog#about .dialog_content {
-            text-align: left!important;
-            margin: 0!important;
-          }
-          dialog#about .socials {
-            padding: 0!important;
-          }
-          dialog#about code {
-            padding: 0 2px;
-          }
-          dialog#about #banner {
-            background-color: var(--color-accent);
-            color: var(--color-accent_text);
-            width: 100%;
-            padding: 0 8px
-          }
-          dialog#about #content {
-            margin: 24px;
-          }
-        </style>
-        ${banner ? `<div id="banner">This window can be reopened at any time from <strong>Help > About Plugins > ${name}</strong></div>` : ""}
-        <div id="content">
-          <h1 style="margin-top:-10px">${name}</h1>
-          <p>${name} can be used to load the vanilla entity models for Minecraft: Java Edition, so you can use them in OptiFine CEM, or as texturing templates.</p>
-          <br>
-          <p>To use this plugin, head to the <strong>Tools</strong> tab and select <strong>${name}</strong>. From here, select the model that you would like to edit and load it.</p>
-          <br>
-          <p>After editing your model, export it as an OptiFine JEM to the folder <code>assets/minecraft/optifine/cem</code>. If a texture is used in the model, make sure it saves with a valid file path.</p>
-          <br>
-          <h2>Important</h2>
-          <p>When editing an entity model, you cannot rotate root groups (top level folders), or move the pivot points of root groups, as this can break your model. If you need to rotate a root group, use a subgroup. If you need to change a root group's pivot point, use CEM animations.</p>
-          <br>
-          <div class="socials">
-            <a href="${links["website"]}" class="open-in-browser">
-              <i class="icon material-icons" style="color:#33E38E">language</i>
-              <label>By ${author}</label>
-            </a>
-            <a href="${links["discord"]}" class="open-in-browser">
-              <i class="icon fab fa-discord" style="color:#727FFF"></i>
-              <label>Discord Server</label>
-            </a>
-            <a href="${links["tutorial"]}" class="open-in-browser">
-              <i class="icon fab fa-youtube" style="color:#FF4444"></i>
-              <label>CEM Modelling Tutorial</label>
-            </a>
-          </div>
-        </div>
-      `]
-    }).show()
-    $("dialog#about .dialog_title").html(`
-      <i class="icon material-icons">${icon}</i>
-      ${name}
-    `)
-  }
 })()
