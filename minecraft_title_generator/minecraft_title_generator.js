@@ -93,7 +93,7 @@
     author,
     description,
     tags: ["Minecraft", "Title", "Logo"],
-    version: "1.3.4",
+    version: "1.3.5",
     min_version: "4.8.0",
     variant: "both",
     creation_date: "2023-06-10",
@@ -188,7 +188,7 @@
           overflow-x: hidden;
         }
         .minecraft-title-list.small {
-          max-height: 198px;
+          max-height: 256px;
         }
         .minecraft-title-item {
           display: flex;
@@ -981,13 +981,14 @@
             font-size: 1.25rem;
             z-index: 1;
             flex-direction: column;
-            gap: 5px;
+            gap: 3px;
+            display: flex;
           }
           .minecraft-title-item-buttons > i {
             display: none;
             font-size: 1.25rem;
           }
-          .minecraft-title-item:hover i{
+          .minecraft-title-item:hover i {
             display: flex !important;
           }
           .minecraft-title-item-author:hover::after {
@@ -1002,6 +1003,10 @@
           }
           .minecraft-title-item:nth-child(3n) .minecraft-title-item-author:hover::after {
             transform: translateX(calc(-100% - 25px));
+          }
+          .minecraft-title-item-buttons > .fa::before {
+            font-size: 16px;
+            margin-left: 1.25px;
           }
           #minecraft-title-expanded-preview {
             position: absolute;
@@ -1996,27 +2001,42 @@
                 }
               }).show()
             },
-            textInfo() {
+            textInfo(font = this.font) {
               new Blockbench.Dialog({
                 id: "minecraft_title_info",
-                title: "Minecraft Title Info",
+                title: `${fonts[font].name} Font Info`,
                 lines: [`<style>
-                  #minecraft_title_info code {
+                  #minecraft_title_info .code, #minecraft_title_info code {
                     padding: 0 2px;
                     border: 1px solid var(--color-border);
-                    font-family: var(--font-code);
                     background-color: var(--color-back);
                     cursor: text;
                     user-select: text;
                   }
                 </style>`],
                 component: { template: `
-                  <p class="markdown">
-                    <ul>
-                      <li>Available characters:<br><code>${Object.keys(fonts[this.font].characters).sort().join("").replace(/[😩😳┣┫]/g, "")}</code></li>
-                      <li>You can use a lowercase <code>a</code> for a normal <code>a</code>, or an uppercase <code>A</code> for a creeper face <code>a</code></li>
-                    </ul>
-                  </p>
+                  <div>
+                    <h2>Available Characters</h2>
+                    <div class="code">${Object.keys(fonts[font].characters).sort((a, b) => {
+                      const isALetter = /[a-zA-Z]/.test(a)
+                      const isBLetter = /[a-zA-Z]/.test(b)
+                      const isANumber = /\d/.test(a)
+                      const isBNumber = /\d/.test(b)
+                      if (isALetter) {
+                        if (!isBLetter) return -1
+                        else if (isBLetter)
+                        return a.localeCompare(b)
+                      } else if (isANumber) {
+                        if (!isBLetter && !isBNumber) return -1
+                        else if (isBLetter) return 1
+                        else if (isBNumber) return a.localeCompare(b)
+                      } else {
+                        if (isBLetter || isBNumber) return 1
+                        else return a.localeCompare(b)
+                      }
+                    }).join(" ").replace(/[😩😳]/g, "")}</div>
+                    <p style="margin-top:10px">You can use an uppercase <code>A</code> to get the <code>a</code> with the creeper face.</p>
+                  </div>
                 ` },
                 buttons: ["dialog.close"]
               }).show()
@@ -2087,7 +2107,7 @@
                 <p>The text you want to add to the scene</p>
                 <div class="text-input-row">
                   <input id="minecraft-title-text-input" class="dark_bordered" v-model="text" placeholder="Minecraft"/>
-                  <i class="material-icons" title="More info" @click="textInfo">info</i>
+                  <i class="fa fa-circle-info" title="More info" @click="textInfo()"></i>
                 </div>
                 <br>
                 <div class="minecraft-title-header-row">
@@ -2106,6 +2126,7 @@
                     <div :style="{ maxWidth: data.variants ? '78%' : null }">{{ data.name }}</div>
                     <div class="minecraft-title-item-buttons">
                       <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                      <i class="fa fa-circle-info" title="More info" @click="textInfo(id)"></i>
                     </div>
                     <i v-if="data.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (data.variants.length + 1) + ' variants'">filter_{{ data.variants.length > 9 ? '9_plus' : data.variants.length + 1 }}</i>
                   </div>
@@ -2119,9 +2140,10 @@
                   <div v-if="fontVariantsVisible" class="minecraft-title-list small">
                     <div class="minecraft-title-item" @click="font = baseFont; fontVariant = null; variant = null; updateFont()" :class="{ selected: !fontVariant }">
                       <img :src="'${root}/fonts/' + baseFont + '/thumbnails/flat.png'" />
-                      <div>{{ fonts[baseFont].name }}</div>
+                      <div>Default</div>
                       <div class="minecraft-title-item-buttons">
                         <i v-if="fonts[baseFont].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + fonts[baseFont].author">person</i>
+                        <i class="fa fa-circle-info" title="More info" @click="textInfo(baseFont)"></i>
                       </div>
                     </div>
                     <div class="minecraft-title-item" v-for="data of fonts[baseFont].variants" @click="font = data.id; fontVariant = data.id, variant = null; updateFont()" :class="{ selected: fontVariant === data.id }">
@@ -2129,6 +2151,7 @@
                       <div>{{ data.name }}</div>
                       <div class="minecraft-title-item-buttons">
                         <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                        <i class="fa fa-circle-info" title="More info" @click="textInfo(data.id)"></i>
                       </div>
                     </div>
                   </div>
@@ -2421,6 +2444,7 @@
               font.textures = `fonts/${font.id}/textures.json`
               fonts[font.id] = font
             }
+            font.parsed = true
             if (font.variants) for (const [j, v] of font.variants.entries()) {
               const variant = Object.assign({}, font, v)
               variant.name ??= titleCase(variant.id)
@@ -2429,7 +2453,12 @@
               delete variant.overlays
               fonts[variant.id] = variant
               font.variants[j] = variant
+              variant.parsed = true
             }
+          }
+          for (const font of Object.entries(fonts).filter(e => !e[1].parsed)) {
+            font[1].id = font[0]
+            fontData.push(font[1])
           }
           this.content_vue.fontList = fontData.map(e => [e.id, e])
           this.content_vue.textures = Object.entries(fonts["minecraft-ten"].textures).map(e => e.concat(["minecraft-ten"]))
