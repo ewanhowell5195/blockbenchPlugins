@@ -6,17 +6,21 @@
   const icon = "refresh"
   Plugin.register(id, {
     title: name,
-    icon,
+    icon: "icon.png",
     author: "Ewan Howell",
     description: "Edit plugins and themes live in any text editor and have them automatically update in Blockbench.",
     tags: ["Themes", "Blockbench"],
     version: "1.0.0",
-    min_version: "4.8.0",
+    min_version: "4.9.3",
     variant: "desktop",
+    website: "https://ewanhowell.com/plugins/live-dev-reloader",
+    repository: "https://github.com/ewanhowell5195/blockbenchPlugins/tree/main/live_dev_reloader",
+    bug_tracker: "https://github.com/ewanhowell5195/blockbenchPlugins/issues",
     onload() {
       let toggle
       actions = [
         new Action("live_dev_reloader_watch", {
+          plugin: id,
           name: "Watch plugin or theme file",
           icon: "visibility",
           description: "Watch a plugin or theme file and reload it in Blockbench when changes are made",
@@ -63,9 +67,10 @@
       unwatch("force")
       return Blockbench.showQuickMessage(`Stopped watching. File not found: ${path.basename(file)}`, 3000)
     }
-    fs.watchFile(file, { interval: 100 }, update)
+    fs.watchFile(file, { interval: 100 }, (...args) => update(...args, true))
+    fs.watchFile(path.join(path.dirname(file), "about.md"), { interval: 100 }, update)
     watching = file
-    update({ mtime: 1 }, { mtime: 0 }, true)
+    update({ mtime: 1 }, { mtime: 0 }, true, true)
     localStorage.setItem("live_dev_reloader_file", file)
     Blockbench.showQuickMessage(`Watching file: ${path.basename(file)}`, 3000)
     if (unwatchAction) {
@@ -73,6 +78,7 @@
       actions.splice(actions.indexOf(unwatchAction), 1)
     }
     unwatchAction = new Action("live_dev_reloader_unwatch", {
+      plugin: id,
       name: "Stop watching plugin or theme file",
       icon: "visibility_off",
       description: `Currently watching: ${file}`,
@@ -84,7 +90,10 @@
   }
 
   function unwatch(type) {
-    if (watching) fs.unwatchFile(watching)
+    if (watching) {
+      fs.unwatchFile(watching)
+      fs.unwatchFile(path.join(path.dirname(watching), "about.md"))
+    }
     styles?.delete()
     message?.close()
     if (type === "force") localStorage.removeItem("live_dev_reloader_file")
@@ -107,6 +116,7 @@
     const file = localStorage.getItem("live_dev_reloader_file")
     if (fs.existsSync(file)) {
       rewatchAction = new Action("live_dev_reloader_rewatch", {
+        plugin: id,
         name: `Rewatch ${path.basename(file)}`,
         description: `Rewatch the file: ${file}`,
         icon,
@@ -117,10 +127,10 @@
     }
   }
 
-  async function update(curr, prev, first) {
-    if (curr.mtimeMs === 0) {
-      unwatch("force")
-      return Blockbench.showQuickMessage(`Stopped watching. File not found: ${path.basename(file)}`, 3000)
+  async function update(curr, prev, main, first) {
+    if (main && curr.mtimeMs === 0) {
+      Blockbench.showQuickMessage(`Stopped watching. File not found: ${path.basename(watching)}`, 3000)
+      return unwatch("force")
     } else if (curr.mtime > prev.mtime) {
       message?.close()
       styles?.delete()
@@ -163,6 +173,7 @@
           }
         }
         styles = Blockbench.addCSS(css)
+        console.log(`Theme reloaded: ${path.basename(watching, ".bbtheme")}`)
       }
     }
   }
