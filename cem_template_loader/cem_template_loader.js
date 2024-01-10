@@ -1198,7 +1198,7 @@
         const button = E("div").addClass("cem_animation_button").append(
           E("button").attr({
             id: "cem_animation_death_time_button",
-            title: 'Simulate the entity attacking. Runs "death_time"'
+            title: 'Simulate the entity getting killed. Runs "death_time"'
           }).text("Kill entity").on("click", evt => {
             if ($(evt.target).hasClass("cem_animation_button_disabled")) return
             specials.set("death_time", [0, true])
