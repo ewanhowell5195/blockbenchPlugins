@@ -9,7 +9,7 @@
     icon: "icon.png",
     author: "Ewan Howell",
     description: "Edit plugins and themes live in any text editor and have them automatically update in Blockbench.",
-    tags: ["Themes", "Blockbench"],
+    tags: ["Plugins", "Themes", "Blockbench"],
     version: "1.0.0",
     min_version: "4.9.3",
     variant: "desktop",
