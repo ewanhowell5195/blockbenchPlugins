@@ -140,7 +140,10 @@
         if (!plugin) return message = Blockbench.showMessageBox({
           title: "Plugin not installed",
           message: `Please install the <code>${id}</code> plugin so that it can be watched for live changes.\n\nPlugin location: <code>${watching}</code>`,
-          buttons: ["dialog.close"]
+          buttons: ["Install Plugin", "Stop Watching", "dialog.close"]
+        }, button => {
+          if (button === 0) Blockbench.read(watching, {}, f => new Plugin().loadFromFile(f[0], true))
+          else if (button === 1) unwatch("force")
         })
         if (first) return
         plugin.reload()
@@ -168,7 +171,9 @@
             return message = Blockbench.showMessageBox({
               title: "Invalid JSON",
               message: `Invalid JSON in theme <code>${path.basename(watching)}</code>:\n<code>${err.message}</code>\n\nTheme location: <code>${watching}</code>`,
-              buttons: ["dialog.close"]
+              buttons: ["Stop Watching", "dialog.close"]
+            }, button => {
+              if (button === 0) unwatch("force")
             })
           }
         }
