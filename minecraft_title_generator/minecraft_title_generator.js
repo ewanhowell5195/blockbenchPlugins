@@ -35,6 +35,11 @@
     }
   }
   const fontData = []
+  let tilables = {
+    cobblestone: {
+      texture: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAElBMVEW1tbWmpqaIh4hubW1hYWFSUlLm8qFQAAAAcUlEQVR42gVAARGDMAz8MAMjh4CSLwIWIgDSIGAD/1p2iPk5pTfFOW3QLR3nGrrGQxSLTL1wp2TJ3PF6W/yaOjSV9eEB2y3a4omQPSerG4f6biMXkP0a8X2DMdpytQkuIWuY49CuziJmclhoIcsjUvgH41gVHD61kt4AAAAASUVORK5CYII="
+    }
+  }
   const connection = {
     roots: [
       `https://raw.githubusercontent.com/${repo}/main`,
@@ -1401,9 +1406,13 @@
             row: 0,
             texture: Object.keys(fonts["minecraft-ten"].textures)[1] ?? Object.keys(fonts["minecraft-ten"].textures)[0],
             textures: [],
+            tilable: Object.keys(tilables)[0],
+            tilables,
+            tilablesList: [],
             overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
             overlays: [],
             variant: null,
+            tilableVariant: null,
             hue: 0,
             saturation: 100,
             brightness: 100,
@@ -2354,11 +2363,12 @@
                 </div>
                 <p>The texture to apply to the text</p>
                 <ul class="form_inline_select">
-                  <li @click="textureSource = 'premade'; updatePreview()" :class="{ selected: textureSource === 'premade' }">Pre-made</li>
+                  <li @click="textureSource = 'premade'; updatePreview()" :class="{ selected: textureSource === 'premade' }">Textures</li>
+                  <li @click="textureSource = 'tileable'; updatePreview()" :class="{ selected: textureSource === 'tileable' }">Tileables</li>
                   <li @click="textureSource = 'gradient'; updatePreview()" :class="{ selected: textureSource === 'gradient' }">Gradient</li>
                   <li @click="lastTextureSource = textureSource; textureSource = 'file'; updatePreview()" :class="{ selected: textureSource === 'file' }">File</li>
                 </ul>
-                <div v-if="textureSource === 'premade'" >
+                <div v-if="textureSource === 'premade'">
                   <div v-if="textures.filter(e => e[2] === font).length > 16" class="minecraft-texture-search">
                     <input type="text" placeholder="Search…" class="dark_bordered" v-model="textureSearch">
                     <i class="material-icons">search</i>
@@ -2371,12 +2381,12 @@
                         <i v-if="data.author" class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
                         <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', id)">save</i>
                       </div>
-                      <i v-if="fonts[font].textures[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(fonts[font].textures[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(fonts[font].textures[id].variants).length > 9 ? '9_plus' : Object.keys(fonts[font].textures[id].variants).length + 1 }}</i>
+                      <i v-if="fonts[font].textures[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(fonts[font].textures[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(fonts[font].textures[id].variants).length > 8 ? '9_plus' : Object.keys(fonts[font].textures[id].variants).length + 1 }}</i>
                     </div>
                   </div>
                   <div v-if="fonts[font].textures[texture]?.variants">
                     <br>
-                    <h2>Texture Variants</h2>
+                    <h2>Variants</h2>
                     <div class="minecraft-title-list" ref="textureVariants">
                       <div class="minecraft-title-item" @click="variant = null; updatePreview()" :class="{ selected: !variant }">
                         <img :src="'${root}/fonts/' + font + '/thumbnails/' + texture + '.png'" />
@@ -2390,7 +2400,46 @@
                         <img :src="'${root}/fonts/' + font + '/thumbnails/' + id + '.png'" />
                         <div>{{ data.name }}</div>
                         <div class="minecraft-title-item-buttons">
-                          <i v-if="fonts[font].textures[texture].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + (data.author ?? fonts[font].textures[texture].author)">person</i>
+                          <i v-if="data.author ?? fonts[font].textures[texture].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + (data.author ?? fonts[font].textures[texture].author)">person</i>
+                          <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', texture, id)">save</i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="textureSource === 'tileable'">
+                  <div v-if="tilablesList.length > 16" class="minecraft-texture-search">
+                    <input type="text" placeholder="Search…" class="dark_bordered" v-model="textureSearch">
+                    <i class="material-icons">search</i>
+                  </div>
+                  <div class="minecraft-title-list">
+                    <div class="minecraft-title-item" v-for="[id, data] of tilablesList" v-if="tilablesList.length <= 16 || id.includes(textureSearch) || id === tilable || Object.keys(tilables[id]?.variants ?? {}).some(e => e.includes(textureSearch))" @click="tilable = id; tilableVariant = null; updatePreview(); scrollToVariants()" :class="{ selected: tilable === id }">
+                      <img :src="data.texture ?? '${root}/tilables/' + (data.path ? data.path + '/' : '') + id + '.png'" />
+                      <div :style="{ maxWidth: tilables[id]?.variants ? '78%' : null }">{{ data.category ?? data.name }}</div>
+                      <div class="minecraft-title-item-buttons">
+                        <i class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
+                        <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', id)">save</i>
+                      </div>
+                      <i v-if="tilables[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(tilables[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(tilables[id].variants).length > 8 ? '9_plus' : Object.keys(tilables[id].variants).length + 1 }}</i>
+                    </div>
+                  </div>
+                  <div v-if="tilables[tilable]?.variants">
+                    <br>
+                    <h2>Variants</h2>
+                    <div class="minecraft-title-list" ref="textureVariants">
+                      <div class="minecraft-title-item" @click="tilableVariant = null; updatePreview()" :class="{ selected: !tilableVariant }">
+                        <img :src="tilables[tilable].texture ?? '${root}/tilables/' + (tilables[tilable].path ? tilables[tilable].path + '/' : '') + tilable + '.png'" />
+                        <div>{{ tilables[tilable].name }}</div>
+                        <div class="minecraft-title-item-buttons">
+                          <i v-if="tilables[tilable].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + tilables[tilable].author">person</i>
+                          <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', texture)">save</i>
+                        </div>
+                      </div>
+                      <div class="minecraft-title-item" v-for="[id, data] of Object.entries(tilables[tilable].variants)" @click="tilableVariant = id; updatePreview()" :class="{ selected: tilableVariant === id }">
+                        <img :src="data.texture ?? '${root}/tilables/' + (tilables[tilable].path ? tilables[tilable].path + '/' : '') + id + '.png'" />
+                        <div>{{ data.name }}</div>
+                        <div class="minecraft-title-item-buttons">
+                          <i class="minecraft-title-item-author material-icons" :data-author="'By ' + (data.author ?? tilables[tilable].author)">person</i>
                           <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', texture, id)">save</i>
                         </div>
                       </div>
@@ -2447,7 +2496,7 @@
                 </div>
                 <p>A texture to overlay onto the text</p>
                 <ul class="form_inline_select">
-                  <li @click="overlaySource = 'premade'; updatePreview()" :class="{ selected: overlaySource === 'premade' }">Pre-made</li>
+                  <li @click="overlaySource = 'premade'; updatePreview()" :class="{ selected: overlaySource === 'premade' }">Textures</li>
                   <li @click="overlaySource = 'file'; updatePreview()" :class="{ selected: overlaySource === 'file' }">File</li>
                 </ul>
                 <div v-if="overlaySource === 'premade'" class="minecraft-title-list small">
@@ -2633,8 +2682,15 @@
             font[1].id = font[0]
             fontData.push(font[1])
           }
+          tilables = Object.assign(tilables, await fetchData("tilables.json"))
+          for (const [id, tilable] of Object.entries(tilables)) {
+            tilable.name ??= titleCase(id)
+            tilable.author ??= "Mojang"
+            tilable.path ??= "minecraft"
+          }
           this.content_vue.fontList = fontData.map(e => [e.id, e])
           this.content_vue.textures = Object.entries(fonts["minecraft-ten"].textures).map(e => e.concat(["minecraft-ten"]))
+          this.content_vue.tilablesList = Object.entries(tilables)
           this.content_vue.overlays = Object.entries(fonts["minecraft-ten"].overlays).map(e => e.concat(["minecraft-ten"]))
           if (Object.keys(fonts["minecraft-ten"].textures)[1]) this.content_vue.texture = Object.keys(fonts["minecraft-ten"].textures)[1]
           this.content_vue.fontList.sort((a, b) => {
@@ -2707,7 +2763,7 @@
                 <div class="minecraft-title-item" v-for="[id, data] of Object.entries(fonts[font].textures)" v-if="fonts[font].textures[id]" @click="texture = id; variant = null" :class="{ selected: texture === id }">
                   <img :src="data.thumbnail ?? '${root}/fonts/' + font + '/thumbnails/' + id + '.png'" />
                   <div>{{ data.category ?? data.name }}</div>
-                  <i v-if="fonts[font].textures[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(fonts[font].textures[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(fonts[font].textures[id].variants).length > 9 ? '9_plus' : Object.keys(fonts[font].textures[id].variants).length + 1 }}</i>
+                  <i v-if="fonts[font].textures[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(fonts[font].textures[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(fonts[font].textures[id].variants).length > 8 ? '9_plus' : Object.keys(fonts[font].textures[id].variants).length + 1 }}</i>
                 </div>
               </div>
               <div v-if="fonts[font].textures[texture]?.variants">
