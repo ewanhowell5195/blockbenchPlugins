@@ -1474,7 +1474,11 @@
             textureSearch: "",
             colourOpacity: 100,
             overlayOpacity: 100,
-            tileableScale: 2
+            tileableScale: 2,
+            tileableXOffset: 0,
+            tileableYOffset: 0,
+            tileableWidth: 0,
+            tileableHeight: 0
           },
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
@@ -1780,6 +1784,13 @@
                 this.material.map = texture
                 this.material.needsUpdate = true
                 this.renderer.render(this.scene, this.camera)
+                if (this.textureSource === "tileable") {
+                  const img = await loadImage(await getTileable(this.tileable, this.tileableVariant))
+                  this.tileableWidth = img.width - 1
+                  this.tileableHeight = img.height - 1
+                  this.tileableXOffset = Math.min(this.tileableXOffset, img.width - 1)
+                  this.tileableYOffset = Math.min(this.tileableYOffset, img.height - 1)
+                }
                 this.updating = false
                 if (this.update) {
                   this.update = false
@@ -1824,7 +1835,7 @@
               type: "PNG Texture",
               extensions: ["png"],
               name: variant ?? texture,
-              content: await getTexture(fonts[font][type], texture, variant),
+              content: type === "tileables" ? await getTileable(texture, variant) : await getTexture(fonts[font][type], texture, variant),
               savetype: "image"
             }),
             async importTexture() {
@@ -2360,7 +2371,7 @@
                 <p>The vertical row that the text will appear on</p>
                 <div class="bar slider_input_combo">
                   <input type="range" class="tool disp_range" v-model.number="row" min="-10" max="10" step="1" />
-                  <input type="number" class="tool disp_text" v-model.number="row" step="1" />
+                  <numeric-input class="tool disp_text" v-model.number="row" :min="-10" :max="10" :step="1" />
                 </div>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 1 }">
@@ -2420,11 +2431,6 @@
                   </div>
                 </div>
                 <div v-if="textureSource === 'tileable'">
-                  <div class="bar slider_input_combo" style="margin-bottom: 10px;">
-                    <div class="slider-label">Scale:</div>
-                    <input type="range" class="tool disp_range" v-model.number="tileableScale" min="1" max="8" step="1" @input="updatePreview" />
-                    <input type="number" class="tool disp_text" v-model.number="tileableScale" step="1" @input="updatePreview" />
-                  </div>
                   <div v-if="tileablesList.length > 16" class="minecraft-texture-search">
                     <input type="text" placeholder="Search…" class="dark_bordered" v-model="textureSearch">
                     <i class="material-icons">search</i>
@@ -2437,7 +2443,7 @@
                       <div :style="{ maxWidth: tileables[id]?.variants ? '78%' : null }">{{ data.category ?? data.name }}</div>
                       <div class="minecraft-title-item-buttons">
                         <i class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
-                        <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', id)">save</i>
+                        <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'tileables', id)">save</i>
                       </div>
                       <i v-if="tileables[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(tileables[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(tileables[id].variants).length > 8 ? '9_plus' : Object.keys(tileables[id].variants).length + 1 }}</i>
                     </div>
@@ -2453,7 +2459,7 @@
                         <div>{{ tileables[tileable].name }}</div>
                         <div class="minecraft-title-item-buttons">
                           <i v-if="tileables[tileable].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + tileables[tileable].author">person</i>
-                          <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', texture)">save</i>
+                          <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'tileables', tileable)">save</i>
                         </div>
                       </div>
                       <div class="minecraft-title-item" v-for="[id, data] of Object.entries(tileables[tileable].variants)" @click="tileableVariant = id; updatePreview()" :class="{ selected: tileableVariant === id }">
@@ -2463,7 +2469,7 @@
                         <div>{{ data.name }}</div>
                         <div class="minecraft-title-item-buttons">
                           <i class="minecraft-title-item-author material-icons" :data-author="'By ' + (data.author ?? tileables[tileable].author)">person</i>
-                          <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', texture, id)">save</i>
+                          <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'tileables', tileable, id)">save</i>
                         </div>
                       </div>
                     </div>
@@ -2532,7 +2538,6 @@
                     </div>
                   </div>
                 </div>
-                <br>
                 <div :class="{ hidden: overlaySource !== 'file' }" id="minecraft-title-custom-overlay" class="minecraft-title-file" @click="selectCustomOverlay">
                   <canvas class="checkerboard" width="500" height="160" />
                   <button>Select file</button>
@@ -2551,31 +2556,51 @@
                 <p>The opacity to apply the overlay at</p>
                 <div class="bar slider_input_combo">
                   <input type="range" class="tool disp_range" v-model.number="overlayOpacity" min="0" max="100" step="1" @input="updatePreview" />
-                  <input type="number" class="tool disp_text" v-model.number="overlayOpacity" step="1" @input="updatePreview" />
+                  <numeric-input class="tool disp_text" v-model.number="overlayOpacity" :min="0" :max="100" :step="1" @input="updatePreview" />
                 </div>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 3 }">
+                <div v-if="textureSource === 'tileable'">
+                  <h2>Configuration</h2>
+                  <p>Configure the tileable texture</p>
+                  <div class="bar slider_input_combo">
+                    <div class="slider-label">Scale:</div>
+                    <input type="range" class="tool disp_range" v-model.number="tileableScale" min="1" max="8" step="1" @input="updatePreview" />
+                    <numeric-input class="tool disp_text" v-model.number="tileableScale" :min="1" :max="8" :step="1" @input="updatePreview" />
+                  </div>
+                  <div class="bar slider_input_combo">
+                    <div class="slider-label">X Offset:</div>
+                    <input type="range" class="tool disp_range" v-model.number="tileableXOffset" min="0" :max="tileableWidth" step="1" @input="updatePreview" />
+                    <numeric-input class="tool disp_text" v-model.number="tileableXOffset" :min="0" :max="tileableWidth" :step="1" @input="updatePreview" />
+                  </div>
+                  <div class="bar slider_input_combo">
+                    <div class="slider-label">Y Offset:</div>
+                    <input type="range" class="tool disp_range" v-model.number="tileableYOffset" min="0" :max="tileableHeight" step="1" @input="updatePreview" />
+                    <numeric-input class="tool disp_text" v-model.number="tileableYOffset" :min="0" :max="tileableHeight" :step="1" @input="updatePreview" />
+                  </div>
+                  <br>
+                </div>
                 <h2>Filters</h2>
                 <p>Apply some filters to the chosen texture</p>
                 <div class="bar slider_input_combo">
                   <div class="slider-label" style="width:70px">Hue</div>
                   <input type="range" class="tool disp_range" v-model.number="hue" min="0" max="359" step="1" @input="updatePreview" />
-                  <input type="number" class="tool disp_text" v-model.number="hue" step="1" @input="updatePreview" />
+                  <numeric-input class="tool disp_text" v-model.number="hue" :min="0" :max="359" :step="1" @input="updatePreview" />
                 </div>
                 <div class="bar slider_input_combo">
                   <div class="slider-label" style="width:70px">Saturation</div>
                   <input type="range" class="tool disp_range" v-model.number="saturation" min="0" max="200" step="1" @input="updatePreview" />
-                  <input type="number" class="tool disp_text" v-model.number="saturation" step="1" @input="updatePreview" />
+                  <numeric-input class="tool disp_text" v-model.number="saturation" :min="0" :max="200" :step="1" @input="updatePreview" />
                 </div>
                 <div class="bar slider_input_combo">
                   <div class="slider-label" style="width:70px">Brightness</div>
                   <input type="range" class="tool disp_range" v-model.number="brightness" min="0" max="200" step="1" @input="updatePreview" />
-                  <input type="number" class="tool disp_text" v-model.number="brightness" step="1" @input="updatePreview" />
+                  <numeric-input class="tool disp_text" v-model.number="brightness" :min="0" :max="200" :step="1" @input="updatePreview" />
                 </div>
                 <div class="bar slider_input_combo">
                   <div class="slider-label" style="width:70px">Contrast</div>
                   <input type="range" class="tool disp_range" v-model.number="contrast" min="0" max="200" step="1" @input="updatePreview" />
-                  <input type="number" class="tool disp_text" v-model.number="contrast" step="1" @input="updatePreview" />
+                  <numeric-input class="tool disp_text" v-model.number="contrast" :min="0" :max="200" :step="1" @input="updatePreview" />
                 </div>
                 <br>
                 <h2>Colour</h2>
@@ -2586,7 +2611,7 @@
                 <p style="margin:15px 0 -5px">The opacity to apply the colour at</p>
                 <div class="bar slider_input_combo">
                   <input type="range" class="tool disp_range" v-model.number="colourOpacity" min="0" max="100" step="1" @input="updatePreview" />
-                  <input type="number" class="tool disp_text" v-model.number="colourOpacity" step="1" @input="updatePreview" />
+                  <numeric-input class="tool disp_text" v-model.number="colourOpacity" :min="0" :max="100" :step="1" @input="updatePreview" />
                 </div>
                 <br>
                 <h2>Border</h2>
@@ -2617,32 +2642,32 @@
                 <p>Add a space between each character</p>
                 <div class="bar slider_input_combo">
                   <input type="range" class="tool disp_range" v-model.number="characterSpacing" min="0" max="20" step="1" />
-                  <input type="number" class="tool disp_text" v-model.number="characterSpacing" step="1" />
+                  <numeric-input class="tool disp_text" v-model.number="characterSpacing" :min="0" :max="20" :step="1" />
                 </div>
                 <br>
                 <h2>Row Spacing</h2>
                 <p>Change the spacing between the vertical rows of text</p>
                 <div class="bar slider_input_combo">
                   <input type="range" class="tool disp_range" v-model.number="rowSpacing" min="-4" max="20" step="1" />
-                  <input type="number" class="tool disp_text" v-model.number="rowSpacing" step="1" />
+                  <numeric-input class="tool disp_text" v-model.number="rowSpacing" :min="-4" :max="20" :step="1" />
                 </div>
                 <br>
                 <h2>Text Scale</h2>
                 <p>The scale to render the text<br>For advanced scaling, use <strong>Transform > Scale</strong> after adding the text</p>
                 <div class="bar slider_input_combo">
                   <div class="slider-label">X</div>
-                  <input type="range" class="tool disp_range" v-model.number="scaleX" min="0.05" max="4" step="0.05" value="{{ scaleX }}" style="--color-thumb:var(--color-axis-x)" />
-                  <input type="number" class="tool disp_text" v-model.number="scaleX" step="1" />
+                  <input type="range" class="tool disp_range" v-model.number="scaleX" min="0.05" max="4" step="0.05" style="--color-thumb:var(--color-axis-x)" />
+                  <numeric-input class="tool disp_text" v-model.number="scaleX" :min="0.05" :max="4" :step="0.05" />
                 </div>
                 <div class="bar slider_input_combo">
                   <div class="slider-label">Y</div>
-                  <input type="range" class="tool disp_range" v-model.number="scaleY" min="0.05" max="4" step="0.05" value="{{ scaleY }}" style="--color-thumb:var(--color-axis-y)" />
-                  <input type="number" class="tool disp_text" v-model.number="scaleY" step="1" />
+                  <input type="range" class="tool disp_range" v-model.number="scaleY" min="0.05" max="4" step="0.05" style="--color-thumb:var(--color-axis-y)" />
+                  <numeric-input class="tool disp_text" v-model.number="scaleY" :min="0.05" :max="4" :step="0.05" />
                 </div>
                 <div class="bar slider_input_combo">
                   <div class="slider-label">Z</div>
-                  <input type="range" class="tool disp_range" v-model.number="scaleZ" min="0" max="4" step="0.05" value="{{ scaleZ }}" style="--color-thumb:var(--color-axis-z)" />
-                  <input type="number" class="tool disp_text" v-model.number="scaleZ" step="1" />
+                  <input type="range" class="tool disp_range" v-model.number="scaleZ" min="0.05" max="4" step="0.05" style="--color-thumb:var(--color-axis-z)" />
+                  <numeric-input class="tool disp_text" v-model.number="scaleZ" :min="0.05" :max="4" :step="0.05" />
                 </div>
               </div>
               <div id="minecraft-title-buttons">
@@ -3040,12 +3065,9 @@
   }
 
   async function makeTexture(args) {
-    const img = (await new Promise(async fulfill => new THREE.TextureLoader().load(args.customTexture ?? await getTexture(fonts[args.font].textures, args.texture, args.variant), fulfill, null, fulfill))).image
-    let canvas = document.createElement("canvas")
-    canvas.width = img.width
-    canvas.height = img.height
+    const img = await loadImage(args.customTexture ?? await getTexture(fonts[args.font].textures, args.texture, args.variant))
+    let { canvas, ctx } = new CanvasFrame(img.width, img.height)
     let m = canvas.width / 1000
-    let ctx = canvas.getContext("2d")
     ctx.drawImage(img, 0, 0)
     if (args.gradientColour0) {
       if (args.smoothGradient) {
@@ -3123,12 +3145,17 @@
       }
       if (fonts[args.font].overlay) {
         if (typeof fonts[args.font].overlay === "boolean") {
-          fonts[args.font].overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(await getTexture(null, null, null, `fonts/${args.font}/textures/overlay.png`), fulfill, null, fulfill))).image
+          fonts[args.font].overlay = await loadImage(await getTexture(null, null, null, `fonts/${args.font}/textures/overlay.png`))
         }
         ctx.drawImage(fonts[args.font].overlay, 0, 0, canvas.width, canvas.height)
       }
     } else if (args.tileable) {
-      const texture = await getTileable(args.tileable, args.tileableVariant)
+      const img = await loadImage(await getTileable(args.tileable, args.tileableVariant))
+      const { canvas: texture, ctx: tctx } = new CanvasFrame(img.width, img.height)
+      tctx.drawImage(img, args.tileableXOffset, args.tileableYOffset)
+      if (args.tileableXOffset) tctx.drawImage(img, -img.width + args.tileableXOffset, args.tileableYOffset)
+      if (args.tileableYOffset) tctx.drawImage(img, args.tileableXOffset, -img.height + args.tileableYOffset)
+      if (args.tileableXOffset && args.tileableYOffset) tctx.drawImage(img, -img.width + args.tileableXOffset, -img.height + args.tileableYOffset)
       const width = texture.width * args.tileableScale
       const height = texture.height * args.tileableScale
       ctx.fillStyle = "#0008"
@@ -3235,7 +3262,7 @@
       }
     }
     if (args.customOverlay || (args.overlay && args.overlay !== "none")) {
-      const overlay = (await new Promise(async fulfill => new THREE.TextureLoader().load(args.customOverlay ?? await getTexture(fonts[args.font].overlays, args.overlay), fulfill, null, fulfill))).image
+      const overlay = await loadImage(args.customOverlay ?? await getTexture(fonts[args.font].overlays, args.overlay))
       const overlayCanvas = new CanvasFrame(overlay.width, overlay.height)
       overlayCanvas.ctx.drawImage(overlay, 0, 0)
       overlayCanvas.ctx.globalCompositeOperation = args.overlayColourBlend
@@ -3556,10 +3583,10 @@
       font: vue.font,
       type: vue.textType,
       row: vue.row,
-      texture: vue.textureSource === "gradient" || vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient") ? "flat" : vue.texture,
-      variant: vue.textureSource === "premade" || (vue.textureSource === "file" && vue.lastTextureSource !== "gradient") ? vue.variant : null,
-      tileable: vue.textureSource === "tileable" ? vue.tileable : null,
-      tileableVariant: vue.textureSource === "tileable" ? vue.tileableVariant : null,
+      texture: vue.textureSource === "gradient" || vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && ["gradient", "tileable"].includes(vue.lastTextureSource)) ? "flat" : vue.texture,
+      variant: vue.textureSource === "premade" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "premade") ? vue.variant : null,
+      tileable: vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileable : null,
+      tileableVariant: vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileableVariant : null,
       characterSpacing: vue.characterSpacing,
       rowSpacing: vue.rowSpacing,
       scale: [vue.scaleX, vue.scaleY, vue.scaleZ],
@@ -3590,6 +3617,8 @@
       colourOpacity: vue.colourOpacity,
       overlayOpacity: vue.overlayOpacity,
       tileableScale: vue.tileableScale,
+      tileableXOffset: vue.tileableXOffset,
+      tileableYOffset: vue.tileableYOffset,
       three
     }
   }
@@ -3653,6 +3682,6 @@
         reader.readAsDataURL(new Blob([await fetchData(`/tileables/${data.path ? data.path + "/" : ""}${variant ?? id}.png`).then(e => e.arrayBuffer())], { type: "image/png" }))
       }).catch(() => {})
     }
-    return (await new Promise(async fulfill => new THREE.TextureLoader().load(data.texture, fulfill, null, fulfill))).image
+    return data.texture
   }
 })()
