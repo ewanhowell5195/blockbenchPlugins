@@ -3135,7 +3135,7 @@
       ctx.globalCompositeOperation = "source-atop"
       const uvScaleW = canvas.width / 16
       const uvScaleH = canvas.height / 16
-      console.log(args.font)
+      await getFontCharacters(args.font)
       for (const char of Object.values(fonts[args.font].characters)) {
         let faceUV, topUV, bottomUV
         for (const cube of char) {
@@ -3554,8 +3554,6 @@
   function getArgs(vue, three) {
     return {
       font: vue.font,
-      baseFont: vue.baseFont,
-      fontVariant: vue.fontVariant,
       type: vue.textType,
       row: vue.row,
       texture: vue.textureSource === "gradient" || vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient") ? "flat" : vue.texture,
