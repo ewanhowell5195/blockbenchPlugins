@@ -35,7 +35,7 @@
     }
   }
   const fontData = []
-  let tilables = {
+  let tileables = {
     cobblestone: {
       texture: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAElBMVEW1tbWmpqaIh4hubW1hYWFSUlLm8qFQAAAAcUlEQVR42gVAARGDMAz8MAMjh4CSLwIWIgDSIGAD/1p2iPk5pTfFOW3QLR3nGrrGQxSLTL1wp2TJ3PF6W/yaOjSV9eEB2y3a4omQPSerG4f6biMXkP0a8X2DMdpytQkuIWuY49CuziJmclhoIcsjUvgH41gVHD61kt4AAAAASUVORK5CYII="
     }
@@ -1385,6 +1385,17 @@
           #minecraft-title-connection-warning-underline {
             text-decoration: underline;
           }
+          .tileable-preview {
+            width: calc(100% - 34px);
+            min-height: 48px;
+            overflow: hidden;
+          }
+          .tileable-preview > div {
+            scale: 3;
+            width: 100%;
+            height: 100%;
+            transform-origin: 0 0;
+          }
         </style>`],
         component: {
           data: {
@@ -1406,13 +1417,13 @@
             row: 0,
             texture: Object.keys(fonts["minecraft-ten"].textures)[1] ?? Object.keys(fonts["minecraft-ten"].textures)[0],
             textures: [],
-            tilable: Object.keys(tilables)[0],
-            tilables,
-            tilablesList: [],
+            tileable: Object.keys(tileables)[0],
+            tileables,
+            tileablesList: [],
             overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
             overlays: [],
             variant: null,
-            tilableVariant: null,
+            tileableVariant: null,
             hue: 0,
             saturation: 100,
             brightness: 100,
@@ -1462,7 +1473,8 @@
             lastTextureSource: null,
             textureSearch: "",
             colourOpacity: 100,
-            overlayOpacity: 100
+            overlayOpacity: 100,
+            tileableScale: 2
           },
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
@@ -2408,38 +2420,49 @@
                   </div>
                 </div>
                 <div v-if="textureSource === 'tileable'">
-                  <div v-if="tilablesList.length > 16" class="minecraft-texture-search">
+                  <div class="bar slider_input_combo" style="margin-bottom: 10px;">
+                    <div class="slider-label">Scale:</div>
+                    <input type="range" class="tool disp_range" v-model.number="tileableScale" min="1" max="8" step="1" @input="updatePreview" />
+                    <input type="number" class="tool disp_text" v-model.number="tileableScale" step="1" @input="updatePreview" />
+                  </div>
+                  <div v-if="tileablesList.length > 16" class="minecraft-texture-search">
                     <input type="text" placeholder="Search…" class="dark_bordered" v-model="textureSearch">
                     <i class="material-icons">search</i>
                   </div>
                   <div class="minecraft-title-list">
-                    <div class="minecraft-title-item" v-for="[id, data] of tilablesList" v-if="tilablesList.length <= 16 || id.includes(textureSearch) || id === tilable || Object.keys(tilables[id]?.variants ?? {}).some(e => e.includes(textureSearch))" @click="tilable = id; tilableVariant = null; updatePreview(); scrollToVariants()" :class="{ selected: tilable === id }">
-                      <img :src="data.texture ?? '${root}/tilables/' + (data.path ? data.path + '/' : '') + id + '.png'" />
-                      <div :style="{ maxWidth: tilables[id]?.variants ? '78%' : null }">{{ data.category ?? data.name }}</div>
+                    <div class="minecraft-title-item" v-for="[id, data] of tileablesList" v-if="tileablesList.length <= 16 || id.includes(textureSearch) || id === tileable || Object.keys(tileables[id]?.variants ?? {}).some(e => e.includes(textureSearch))" @click="tileable = id; tileableVariant = null; updatePreview(); scrollToVariants()" :class="{ selected: tileable === id }">
+                      <div class="tileable-preview">
+                        <div :style="{ backgroundImage: 'url(' + (data.texture ?? '${root}/tileables/' + (data.path ? data.path + '/' : '') + id + '.png') + ')' }" />
+                      </div>
+                      <div :style="{ maxWidth: tileables[id]?.variants ? '78%' : null }">{{ data.category ?? data.name }}</div>
                       <div class="minecraft-title-item-buttons">
                         <i class="minecraft-title-item-author material-icons" :data-author="'By ' + data.author">person</i>
                         <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', id)">save</i>
                       </div>
-                      <i v-if="tilables[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(tilables[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(tilables[id].variants).length > 8 ? '9_plus' : Object.keys(tilables[id].variants).length + 1 }}</i>
+                      <i v-if="tileables[id]?.variants" class="minecraft-title-item-has-variants material-icons" :title="'Has ' + (Object.keys(tileables[id].variants).length + 1) + ' variants'">filter_{{ Object.keys(tileables[id].variants).length > 8 ? '9_plus' : Object.keys(tileables[id].variants).length + 1 }}</i>
                     </div>
                   </div>
-                  <div v-if="tilables[tilable]?.variants">
+                  <div v-if="tileables[tileable]?.variants">
                     <br>
                     <h2>Variants</h2>
                     <div class="minecraft-title-list" ref="textureVariants">
-                      <div class="minecraft-title-item" @click="tilableVariant = null; updatePreview()" :class="{ selected: !tilableVariant }">
-                        <img :src="tilables[tilable].texture ?? '${root}/tilables/' + (tilables[tilable].path ? tilables[tilable].path + '/' : '') + tilable + '.png'" />
-                        <div>{{ tilables[tilable].name }}</div>
+                      <div class="minecraft-title-item" @click="tileableVariant = null; updatePreview()" :class="{ selected: !tileableVariant }">
+                        <div class="tileable-preview">
+                          <div :style="{ backgroundImage: 'url(' + (tileables[tileable].texture ?? '${root}/tileables/' + (tileables[tileable].path ? tileables[tileable].path + '/' : '') + tileable + '.png') + ')' }" />
+                        </div>
+                        <div>{{ tileables[tileable].name }}</div>
                         <div class="minecraft-title-item-buttons">
-                          <i v-if="tilables[tilable].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + tilables[tilable].author">person</i>
+                          <i v-if="tileables[tileable].author" class="minecraft-title-item-author material-icons" :data-author="'By ' + tileables[tileable].author">person</i>
                           <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', texture)">save</i>
                         </div>
                       </div>
-                      <div class="minecraft-title-item" v-for="[id, data] of Object.entries(tilables[tilable].variants)" @click="tilableVariant = id; updatePreview()" :class="{ selected: tilableVariant === id }">
-                        <img :src="data.texture ?? '${root}/tilables/' + (tilables[tilable].path ? tilables[tilable].path + '/' : '') + id + '.png'" />
+                      <div class="minecraft-title-item" v-for="[id, data] of Object.entries(tileables[tileable].variants)" @click="tileableVariant = id; updatePreview()" :class="{ selected: tileableVariant === id }">
+                        <div class="tileable-preview">
+                          <div :style="{ backgroundImage: 'url(' + (data.texture ?? '${root}/tileables/' + (tileables[tileable].path ? tileables[tileable].path + '/' : '') + id + '.png') + ')' }" />
+                        </div>
                         <div>{{ data.name }}</div>
                         <div class="minecraft-title-item-buttons">
-                          <i class="minecraft-title-item-author material-icons" :data-author="'By ' + (data.author ?? tilables[tilable].author)">person</i>
+                          <i class="minecraft-title-item-author material-icons" :data-author="'By ' + (data.author ?? tileables[tileable].author)">person</i>
                           <i class="material-icons" title="Save Texture" @click="saveTexture(font, 'textures', texture, id)">save</i>
                         </div>
                       </div>
@@ -2682,15 +2705,19 @@
             font[1].id = font[0]
             fontData.push(font[1])
           }
-          tilables = Object.assign(tilables, await fetchData("tilables.json"))
-          for (const [id, tilable] of Object.entries(tilables)) {
-            tilable.name ??= titleCase(id)
-            tilable.author ??= "Mojang"
-            tilable.path ??= "minecraft"
+          tileables = Object.assign(tileables, await fetchData("tileables.json"))
+          for (const [id, tileable] of Object.entries(tileables)) {
+            tileable.name ??= titleCase(id)
+            tileable.author ??= "Mojang"
+            tileable.path ??= "minecraft"
+            if (tileable.variants) for (const [id, variant] of Object.entries(tileable.variants)) {
+              variant.name ??= titleCase(id)
+              variant.path ??= tileable.path
+            }
           }
           this.content_vue.fontList = fontData.map(e => [e.id, e])
           this.content_vue.textures = Object.entries(fonts["minecraft-ten"].textures).map(e => e.concat(["minecraft-ten"]))
-          this.content_vue.tilablesList = Object.entries(tilables)
+          this.content_vue.tileablesList = Object.entries(tileables)
           this.content_vue.overlays = Object.entries(fonts["minecraft-ten"].overlays).map(e => e.concat(["minecraft-ten"]))
           if (Object.keys(fonts["minecraft-ten"].textures)[1]) this.content_vue.texture = Object.keys(fonts["minecraft-ten"].textures)[1]
           this.content_vue.fontList.sort((a, b) => {
@@ -3100,6 +3127,93 @@
         }
         ctx.drawImage(fonts[args.font].overlay, 0, 0, canvas.width, canvas.height)
       }
+    } else if (args.tileable) {
+      const texture = await getTileable(args.tileable, args.tileableVariant)
+      const width = texture.width * args.tileableScale
+      const height = texture.height * args.tileableScale
+      ctx.fillStyle = "#0008"
+      ctx.globalCompositeOperation = "source-atop"
+      const uvScaleW = canvas.width / 16
+      const uvScaleH = canvas.height / 16
+      console.log(args.font)
+      for (const char of Object.values(fonts[args.font].characters)) {
+        let faceUV, topUV, bottomUV
+        for (const cube of char) {
+          for (const face of Object.values(cube.faces)) {
+            const mapped = (face?.uv ?? face).map((e, i) => i % 2 ? e * uvScaleH : e * uvScaleW)
+            const middle = fonts[args.font].faces.find(e => mapped[1] >= e[0] && mapped[1] <= e[e.length - 1] && mapped[3] >= e[0] && mapped[3] <= e[e.length - 1])
+            if (middle) {
+              if (!faceUV) {
+                faceUV = [Math.min(mapped[0], mapped[2]), middle[0], Math.max(mapped[0], mapped[2]), middle[middle.length - 1], middle.length === 4 ? middle[1] - middle[0] : null]
+              } else {
+                faceUV[0] = Math.min(faceUV[0], mapped[0], mapped[2])
+                faceUV[2] = Math.max(faceUV[2], mapped[0], mapped[2])
+              }
+            } else {
+              const top = fonts[args.font].ends.find(e => mapped[1] >= e[0] && mapped[1] <= e[1] && mapped[3] >= e[0] && mapped[3] <= e[1])
+              if (top) {
+                if (!topUV) {
+                  topUV = [Math.min(mapped[0], mapped[2]), top[0], Math.max(mapped[0], mapped[2]), top[1]]
+                } else {
+                  topUV[0] = Math.min(topUV[0], mapped[0], mapped[2])
+                  topUV[2] = Math.max(topUV[2], mapped[0], mapped[2])
+                }
+              } else {
+                const bottom = fonts[args.font].ends.find(e => mapped[1] >= e[2] && mapped[1] <= e[3] && mapped[3] >= e[2] && mapped[3] <= e[3])
+                if (bottom) {
+                  if (!bottomUV) {
+                    bottomUV = [Math.min(mapped[0], mapped[2]), bottom[2], Math.max(mapped[0], mapped[2]), bottom[3]]
+                  } else {
+                    bottomUV[0] = Math.min(bottomUV[0], mapped[0], mapped[2])
+                    bottomUV[2] = Math.max(bottomUV[2], mapped[0], mapped[2])
+                  }
+                }
+              }
+            }
+          }
+        }
+        if (faceUV) {
+          const area = new CanvasFrame(faceUV[2] - faceUV[0], faceUV[3] - faceUV[1])
+          area.ctx.imageSmoothingEnabled = false
+          const start = faceUV[4] ?? 0
+          for (let y = start; y < area.height; y += height) {
+            for (let x = 0; x < area.width; x += width) {
+              area.ctx.drawImage(texture, x, y, width, height)
+            }
+          }
+          if (start !== 0) {
+            for (let y = start; y > 0; y -= height) {
+              for (let x = 0; x < area.width; x += width) {
+                area.ctx.drawImage(texture, x, y - height, width, height)
+              }
+            }
+          }
+          ctx.drawImage(area.canvas, faceUV[0], faceUV[1])
+        }
+        if (topUV) {
+          const area = new CanvasFrame(topUV[2] - topUV[0], topUV[3] - topUV[1])
+          area.ctx.imageSmoothingEnabled = false
+          for (let y = area.height; y > 0; y -= height) {
+            for (let x = 0; x < area.width; x += width) {
+              area.ctx.drawImage(texture, x, y - height, width, height)
+            }
+          }
+          ctx.drawImage(area.canvas, topUV[0], topUV[1])
+          ctx.fillRect(topUV[0], topUV[1], area.width, area.height)
+        }
+        if (bottomUV) {
+          const area = new CanvasFrame(bottomUV[2] - bottomUV[0], bottomUV[3] - bottomUV[1])
+          area.ctx.imageSmoothingEnabled = false
+          for (let y = 0; y < area.height; y += height) {
+            for (let x = 0; x < area.width; x += width) {
+              area.ctx.drawImage(texture, x, y, width, height)
+            }
+          }
+          ctx.drawImage(area.canvas, bottomUV[0], bottomUV[1])
+          ctx.fillRect(bottomUV[0], bottomUV[1], area.width, area.height)
+        }
+      }
+      ctx.globalCompositeOperation = "source-over"
     }
     ctx.globalCompositeOperation = "copy"
     ctx.filter =`hue-rotate(${args.hue}deg) saturate(${args.saturation}%) brightness(${args.brightness}%) contrast(${args.contrast}%`
@@ -3444,8 +3558,10 @@
       fontVariant: vue.fontVariant,
       type: vue.textType,
       row: vue.row,
-      texture: vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient") ? "flat" : vue.texture,
+      texture: vue.textureSource === "gradient" || vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient") ? "flat" : vue.texture,
       variant: vue.textureSource === "premade" || (vue.textureSource === "file" && vue.lastTextureSource !== "gradient") ? vue.variant : null,
+      tileable: vue.textureSource === "tileable" ? vue.tileable : null,
+      tileableVariant: vue.textureSource === "tileable" ? vue.tileableVariant : null,
       characterSpacing: vue.characterSpacing,
       rowSpacing: vue.rowSpacing,
       scale: [vue.scaleX, vue.scaleY, vue.scaleZ],
@@ -3475,6 +3591,7 @@
       smoothGradient: vue.smoothGradient,
       colourOpacity: vue.colourOpacity,
       overlayOpacity: vue.overlayOpacity,
+      tileableScale: vue.tileableScale,
       three
     }
   }
@@ -3527,5 +3644,17 @@
       }
     }
     return [width, height]
+  }
+
+  async function getTileable(id, variant) {
+    const data = variant ? tileables[id].variants[variant] : tileables[id]
+    if (!data.texture) {
+      data.texture = await new Promise(async fulfil => {
+        const reader = new FileReader()
+        reader.onload = e => fulfil(e.target.result)
+        reader.readAsDataURL(new Blob([await fetchData(`/tileables/${data.path ? data.path + "/" : ""}${variant ?? id}.png`).then(e => e.arrayBuffer())], { type: "image/png" }))
+      }).catch(() => {})
+    }
+    return (await new Promise(async fulfill => new THREE.TextureLoader().load(data.texture, fulfill, null, fulfill))).image
   }
 })()
