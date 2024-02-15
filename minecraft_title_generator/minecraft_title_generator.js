@@ -3176,18 +3176,16 @@
         ctx.fillRect(0, end[2] * m, canvas.width, end[3] * m - end[2] * m)
       }
       if (fonts[args.font].overlay) {
-        if (typeof fonts[args.font].overlay === "boolean") {
-          fonts[args.font].overlay = await loadImage(await getTexture(null, null, null, `fonts/${args.font}/textures/overlay.png`))
-        }
+        await loadOverlay(args.font)
         ctx.drawImage(fonts[args.font].overlay, 0, 0, canvas.width, canvas.height)
       }
     } else if (args.tileable) {
-      const img = await loadImage(await getTileable(args.tileable, args.tileableVariant))
-      const { canvas: texture, ctx: tctx } = new CanvasFrame(img.width, img.height)
-      tctx.drawImage(img, args.tileableXOffset, args.tileableYOffset)
-      if (args.tileableXOffset) tctx.drawImage(img, -img.width + args.tileableXOffset, args.tileableYOffset)
-      if (args.tileableYOffset) tctx.drawImage(img, args.tileableXOffset, -img.height + args.tileableYOffset)
-      if (args.tileableXOffset && args.tileableYOffset) tctx.drawImage(img, -img.width + args.tileableXOffset, -img.height + args.tileableYOffset)
+      const base = await loadImage(await getTileable(args.tileable, args.tileableVariant))
+      const { canvas: texture, ctx: tctx } = new CanvasFrame(base.width, base.height)
+      tctx.drawImage(base, args.tileableXOffset, args.tileableYOffset)
+      if (args.tileableXOffset) tctx.drawImage(base, -base.width + args.tileableXOffset, args.tileableYOffset)
+      if (args.tileableYOffset) tctx.drawImage(base, args.tileableXOffset, -base.height + args.tileableYOffset)
+      if (args.tileableXOffset && args.tileableYOffset) tctx.drawImage(base, -base.width + args.tileableXOffset, -base.height + args.tileableYOffset)
       const width = texture.width * args.tileableScale
       const height = texture.height * args.tileableScale
       ctx.fillStyle = "#0008"
@@ -3272,7 +3270,13 @@
           ctx.fillRect(bottomUV[0], bottomUV[1], area.width, area.height)
         }
       }
-      ctx.globalCompositeOperation = "source-over"
+      if (fonts[args.font].overlay) {
+        ctx.globalCompositeOperation = "destination-out"
+        await loadOverlay(args.font)
+        ctx.drawImage(fonts[args.font].overlay, 0, 0)
+        ctx.globalCompositeOperation = "destination-over"
+        ctx.drawImage(img, 0, 0)
+      }
     }
     ctx.globalCompositeOperation = "copy"
     ctx.filter =`hue-rotate(${args.hue}deg) saturate(${args.saturation}%) brightness(${args.brightness}%) contrast(${args.contrast}%`
@@ -3715,5 +3719,11 @@
       }).catch(() => {})
     }
     return data.texture
+  }
+
+  async function loadOverlay(id) {
+    if (typeof fonts[id].overlay === "boolean") {
+      fonts[id].overlay = await loadImage(await getTexture(null, null, null, `fonts/${id}/textures/overlay.png`))
+    }
   }
 })()
