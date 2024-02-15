@@ -1396,6 +1396,20 @@
             height: 100%;
             transform-origin: 0 0;
           }
+          .radio-row {
+            display: flex;
+            align-items: center;
+            gap: 20px !important;
+          }
+          .radio-row > label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+          }
+          .radio-row > label * {
+            cursor: pointer;
+          }
         </style>`],
         component: {
           data: {
@@ -1469,6 +1483,7 @@
             overlayBlend: "overlay",
             overlayColourBlend: "multiply",
             customTexture: null,
+            customTextureType: "texture",
             smoothGradient: true,
             lastTextureSource: null,
             textureSearch: "",
@@ -1789,8 +1804,10 @@
                 this.material.map = texture
                 this.material.needsUpdate = true
                 this.renderer.render(this.scene, this.camera)
-                if (this.textureSource === "tileable") {
-                  const img = await loadImage(await getTileable(this.tileable, this.tileableVariant))
+                if (this.textureSource === "tileable" || this.textureSource === "file" && this.customTexture && this.customTextureType === "tileable") {
+                  let img
+                  if (this.textureSource === "file") img = await loadImage(this.customTexture)
+                  else img = await loadImage(await getTileable(this.tileable, this.tileableVariant))
                   this.tileableWidth = img.width - 1
                   this.tileableHeight = img.height - 1
                   this.tileableXOffset = Math.min(this.tileableXOffset, img.width - 1)
@@ -1816,18 +1833,21 @@
             async selectCustomTexture() {
               const texture = await getTextureFromFile()
               if (!texture) return
-              this.customTextureCanvas.width = texture.image.width
-              this.customTextureCanvas.height = texture.image.height
-              this.customTextureCanvas.getContext("2d").drawImage(texture.image, 0, 0, this.customTextureCanvas.width, this.customTextureCanvas.height)
+              if (texture.width / texture.height === 3.125) this.customTextureType = "texture"
+              else this.customTextureType = "tileable"
+              globalThis.texture = texture
+              this.customTextureCanvas.width = texture.width
+              this.customTextureCanvas.height = texture.height
+              this.customTextureCanvas.getContext("2d").drawImage(texture, 0, 0, this.customTextureCanvas.width, this.customTextureCanvas.height)
               this.customTexture = this.customTextureCanvas.toDataURL()
               this.updatePreview()
             },
             async selectCustomOverlay() {
               const texture = await getTextureFromFile()
               if (!texture) return
-              this.customOverlayCanvas.width = texture.image.width
-              this.customOverlayCanvas.height = texture.image.height
-              this.customOverlayCanvas.getContext("2d").drawImage(texture.image, 0, 0, this.customOverlayCanvas.width, this.customOverlayCanvas.height)
+              this.customOverlayCanvas.width = texture.width
+              this.customOverlayCanvas.height = texture.height
+              this.customOverlayCanvas.getContext("2d").drawImage(texture, 0, 0, this.customOverlayCanvas.width, this.customOverlayCanvas.height)
               this.customOverlay = this.customOverlayCanvas.toDataURL()
               this.updatePreview()
             },
@@ -2543,6 +2563,17 @@
                     <button @click="selectCustomTexture">Select file</button>
                     <button @click="importTextureAsFile" title="Import the current selected texture as a custom texture, with its overlay and styles applied">Import current texture as file</button>
                   </div>
+                  <div class="radio-row">
+                    <div>Texture Type:</div>
+                    <label for="custom-texture-type-texture">
+                      <input type="radio" id="custom-texture-type-texture" value="texture" v-model="customTextureType" @input="updatePreview" />
+                      <div>Texture</div>
+                    </label>
+                    <label for="custom-texture-type-tileable">
+                      <input type="radio" id="custom-texture-type-tileable" value="tileable" v-model="customTextureType" @input="updatePreview" />
+                      <div>Tileable</div>
+                    </label>
+                  </div>
                 </div>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 2 }">
@@ -2592,13 +2623,13 @@
                 </div>
               </div>
               <div class="minecraft-title-contents" :class="{ visible: tab === 3 }">
-                <div v-if="textureSource === 'tileable'">
+                <div v-if="textureSource === 'tileable' || textureSource === 'file' && customTexture && customTextureType === 'tileable'">
                   <h2>Configuration</h2>
                   <p>Configure the tileable texture</p>
                   <div class="bar slider_input_combo">
                     <div class="slider-label">Scale:</div>
-                    <input type="range" class="tool disp_range" v-model.number="tileableScale" min="1" max="8" step="1" @input="updatePreview" />
-                    <numeric-input class="tool disp_text" v-model.number="tileableScale" :min="1" :max="8" :step="1" @input="updatePreview" />
+                    <input type="range" class="tool disp_range" v-model.number="tileableScale" min="0.1" max="8.1" :step="tileableScale >= 1 ? 1 : 0.1" @input="tileableScale > 1 ? tileableScale = Math.round(tileableScale) : null; updatePreview()" />
+                    <numeric-input class="tool disp_text" v-model.number="tileableScale" :min="0.1" :max="8.1" :step="tileableScale >= 1 ? 1 : 0.1" @input="tileableScale > 1 ? tileableScale = Math.round(tileableScale) : null; updatePreview()" />
                   </div>
                   <div class="bar slider_input_combo">
                     <div class="slider-label">X Offset:</div>
@@ -3097,7 +3128,7 @@
   }
 
   async function makeTexture(args) {
-    const img = await loadImage(args.customTexture ?? await getTexture(fonts[args.font].textures, args.texture, args.variant))
+    const img = await loadImage(args.customTexture && args.customTextureType === "texture" ? args.customTexture : await getTexture(fonts[args.font].textures, args.texture, args.variant))
     let { canvas, ctx } = new CanvasFrame(img.width, img.height)
     let m = canvas.width / 1000
     ctx.drawImage(img, 0, 0)
@@ -3179,15 +3210,17 @@
         await loadOverlay(args.font)
         ctx.drawImage(fonts[args.font].overlay, 0, 0, canvas.width, canvas.height)
       }
-    } else if (args.tileable) {
-      const base = await loadImage(await getTileable(args.tileable, args.tileableVariant))
+    } else if (args.tileable || args.customTexture && args.customTextureType === "tileable") {
+      let base
+      if (args.customTexture) base = await loadImage(args.customTexture)
+      else base = await loadImage(await getTileable(args.tileable, args.tileableVariant))
       const { canvas: texture, ctx: tctx } = new CanvasFrame(base.width, base.height)
-      tctx.drawImage(base, args.tileableXOffset, args.tileableYOffset)
-      if (args.tileableXOffset) tctx.drawImage(base, -base.width + args.tileableXOffset, args.tileableYOffset)
-      if (args.tileableYOffset) tctx.drawImage(base, args.tileableXOffset, -base.height + args.tileableYOffset)
-      if (args.tileableXOffset && args.tileableYOffset) tctx.drawImage(base, -base.width + args.tileableXOffset, -base.height + args.tileableYOffset)
-      const width = texture.width * args.tileableScale
-      const height = texture.height * args.tileableScale
+      tctx.drawImage(base, -args.tileableXOffset, -args.tileableYOffset)
+      if (args.tileableXOffset) tctx.drawImage(base, base.width - args.tileableXOffset, -args.tileableYOffset)
+      if (args.tileableYOffset) tctx.drawImage(base, -args.tileableXOffset, base.height - args.tileableYOffset)
+      if (args.tileableXOffset && args.tileableYOffset) tctx.drawImage(base, base.width - args.tileableXOffset, base.height - args.tileableYOffset)
+      const width = Math.round(texture.width * args.tileableScale)
+      const height = Math.round(texture.height * args.tileableScale)
       ctx.fillStyle = "#0008"
       ctx.globalCompositeOperation = "source-atop"
       const uvScaleW = canvas.width / 16
@@ -3588,7 +3621,7 @@
           }]
         })
         if (!file) return
-        texture = await new Promise(fulfill => new THREE.TextureLoader().load(file[0], fulfill, null, fulfill))
+        texture = await loadImage(file[0])
       } else {
         const input = document.createElement("input")
         let file
@@ -3606,7 +3639,7 @@
           fr.onload = () => fulfil(fr.result)
           fr.readAsDataURL(file[0])
         })
-        texture = await new Promise(fulfill => new THREE.TextureLoader().load(data, fulfill, null, fulfill))
+        texture = await loadImage(data)
       }
       return texture
     } catch {
@@ -3619,7 +3652,7 @@
       font: vue.font,
       type: vue.textType,
       row: vue.row,
-      texture: vue.textureSource === "gradient" || vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && ["gradient", "tileable"].includes(vue.lastTextureSource)) ? "flat" : vue.texture,
+      texture: vue.textureSource === "gradient" || vue.textureSource === "tileable" || (vue.textureSource === "file" && vue.customTexture) || (!vue.customTexture && vue.textureSource === "file" && ["gradient", "tileable"].includes(vue.lastTextureSource)) ? "flat" : vue.texture,
       variant: vue.textureSource === "premade" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "premade") ? vue.variant : null,
       tileable: vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileable : null,
       tileableVariant: vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileableVariant : null,
@@ -3639,6 +3672,7 @@
       customEdge: vue.customEdge,
       customEdgeColour: vue.customEdgeColour,
       customTexture: vue.textureSource === "file" ? vue.customTexture : null,
+      customTextureType: vue.customTextureType,
       customOverlay: vue.overlaySource === "file" ? vue.customOverlay : null,
       gradientColour0: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour0 : null,
       gradientColour1: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour1Enabled ? vue.gradientColour1 : null,
@@ -3669,8 +3703,9 @@
 
   function loadImage(b64) {
     const img = new Image()
-    return new Promise(fulfil => {
-      img.onload = fulfil(img)
+    return new Promise((fulfil, reject) => {
+      img.onload = () => fulfil(img)
+      img.onerror = reject
       img.src = b64
     })
   }
