@@ -1504,6 +1504,8 @@
               if (force || this.tab === 1) {
                 this.texture = Object.keys(fonts[this.font].textures)[1] ?? Object.keys(fonts[this.font].textures)[0]
                 this.variant = null
+                this.tileable = Object.keys(tileables)[0]
+                this.tileableVariant = null
                 this.textureSource = "premade"
                 this.gradientColour1Enabled = false
                 this.gradientColour2Enabled = false
@@ -1546,6 +1548,9 @@
                 $(this.$refs.overlayColour).spectrum("set", "#ffffff")
               }
               if (force || this.tab === 3) {
+                this.tileableScale = 2
+                this.tileableXOffset = 0
+                this.tileableYOffset = 0
                 this.hue = 0
                 this.saturation = 100
                 this.brightness = 100
@@ -1947,7 +1952,7 @@
                       if (args.textureSource === "file" || args.overlaySource === "file") {
                         return Blockbench.showQuickMessage("Custom textures are not supported for presets", 3000)
                       }
-                      const filtered = Object.fromEntries(Object.entries(args).filter(e => e[1]))
+                      const filtered = Object.fromEntries(Object.entries(args).filter(e => e[1] !== null))
                       for (const [key, obj] of Object.entries(this.presets)) {
                         if (areObjectsEqual(filtered, obj.settings)) {
                           return Blockbench.showQuickMessage(`Current settings are already saved under the preset "${key}"`, 3000)
@@ -1977,9 +1982,18 @@
                       }).show()
                     },
                     deletePreset(event, name) {
-                      delete this.presets[name]
-                      localStorage.setItem("minecraft_title_presets", JSON.stringify(this.presets))
-                      this.$forceUpdate()
+                      Blockbench.showMessageBox({
+                        title: "Delete preset",
+                        message: `Are you sure you want to delete the preset "${name}"?\n\nThis action cannot be undone.`,
+                        buttons: ["dialog.confirm", "dialog.cancel"]
+                      }, async button => {
+                        if (button === 0) {
+                          delete this.presets[name]
+                          localStorage.setItem("minecraft_title_presets", JSON.stringify(this.presets))
+                          this.$forceUpdate()
+                          Blockbench.showQuickMessage("Deleted preset")
+                        }
+                      })
                     },
                     async load(event, name) {
                       if (event.target.classList.contains("material-icons")) return
@@ -2003,6 +2017,18 @@
                       if (args.type) settings.textType = args.type
                       if (args.row) settings.row = args.row
                       if (args.textureSource) settings.textureSource = args.textureSource
+                      if (args.tileable && tileables[args.tileable]) {
+                        settings.tileable = args.tileable
+                        if (args.tileableVariant && tileable[args.tileable].variants?.[args.tileableVariant]) {
+                          settings.tileableVariant = args.tileableVariant
+                        }
+                        if (args.tileableXOffset || args.tileableYOffset) {
+                          const img = await loadImage(await getTileable(args.tileable, args.tileableVariant))
+                          if (args.tileableXOffset) settings.tileableXOffset = Math.min(img.width - 1, args.tileableXOffset)
+                          if (args.tileableYOffset) settings.tileableYOffset = Math.min(img.height - 1, args.tileableYOffset)
+                        }
+                      }
+                      if (args.tileableVariant) settings.tileableVariant = args.tileableVariant
                       if (args.overlaySource) settings.overlaySource = args.overlaySource
                       if (args.gradientColour1Enabled) settings.gradientColour1Enabled = args.gradientColour1Enabled
                       if (args.gradientColour2Enabled) settings.gradientColour2Enabled = args.gradientColour2Enabled
@@ -2040,6 +2066,7 @@
                       if (args.overlayColourBlend) settings.overlayColourBlend = args.overlayColourBlend
                       if (args.overlayOpacity !== undefined) settings.overlayOpacity = args.overlayOpacity
                       if (args.colourOpacity !== undefined) settings.colourOpacity = args.colourOpacity
+                      if (args.tileableScale !== undefined) settings.tileableScale = args.tileableScale
                       if (args.hue) settings.hue = args.hue
                       if (args.saturation !== undefined) settings.saturation = args.saturation
                       if (args.brightness !== undefined) settings.brightness = args.brightness
@@ -2064,7 +2091,8 @@
                         settings.overlayColour = args.overlayColour
                         $(settings.$refs.overlayColour).spectrum("set", args.overlayColour)
                       }
-                      settings.makePreview()
+                      settings.makePreview().then(settings.updatePreview)
+                      globalThis.testtest = settings
                       presetDialog.close()
                       Blockbench.showQuickMessage(`Preset "${name}" loaded`, 3000)
                     },
@@ -2121,7 +2149,7 @@
                       })
                     },
                     exportPreset(event, name) {
-                      new Dialog({
+                      const dialog = new Dialog({
                         id: "minecraft_title_preset_export",
                         title: "Minecraft Title Preset Export",
                         buttons: [],
@@ -2164,12 +2192,16 @@
                             copy() {
                               navigator.clipboard.writeText(JSON.stringify(this.preset))
                               Blockbench.showQuickMessage("Copied to clipboard")
+                              dialog.close()
                             },
                             save() {
                               Blockbench.export({
                                 extensions: ["json"],
                                 name: `${name.replace(/\s/g, "_")}.json`,
                                 content: JSON.stringify(this.preset, null, 2)
+                              }, () => {
+                                Blockbench.showQuickMessage("Exported")
+                                dialog.close()
                               })
                             }
                           },
@@ -2178,7 +2210,7 @@
                               <div id="minecraft-title-preset-export-text">{{ JSON.stringify(preset) }}</div>
                               <div id="minecraft-title-preset-export-buttons">
                                 <button @click="copy">Copy</button>
-                                <button @click="save">Save</button>
+                                <button @click="save">Export</button>
                               </div>
                             </div>
                           `
