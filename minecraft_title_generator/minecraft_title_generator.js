@@ -1506,6 +1506,7 @@
             tileableHeight: 0,
             tileableRandomRotations: false,
             tileableRandomMirroring: false,
+            tileableTextureResolution: 1000,
             edgeBrightness: 35
           },
           mounted() {
@@ -1581,6 +1582,9 @@
                 this.tileableScale = 2
                 this.tileableXOffset = 0
                 this.tileableYOffset = 0
+                this.tileableRandomRotations = false
+                this.tileableRandomMirroring = false
+                this.tileableTextureResolution = 1000
                 this.hue = 0
                 this.saturation = 100
                 this.brightness = 100
@@ -2110,6 +2114,7 @@
                       if (args.tileableScale !== undefined) settings.tileableScale = args.tileableScale
                       if (args.tileableRandomRotations) settings.tileableRandomRotations = true
                       if (args.tileableRandomMirroring) settings.tileableRandomMirroring = true
+                      if (args.tileableTextureResolution) settings.tileableTextureResolution = args.tileableTextureResolution
                       if (args.hue) settings.hue = args.hue
                       if (args.saturation !== undefined) settings.saturation = args.saturation
                       if (args.brightness !== undefined) settings.brightness = args.brightness
@@ -2652,8 +2657,8 @@
                   <p>Configure the tileable texture</p>
                   <div class="bar slider_input_combo">
                     <div class="slider-label" style="width: 60px;">Scale:</div>
-                    <input type="range" class="tool disp_range" v-model.number="tileableScale" min="0.1" max="8.1" :step="tileableScale >= 1 ? 1 : 0.1" @input="tileableScale > 1 ? tileableScale = Math.round(tileableScale) : null; updatePreview()" />
-                    <numeric-input class="tool disp_text" v-model.number="tileableScale" :min="0.1" :max="8.1" :step="tileableScale >= 1 ? 1 : 0.1" @input="tileableScale > 1 ? tileableScale = Math.round(tileableScale) : null; updatePreview()" />
+                    <input type="range" class="tool disp_range" v-model.number="tileableScale" min="0.1" max="8" step="0.1" @input="updatePreview" />
+                    <numeric-input class="tool disp_text" v-model.number="tileableScale" :min="0.1" :max="8" :step="0.1" @input="updatePreview" />
                   </div>
                   <div class="bar slider_input_combo">
                     <div class="slider-label" style="width: 60px;">X Offset:</div>
@@ -2673,6 +2678,11 @@
                     <input type="checkbox" :checked="tileableRandomMirroring" v-model="tileableRandomMirroring" @input="updatePreview">
                     <div>Random Mirroring</div>
                   </label>
+                  <div class="bar slider_input_combo">
+                    <div class="slider-label" style="width: 60px;">Texture Resolution:</div>
+                    <input type="range" class="tool disp_range" v-model.number="tileableTextureResolution" min="1000" :max="4000" step="1000" @input="updatePreview" />
+                    <numeric-input class="tool disp_text" v-model.number="tileableTextureResolution" :min="1000" :max="4000" :step="1000" @input="updatePreview" />
+                  </div>
                   <br>
                 </div>
                 <h2>Filters</h2>
@@ -3185,9 +3195,11 @@
 
   async function makeTexture(args) {
     const img = await loadImage(args.customTexture && args.customTextureType === "texture" ? args.customTexture : await getTexture(fonts[args.font].textures, args.texture, args.variant))
-    let { canvas, ctx } = new CanvasFrame(img.width, img.height)
+    const res = args.tileable || args.customTexture && args.customTextureType === "tileable" ? args.tileableTextureResolution / 1000 : 1
+    const { canvas, ctx } = new CanvasFrame(img.width * res, img.height * res)
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
     let m = canvas.width / 1000
-    ctx.drawImage(img, 0, 0)
     if (args.gradientColour0) {
       if (args.smoothGradient) {
         const colours = [
@@ -3275,8 +3287,8 @@
       if (args.tileableXOffset) tctx.drawImage(base, base.width - args.tileableXOffset, -args.tileableYOffset)
       if (args.tileableYOffset) tctx.drawImage(base, -args.tileableXOffset, base.height - args.tileableYOffset)
       if (args.tileableXOffset && args.tileableYOffset) tctx.drawImage(base, base.width - args.tileableXOffset, base.height - args.tileableYOffset)
-      const width = Math.round(texture.width * args.tileableScale)
-      const height = Math.round(texture.height * args.tileableScale)
+      const width = Math.max(1, Math.round(texture.width * args.tileableScale))
+      const height = Math.max(1, Math.round(texture.height * args.tileableScale))
       ctx.globalCompositeOperation = "source-atop"
       const uvScaleW = canvas.width / 16
       const uvScaleH = canvas.height / 16
@@ -3286,28 +3298,28 @@
         for (const cube of char) {
           for (const face of Object.values(cube.faces)) {
             const mapped = (face?.uv ?? face).map((e, i) => i % 2 ? e * uvScaleH : e * uvScaleW)
-            const middle = fonts[args.font].faces.find(e => mapped[1] >= e[0] && mapped[1] <= e[e.length - 1] && mapped[3] >= e[0] && mapped[3] <= e[e.length - 1])
+            const middle = fonts[args.font].faces.find(e => mapped[1] >= e[0] * res && mapped[1] <= e[e.length - 1] * res && mapped[3] >= e[0] * res && mapped[3] <= e[e.length - 1] * res)
             if (middle) {
               if (!faceUV) {
-                faceUV = [Math.min(mapped[0], mapped[2]), middle[0], Math.max(mapped[0], mapped[2]), middle[middle.length - 1], middle.length === 4 ? middle[1] - middle[0] : null]
+                faceUV = [Math.min(mapped[0], mapped[2]), middle[0] * res, Math.max(mapped[0], mapped[2]), middle[middle.length - 1] * res, middle.length === 4 ? (middle[1] - middle[0]) * res : null]
               } else {
                 faceUV[0] = Math.min(faceUV[0], mapped[0], mapped[2])
                 faceUV[2] = Math.max(faceUV[2], mapped[0], mapped[2])
               }
             } else {
-              const top = fonts[args.font].ends.find(e => mapped[1] >= e[0] && mapped[1] <= e[1] && mapped[3] >= e[0] && mapped[3] <= e[1])
+              const top = fonts[args.font].ends.find(e => mapped[1] >= e[0] * res && mapped[1] <= e[1] * res && mapped[3] >= e[0] * res && mapped[3] <= e[1] * res)
               if (top) {
                 if (!topUV) {
-                  topUV = [Math.min(mapped[0], mapped[2]), top[0], Math.max(mapped[0], mapped[2]), top[1]]
+                  topUV = [Math.min(mapped[0], mapped[2]), top[0] * res, Math.max(mapped[0], mapped[2]), top[1] * res]
                 } else {
                   topUV[0] = Math.min(topUV[0], mapped[0], mapped[2])
                   topUV[2] = Math.max(topUV[2], mapped[0], mapped[2])
                 }
               } else {
-                const bottom = fonts[args.font].ends.find(e => mapped[1] >= e[2] && mapped[1] <= e[3] && mapped[3] >= e[2] && mapped[3] <= e[3])
+                const bottom = fonts[args.font].ends.find(e => mapped[1] >= e[2] * res && mapped[1] <= e[3] * res && mapped[3] >= e[2] * res && mapped[3] <= e[3] * res)
                 if (bottom) {
                   if (!bottomUV) {
-                    bottomUV = [Math.min(mapped[0], mapped[2]), bottom[2], Math.max(mapped[0], mapped[2]), bottom[3]]
+                    bottomUV = [Math.min(mapped[0], mapped[2]), bottom[2] * res, Math.max(mapped[0], mapped[2]), bottom[3] * res]
                   } else {
                     bottomUV[0] = Math.min(bottomUV[0], mapped[0], mapped[2])
                     bottomUV[2] = Math.max(bottomUV[2], mapped[0], mapped[2])
@@ -3385,14 +3397,14 @@
       if (fonts[args.font].overlay) {
         ctx.globalCompositeOperation = "destination-out"
         await loadOverlay(args.font)
-        ctx.drawImage(fonts[args.font].overlay, 0, 0)
+        ctx.drawImage(fonts[args.font].overlay, 0, 0, canvas.width, canvas.height)
         ctx.globalCompositeOperation = "destination-over"
-        ctx.drawImage(img, 0, 0)
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
       }
     }
     ctx.globalCompositeOperation = "copy"
     ctx.filter =`hue-rotate(${args.hue}deg) saturate(${args.saturation}%) brightness(${args.brightness}%) contrast(${args.contrast}%`
-    ctx.drawImage(canvas, 0, 0)
+    ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height)
     ctx.filter ="hue-rotate(0deg) saturate(100%) brightness(100%) contrast(100%)"
     ctx.globalCompositeOperation = args.blend
     ctx.fillStyle = args.colour
@@ -3770,6 +3782,7 @@
       tileableYOffset: vue.tileableYOffset,
       tileableRandomRotations: vue.tileableRandomRotations,
       tileableRandomMirroring: vue.tileableRandomMirroring,
+      tileableTextureResolution: vue.tileableTextureResolution,
       edgeBrightness: vue.edgeBrightness,
       three
     }
