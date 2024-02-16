@@ -1886,6 +1886,7 @@
               textures.push(texture)
               Undo.finishEdit("Add Minecraft title texture")
               dialog.close()
+              sendStats(args)
             },
             scrollToVariants() {
               setTimeout(() => {
@@ -1902,21 +1903,7 @@
               }, async button => {
                 if (button === 0) {
                   const args = getArgs(this)
-                  const chosenTexture = args.customTexture || args.gradientColour0 ? undefined : args.texture
-                  const chosenOverlay = args.customOverlay || args.overlay === "none" ? undefined : args.overlay
-                  if (chosenTexture || chosenOverlay) fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", {
-                    method: "POST",
-                    headers: {
-                      source: "blockbench",
-                      "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                      font: args.font,
-                      ignoreFont: true,
-                      texture: chosenTexture,
-                      overlay: chosenOverlay
-                    })
-                  }).catch(() => {})
+                  sendStats(args)
                   args.canvas = true
                   const texture = await makeTexture(args)
                   this.customTextureCanvas.width = texture.width
@@ -2849,6 +2836,11 @@
             const statsB = stats.find(e => e.id === `${a[2]}.${b[0]}`)?.count ?? 0
             return statsB - statsA
           })
+          this.content_vue.tileablesList.sort((a, b) => {
+            const statsA = stats.find(e => e.id === `tileable.${a[0]}`)?.count ?? 0
+            const statsB = stats.find(e => e.id === `tileable.${b[0]}`)?.count ?? 0
+            return statsB - statsA
+          })
           this.content_vue.overlays.sort((a, b) => {
             const statsA = stats.find(e => e.id === `${a[2]}.${a[0]}`)?.count ?? 0
             const statsB = stats.find(e => e.id === `${a[2]}.${b[0]}`)?.count ?? 0
@@ -3040,6 +3032,29 @@
     }
   }
 
+  function sendStats(args, font) {
+    let chosenTexture, chosenTileable
+    if (!args.gradientColour0 && !args.customTexture) {
+      if (args.tileable) chosenTileable = args.tileable
+      else chosenTexture = args.texture
+    }
+    const chosenOverlay = args.customOverlay || args.overlay === "none" ? undefined : args.overlay
+    if (font || chosenTexture || chosenTileable || chosenOverlay) fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", {
+      method: "POST",
+      headers: {
+        source: "blockbench",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        font: args.font,
+        ignoreFont: !font,
+        texture: chosenTexture,
+        tileable: chosenTileable,
+        overlay: chosenOverlay
+      })
+    }).catch(() => {})
+  }
+
   async function getTexture(object, texture, variant, direct) {
     if (!direct && ((variant && object[texture].variants[variant]?.texture.startsWith("data:image/png;base64,")) || (!variant && object[texture].texture.startsWith("data:image/png;base64,")))) return variant ? object[texture].variants[variant].texture : object[texture].texture
     const data = await new Promise(async fulfil => {
@@ -3144,18 +3159,7 @@
     })
     Undo.finishEdit("Add Minecraft title text")
     updateSelection()
-    if (!args.ignoreStats) fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", {
-      method: "POST",
-      headers: {
-        source: "blockbench",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        font: args.font,
-        texture: args.customTexture || args.gradientColour0 ? undefined : args.texture,
-        overlay: args.customOverlay || args.overlay === "none" ? undefined : args.overlay
-      })
-    }).catch(() => {})
+    if (!args.ignoreStats) sendStats(args, true)
   }
 
   async function makeTexture(args) {
