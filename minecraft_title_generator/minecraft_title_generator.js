@@ -337,7 +337,10 @@
         format_page: {
           component: {
             methods: { 
-              create: () => format.new()
+              async create() {
+                if (!await MinecraftEULA.promptUser(id)) return
+                format.new()
+              }
             },
             template: `
               <div style="display:flex;flex-direction:column;height:100%">
