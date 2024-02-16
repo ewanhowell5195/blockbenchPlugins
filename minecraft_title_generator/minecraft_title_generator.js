@@ -1479,6 +1479,8 @@
             scaleX: 1,
             scaleY: 1,
             scaleZ: 1,
+            building: false,
+            build: false,
             updating: false,
             update: false,
             terminators: false,
@@ -1564,7 +1566,7 @@
                 this.scaleZ = 1
               }
               this.resetTexture(force)
-              if (!ignoreUpdate) this.makePreview()
+              if (!ignoreUpdate) this.buildPreview()
             },
             resetTexture(force) {
               if (force || this.tab === 2) {
@@ -1617,7 +1619,26 @@
               }
               this.texture = Object.keys(fonts[this.font].textures)[1] ?? Object.keys(fonts[this.font].textures)[0]
               this.overlay = Object.keys(fonts[this.font].overlays)[0]
-              if (!ignoreUpdate) this.makePreview()
+              if (!ignoreUpdate) this.buildPreview()
+            },
+            buildPreview() {
+              let finish
+              setTimeout(async () => {
+                if (this.building) {
+                  this.build = true
+                  finish()
+                  return
+                }
+                this.building = true
+                await this.makePreview()
+                this.building = false
+                if (this.build) {
+                  this.update = false
+                  await this.buildPreview()
+                }
+                finish()
+              }, 0)
+              return new Promise(fulfil => finish = fulfil)
             },
             async makePreview() {
               this.scene.remove(...this.scene.children)
@@ -2114,7 +2135,7 @@
                         settings.overlayColour = args.overlayColour
                         $(settings.$refs.overlayColour).spectrum("set", args.overlayColour)
                       }
-                      settings.makePreview().then(settings.updatePreview)
+                      settings.buildPreview().then(settings.updatePreview)
                       globalThis.testtest = settings
                       presetDialog.close()
                       Blockbench.showQuickMessage(`Preset "${name}" loaded`, 3000)
@@ -2713,7 +2734,7 @@
                   </div>
                 </div>
                 <label v-if="!fonts[font].forcedTerminators" class="checkbox-row">
-                  <input type="checkbox" :checked="terminators" v-model="terminators" @input="makePreview">
+                  <input type="checkbox" :checked="terminators" v-model="terminators" @input="buildPreview">
                   <div>Enable line terminators</div>
                 </label>
                 <p v-if="!fonts[font].forcedTerminators">Line terminators are special characters that appear at the start and end of the text</p>
@@ -2862,7 +2883,7 @@
 
           this.content_vue.scene = new THREE.Scene()
 
-          this.content_vue.makePreview()
+          this.content_vue.buildPreview()
         }
       })
       debugDialog = new Dialog({
