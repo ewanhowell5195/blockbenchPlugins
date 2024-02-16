@@ -1223,7 +1223,6 @@
             margin: 10px 0;
           }
           .minecraft-title-file > canvas {
-            max-width: 500px;
             max-height: 160px;
             object-fit: contain;
             cursor: pointer;
@@ -1232,13 +1231,6 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-          }
-          .minecraft-title-file > div {
-            display: flex;
-            gap: 10px;
-          }
-          .minecraft-title-file > div > button {
-            flex: 1;
           }
           #custom-gradient-customiser {
             display: flex;
@@ -1410,6 +1402,19 @@
           .radio-row > label * {
             cursor: pointer;
           }
+          .minecraft-title-button-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+          }
+          .minecraft-title-button-row > button {
+            flex: 1;
+            min-height: 32px;
+            height: initial;
+            line-height: 110%;
+            padding-top: 6px;
+            padding-bottom: 6px;
+          }
         </style>`],
         component: {
           data: {
@@ -1493,7 +1498,10 @@
             tileableXOffset: 0,
             tileableYOffset: 0,
             tileableWidth: 0,
-            tileableHeight: 0
+            tileableHeight: 0,
+            tileableRandomRotations: false,
+            tileableRandomMirroring: false,
+            edgeBrightness: 35
           },
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
@@ -1531,6 +1539,8 @@
                 this.gradientColour2 = "#F4C1A4"
                 this.gradientColour3 = "#E19A3E"
                 this.gradientColour4 = "#DA371E"
+                this.customTexture = null
+                this.customTextureType = "texture"
                 $(this.$refs.gradientColour0).spectrum("set", "#FFCF76")
                 $(this.$refs.gradientColour1).spectrum("set", "#FFA3A3")
                 $(this.$refs.gradientColour2).spectrum("set", "#F4C1A4")
@@ -1972,7 +1982,7 @@
                       if (args.textureSource === "file" || args.overlaySource === "file") {
                         return Blockbench.showQuickMessage("Custom textures are not supported for presets", 3000)
                       }
-                      const filtered = Object.fromEntries(Object.entries(args).filter(e => e[1] !== null))
+                      const filtered = Object.fromEntries(Object.entries(args).filter(e => e[1] !== null && e[1] !== false))
                       for (const [key, obj] of Object.entries(this.presets)) {
                         if (areObjectsEqual(filtered, obj.settings)) {
                           return Blockbench.showQuickMessage(`Current settings are already saved under the preset "${key}"`, 3000)
@@ -2053,7 +2063,7 @@
                       if (args.gradientColour1Enabled) settings.gradientColour1Enabled = args.gradientColour1Enabled
                       if (args.gradientColour2Enabled) settings.gradientColour2Enabled = args.gradientColour2Enabled
                       if (args.gradientColour3Enabled) settings.gradientColour3Enabled = args.gradientColour3Enabled
-                      if (args.smoothGradient) settings.smoothGradient = args.smoothGradient
+                      if (args.smoothGradient) settings.smoothGradient = true
                       if (args.gradientColour0) {
                         settings.gradientColour0 = args.gradientColour0
                         $(settings.$refs.gradientColour0).spectrum("set", args.gradientColour0)
@@ -2087,14 +2097,17 @@
                       if (args.overlayOpacity !== undefined) settings.overlayOpacity = args.overlayOpacity
                       if (args.colourOpacity !== undefined) settings.colourOpacity = args.colourOpacity
                       if (args.tileableScale !== undefined) settings.tileableScale = args.tileableScale
+                      if (args.tileableRandomRotations) settings.tileableRandomRotations = true
+                      if (args.tileableRandomMirroring) settings.tileableRandomMirroring = true
                       if (args.hue) settings.hue = args.hue
                       if (args.saturation !== undefined) settings.saturation = args.saturation
                       if (args.brightness !== undefined) settings.brightness = args.brightness
                       if (args.contrast !== undefined) settings.contrast = args.contrast
                       if (args.blend) settings.blend = args.blend
-                      if (args.customBorder) settings.customBorder = args.customBorder
-                      if (args.fadeToBorder) settings.fadeToBorder = args.fadeToBorder
-                      if (args.customEdge) settings.customEdge = args.customEdge
+                      if (args.customBorder) settings.customBorder = true
+                      if (args.fadeToBorder) settings.fadeToBorder = true
+                      if (args.customEdge) settings.customEdge = true
+                      if (args.edgeBrightness !== undefined) settings.edgeBrightness = args.edgeBrightness
                       if (args.colour) {
                         settings.colour = args.colour
                         $(settings.$refs.colour).spectrum("set", args.colour)
@@ -2559,7 +2572,7 @@
                 <div :class="{ hidden: textureSource !== 'file' }" id="minecraft-title-custom-texture" class="minecraft-title-file">
                   <canvas class="checkerboard" width="500" height="160"  @click="selectCustomTexture" />
                   <i v-if="customTexture" class="material-icons" title="Delete custom texture" @click="deleteCustomTexture">delete</i>
-                  <div>
+                  <div class="minecraft-title-button-row">
                     <button @click="selectCustomTexture">Select file</button>
                     <button @click="importTextureAsFile" title="Import the current selected texture as a custom texture, with its overlay and styles applied">Import current texture as file</button>
                   </div>
@@ -2627,41 +2640,49 @@
                   <h2>Configuration</h2>
                   <p>Configure the tileable texture</p>
                   <div class="bar slider_input_combo">
-                    <div class="slider-label">Scale:</div>
+                    <div class="slider-label" style="width: 60px;">Scale:</div>
                     <input type="range" class="tool disp_range" v-model.number="tileableScale" min="0.1" max="8.1" :step="tileableScale >= 1 ? 1 : 0.1" @input="tileableScale > 1 ? tileableScale = Math.round(tileableScale) : null; updatePreview()" />
                     <numeric-input class="tool disp_text" v-model.number="tileableScale" :min="0.1" :max="8.1" :step="tileableScale >= 1 ? 1 : 0.1" @input="tileableScale > 1 ? tileableScale = Math.round(tileableScale) : null; updatePreview()" />
                   </div>
                   <div class="bar slider_input_combo">
-                    <div class="slider-label">X Offset:</div>
+                    <div class="slider-label" style="width: 60px;">X Offset:</div>
                     <input type="range" class="tool disp_range" v-model.number="tileableXOffset" min="0" :max="tileableWidth" step="1" @input="updatePreview" />
                     <numeric-input class="tool disp_text" v-model.number="tileableXOffset" :min="0" :max="tileableWidth" :step="1" @input="updatePreview" />
                   </div>
                   <div class="bar slider_input_combo">
-                    <div class="slider-label">Y Offset:</div>
+                    <div class="slider-label" style="width: 60px;">Y Offset:</div>
                     <input type="range" class="tool disp_range" v-model.number="tileableYOffset" min="0" :max="tileableHeight" step="1" @input="updatePreview" />
                     <numeric-input class="tool disp_text" v-model.number="tileableYOffset" :min="0" :max="tileableHeight" :step="1" @input="updatePreview" />
                   </div>
+                  <label class="checkbox-row">
+                    <input type="checkbox" :checked="tileableRandomRotations" v-model="tileableRandomRotations" @input="updatePreview">
+                    <div>Random Rotations</div>
+                  </label>
+                  <label class="checkbox-row">
+                    <input type="checkbox" :checked="tileableRandomMirroring" v-model="tileableRandomMirroring" @input="updatePreview">
+                    <div>Random Mirroring</div>
+                  </label>
                   <br>
                 </div>
                 <h2>Filters</h2>
                 <p>Apply some filters to the chosen texture</p>
                 <div class="bar slider_input_combo">
-                  <div class="slider-label" style="width:70px">Hue</div>
+                  <div class="slider-label" style="width: 70px">Hue</div>
                   <input type="range" class="tool disp_range" v-model.number="hue" min="0" max="359" step="1" @input="updatePreview" />
                   <numeric-input class="tool disp_text" v-model.number="hue" :min="0" :max="359" :step="1" @input="updatePreview" />
                 </div>
                 <div class="bar slider_input_combo">
-                  <div class="slider-label" style="width:70px">Saturation</div>
+                  <div class="slider-label" style="width: 70px">Saturation</div>
                   <input type="range" class="tool disp_range" v-model.number="saturation" min="0" max="200" step="1" @input="updatePreview" />
                   <numeric-input class="tool disp_text" v-model.number="saturation" :min="0" :max="200" :step="1" @input="updatePreview" />
                 </div>
                 <div class="bar slider_input_combo">
-                  <div class="slider-label" style="width:70px">Brightness</div>
+                  <div class="slider-label" style="width: 70px">Brightness</div>
                   <input type="range" class="tool disp_range" v-model.number="brightness" min="0" max="200" step="1" @input="updatePreview" />
                   <numeric-input class="tool disp_text" v-model.number="brightness" :min="0" :max="200" :step="1" @input="updatePreview" />
                 </div>
                 <div class="bar slider_input_combo">
-                  <div class="slider-label" style="width:70px">Contrast</div>
+                  <div class="slider-label" style="width: 70px">Contrast</div>
                   <input type="range" class="tool disp_range" v-model.number="contrast" min="0" max="200" step="1" @input="updatePreview" />
                   <numeric-input class="tool disp_text" v-model.number="contrast" :min="0" :max="200" :step="1" @input="updatePreview" />
                 </div>
@@ -2694,6 +2715,13 @@
                   <div>Use a custom colour for the top and bottom faces</div>
                 </label>
                 <input ref="customEdgeColour" :class="{ hidden: !customEdge }" />
+                <div :class="{ hidden: !(!customEdge && (textureSource === 'tileable' || textureSource === 'gradient' || textureSource === 'file' && customTexture && customTextureType === 'tileable')) }">
+                  <div class="bar slider_input_combo">
+                    <div class="slider-label">Edge brightness:</div>
+                    <input type="range" class="tool disp_range" v-model.number="edgeBrightness" min="0" max="100" step="1" @input="updatePreview" />
+                    <numeric-input class="tool disp_text" v-model.number="edgeBrightness" :min="0" :max="100" :step="1" @input="updatePreview" />
+                  </div>
+                </div>
                 <label v-if="!fonts[font].forcedTerminators" class="checkbox-row">
                   <input type="checkbox" :checked="terminators" v-model="terminators" @input="makePreview">
                   <div>Enable line terminators</div>
@@ -3201,7 +3229,7 @@
           ctx.fillRect(0, (face[2] ?? end[2]), canvas.width, end[3] - (face[2] ?? end[2]))
         }
       }
-      ctx.fillStyle = "#0008"
+      ctx.fillStyle = `rgba(0, 0, 0, ${(100 - args.edgeBrightness) / 100})`
       for (const end of fonts[args.font].ends) {
         ctx.fillRect(0, end[0] * m, canvas.width, end[1] * m - end[0] * m)
         ctx.fillRect(0, end[2] * m, canvas.width, end[3] * m - end[2] * m)
@@ -3221,12 +3249,11 @@
       if (args.tileableXOffset && args.tileableYOffset) tctx.drawImage(base, base.width - args.tileableXOffset, base.height - args.tileableYOffset)
       const width = Math.round(texture.width * args.tileableScale)
       const height = Math.round(texture.height * args.tileableScale)
-      ctx.fillStyle = "#0008"
       ctx.globalCompositeOperation = "source-atop"
       const uvScaleW = canvas.width / 16
       const uvScaleH = canvas.height / 16
       await getFontCharacters(args.font)
-      for (const char of Object.values(fonts[args.font].characters)) {
+      for (const [i, char] of Object.values(fonts[args.font].characters).entries()) {
         let faceUV, topUV, bottomUV
         for (const cube of char) {
           for (const face of Object.values(cube.faces)) {
@@ -3268,16 +3295,26 @@
           const start = faceUV[4] ?? 0
           for (let y = start; y < area.height; y += height) {
             for (let x = 0; x < area.width; x += width) {
-              area.ctx.drawImage(texture, x, y, width, height)
+              if (args.tileableRandomRotations || args.tileableRandomMirroring) {
+                drawRotatedMirrored(area.ctx, texture, x, y, width, height, Math.floor(random(i, x, y) * 4) * 90 * args.tileableRandomRotations, random(i + 400, x, y) < 0.5 && args.tileableRandomMirroring)
+              } else {
+                area.ctx.drawImage(texture, x, y, width, height)
+              }
             }
           }
           if (start !== 0) {
             for (let y = start; y > 0; y -= height) {
               for (let x = 0; x < area.width; x += width) {
-                area.ctx.drawImage(texture, x, y - height, width, height)
+                if (args.tileableRandomRotations || args.tileableRandomMirroring) {
+                  drawRotatedMirrored(area.ctx, texture, x, y - height, width, height, Math.floor(random(i + 100, x, y) * 4) * 90 * args.tileableRandomRotations, random(i + 400, x, y) < 0.5 && args.tileableRandomMirroring)
+                } else {
+                  area.ctx.drawImage(texture, x, y - height, width, height)
+                }
               }
             }
           }
+          ctx.fillStyle = "#fff"
+          ctx.fillRect(faceUV[0], faceUV[1], area.width, area.height)
           ctx.drawImage(area.canvas, faceUV[0], faceUV[1])
         }
         if (topUV) {
@@ -3285,10 +3322,17 @@
           area.ctx.imageSmoothingEnabled = false
           for (let y = area.height; y > 0; y -= height) {
             for (let x = 0; x < area.width; x += width) {
-              area.ctx.drawImage(texture, x, y - height, width, height)
+              if (args.tileableRandomRotations || args.tileableRandomMirroring) {
+                drawRotatedMirrored(area.ctx, texture, x, y - height, width, height, Math.floor(random(i + 200, x, y) * 4) * 90 * args.tileableRandomRotations, random(i + 400, x, y) < 0.5 && args.tileableRandomMirroring)
+              } else {
+                area.ctx.drawImage(texture, x, y - height, width, height)
+              }
             }
           }
+          ctx.fillStyle = "#fff"
+          ctx.fillRect(topUV[0], topUV[1], area.width, area.height)
           ctx.drawImage(area.canvas, topUV[0], topUV[1])
+          ctx.fillStyle = `rgba(0, 0, 0, ${(100 - args.edgeBrightness) / 100})`
           ctx.fillRect(topUV[0], topUV[1], area.width, area.height)
         }
         if (bottomUV) {
@@ -3296,10 +3340,17 @@
           area.ctx.imageSmoothingEnabled = false
           for (let y = 0; y < area.height; y += height) {
             for (let x = 0; x < area.width; x += width) {
-              area.ctx.drawImage(texture, x, y, width, height)
+              if (args.tileableRandomRotations || args.tileableRandomMirroring) {
+                drawRotatedMirrored(area.ctx, texture, x, y, width, height, Math.floor(random(i + 300, x, y) * 4) * 90 * args.tileableRandomRotations, random(i + 400, x, y) < 0.5 && args.tileableRandomMirroring)
+              } else {
+                area.ctx.drawImage(texture, x, y, width, height)
+              }
             }
           }
+          ctx.fillStyle = "#fff"
+          ctx.fillRect(bottomUV[0], bottomUV[1], area.width, area.height)
           ctx.drawImage(area.canvas, bottomUV[0], bottomUV[1])
+          ctx.fillStyle = `rgba(0, 0, 0, ${(100 - args.edgeBrightness) / 100})`
           ctx.fillRect(bottomUV[0], bottomUV[1], area.width, area.height)
         }
       }
@@ -3689,6 +3740,9 @@
       tileableScale: vue.tileableScale,
       tileableXOffset: vue.tileableXOffset,
       tileableYOffset: vue.tileableYOffset,
+      tileableRandomRotations: vue.tileableRandomRotations,
+      tileableRandomMirroring: vue.tileableRandomMirroring,
+      edgeBrightness: vue.edgeBrightness,
       three
     }
   }
@@ -3760,5 +3814,24 @@
     if (typeof fonts[id].overlay === "boolean") {
       fonts[id].overlay = await loadImage(await getTexture(null, null, null, `fonts/${id}/textures/overlay.png`))
     }
+  }
+
+  function drawRotatedMirrored(ctx, img, x, y, w, h, r, mirror) {
+    ctx.save()
+    ctx.translate(x + w / 2, y + h / 2)
+    ctx.rotate(Math.degToRad(r))
+    if (mirror) ctx.scale(-1, 1)
+    ctx.drawImage(img, -(w / 2), -(h / 2), w, h)
+    ctx.restore()
+  }
+
+  const fract = n => n - Math.floor(n)
+
+  function random(x, y, z) {
+    x = fract(x * 0.1031)
+    y = fract(y * 0.1031)
+    z = fract(z * 0.1031)
+    const res = x * (z + 31.32) + y * (y + 31.32) + z * (x + 31.32)
+    return fract((x + y + res * 2) * (z + res))
   }
 })()
