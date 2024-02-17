@@ -2657,8 +2657,8 @@
                   <p>Configure the tileable texture</p>
                   <div class="bar slider_input_combo">
                     <div class="slider-label" style="width: 60px;">Scale:</div>
-                    <input type="range" class="tool disp_range" v-model.number="tileableScale" min="0.1" max="8" step="0.1" @input="updatePreview" />
-                    <numeric-input class="tool disp_text" v-model.number="tileableScale" :min="0.1" :max="8" :step="0.1" @input="updatePreview" />
+                    <input type="range" class="tool disp_range" v-model.number="tileableScale" min="1" max="8" step="1" @input="updatePreview" />
+                    <numeric-input class="tool disp_text" v-model.number="tileableScale" :min="1" :max="8" :step="1" @input="updatePreview" />
                   </div>
                   <div class="bar slider_input_combo">
                     <div class="slider-label" style="width: 60px;">X Offset:</div>
@@ -2679,7 +2679,7 @@
                     <div>Random Mirroring</div>
                   </label>
                   <div class="bar slider_input_combo">
-                    <div class="slider-label" style="width: 60px;">Texture Resolution:</div>
+                    <div class="slider-label">Texture Resolution:</div>
                     <input type="range" class="tool disp_range" v-model.number="tileableTextureResolution" min="1000" :max="4000" step="1000" @input="updatePreview" />
                     <numeric-input class="tool disp_text" v-model.number="tileableTextureResolution" :min="1000" :max="4000" :step="1000" @input="updatePreview" />
                   </div>
