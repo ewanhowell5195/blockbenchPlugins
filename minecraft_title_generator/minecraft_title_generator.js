@@ -3196,7 +3196,7 @@
   async function makeTexture(args) {
     const img = await loadImage(args.customTexture && args.customTextureType === "texture" ? args.customTexture : await getTexture(fonts[args.font].textures, args.texture, args.variant))
     const res = args.tileable || args.customTexture && args.customTextureType === "tileable" ? args.tileableTextureResolution / 1000 : 1
-    const { canvas, ctx } = new CanvasFrame(img.width * res, img.height * res)
+    let { canvas, ctx } = new CanvasFrame(img.width * res, img.height * res)
     ctx.imageSmoothingEnabled = false
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
     let m = canvas.width / 1000
