@@ -495,6 +495,19 @@
                     flex-wrap: wrap;
                     justify-content: space-between;
                   }
+                  .minecraft-output-options.disabled {
+                    pointer-events: none;
+                    opacity: 0.5;
+                  }
+                  .minecraft-output-options.disabled .sp-preview-inner {
+                    filter: grayscale();
+                  }
+                  .minecraft-output-options.disabled .sp-preview::after {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(to top right, transparent calc(50% - 2px), var(--color-close) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 2px)), linear-gradient(to top left, transparent calc(50% - 2px), var(--color-close) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 2px));
+                  }
                   .minecraft-output-label {
                     font-size: 1.25em;
                   }
@@ -756,7 +769,9 @@
                               <input ref="backgroundColour" />
                             </div>
                           </div>
-                          <div :class="{ hidden: !backgroundColourEnabled }">
+                        </div>
+                        <div class="minecraft-output-options" :class="{ hidden: tab === 'minecraft', disabled: !backgroundColourEnabled }">
+                          <div>
                             <div class="minecraft-output-label">Second Background Colour:</div>
                             <input type="checkbox" :checked="backgroundColour2Enabled" v-model="backgroundColour2Enabled" @input="backgroundColour2Enabled = !backgroundColour2Enabled; update(tab)" />
                             <div :class="{ hidden: !backgroundColour2Enabled }">
