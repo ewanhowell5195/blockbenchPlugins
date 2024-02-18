@@ -1900,6 +1900,14 @@
               name: variant ?? texture,
               content: type === "tileables" ? await getTileable(texture, variant) : await getTexture(fonts[font][type], texture, variant),
               savetype: "image"
+            }, () => {
+              Blockbench.showQuickMessage("Exported texture")
+              sendStats({
+                font,
+                texture: type === "textures" ? texture : undefined,
+                tileable: type === "tileables" ? texture : undefined,
+                overlay: type === "overlays" ? texture : undefined
+              })
             }),
             async importTexture() {
               const textures = []
@@ -2249,7 +2257,7 @@
                                 name: `${name.replace(/\s/g, "_")}.json`,
                                 content: JSON.stringify(this.preset, null, 2)
                               }, () => {
-                                Blockbench.showQuickMessage("Exported")
+                                Blockbench.showQuickMessage("Exported preset")
                                 dialog.close()
                               })
                             }
