@@ -91,7 +91,7 @@
     [0.2, 0.4, 0.6, 0.8]
   ]
   const stats = []
-  await getFontTextures("minecraft-ten", true)
+  
   Plugin.register(id, {
     title: name,
     icon: "icon.png",
@@ -433,6 +433,9 @@
                 title: "Rendering…",
                 buttons: [],
                 lines: [`<style>
+                  #minecraft_title_render_result .hidden {
+                    display: none;
+                  }
                   #minecraft_title_render_result .dialog_content {
                     margin: 0;
                   }
@@ -531,22 +534,17 @@
                       "1.19": "1.19- Title Texture",
                       mojang: "Mojang Studios Texture"
                     },
-                    backgroundColour: "#ffffff",
+                    backgroundColour: "#78b8ff",
+                    backgroundColour2: "#c7ecff",
                     backgroundColourEnabled: false,
+                    backgroundColour2Enabled: false,
                     lastUpdated: 0,
                     updateTimeout: null,
                     padding: 0
                   },
                   mounted() {
-                    $(this.$refs.backgroundColour).spectrum({
-                      preferredFormat: "hex",
-                      color: dialog.component.data.backgroundColour,
-                      showAlpha: false,
-                      showInput: true,
-                      move: c => dialog.component.methods.updateColour.bind(dialog.content_vue)(c),
-                      change: c => dialog.component.methods.updateColour.bind(dialog.content_vue)(c),
-                      hide: c => dialog.component.methods.updateColour.bind(dialog.content_vue)(c)
-                    })
+                    $(this.$refs.backgroundColour).spectrum(this.colourInput("backgroundColour")),
+                    $(this.$refs.backgroundColour2).spectrum(this.colourInput("backgroundColour2"))
                   },
                   methods: {
                     async copy() {
@@ -645,7 +643,14 @@
                       this.canvas.width = canvas.width + padding * 2
                       this.canvas.height = canvas.height + padding * 2
                       if (this.tab !== "minecraft" && this.backgroundColourEnabled) {
-                        this.ctx.fillStyle = this.backgroundColour
+                        if (this.backgroundColour2Enabled) {
+                          const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height)
+                          gradient.addColorStop(0, this.backgroundColour)
+                          gradient.addColorStop(1, this.backgroundColour2)
+                          this.ctx.fillStyle = gradient
+                        } else {
+                          this.ctx.fillStyle = this.backgroundColour
+                        }
                         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
                       }
                       this.ctx.drawImage(canvas, padding, padding)
@@ -688,9 +693,18 @@
                       this.resolutionHeight = h
                       this.update("custom")
                     },
-                    updateColour(c) {
-                      this.backgroundColour = c.toHexString()
-                      if (this.backgroundColourEnabled) this.update(this.tab)
+                    colourInput: v => ({
+                      preferredFormat: "hex",
+                      color: dialog.component.data[v],
+                      showAlpha: false,
+                      showInput: true,
+                      move: c => dialog.content_vue.updateColour(v, c),
+                      change: c => dialog.content_vue.updateColour(v, c),
+                      hide: c => dialog.content_vue.updateColour(v, c)
+                    }),
+                    updateColour(v, c) {
+                      this[v] = c.toHexString()
+                      this.update(this.tab)
                     },
                     update(tab) {
                       const now = performance.now()
@@ -737,8 +751,17 @@
                         <div class="minecraft-output-options" :style="{ display: tab === 'minecraft' ? 'none' : 'flex' }">
                           <div>
                             <div class="minecraft-output-label">Background Colour:</div>
-                            <input ref="backgroundColour" />
                             <input type="checkbox" :checked="backgroundColourEnabled" v-model="backgroundColourEnabled" @input="backgroundColourEnabled = !backgroundColourEnabled; update(tab)" />
+                            <div :class="{ hidden: !backgroundColourEnabled }">
+                              <input ref="backgroundColour" />
+                            </div>
+                          </div>
+                          <div :class="{ hidden: !backgroundColourEnabled }">
+                            <div class="minecraft-output-label">Second Background Colour:</div>
+                            <input type="checkbox" :checked="backgroundColour2Enabled" v-model="backgroundColour2Enabled" @input="backgroundColour2Enabled = !backgroundColour2Enabled; update(tab)" />
+                            <div :class="{ hidden: !backgroundColour2Enabled }">
+                              <input ref="backgroundColour2" />
+                            </div>
                           </div>
                         </div>
                         <div class="minecraft-output-options" :style="{ display: tab === 'minecraft' ? 'none' : 'flex' }">
@@ -1450,15 +1473,15 @@
             saturation: 100,
             brightness: 100,
             contrast: 100,
-            colour: "#ffffff",
-            customBorderColour: "#000000",
-            customEdgeColour: "#000000",
+            colour: "#fff",
+            customBorderColour: "#000",
+            customEdgeColour: "#000",
             gradientColour0: "#FFCF76",
             gradientColour1: "#FFA3A3",
             gradientColour2: "#F4C1A4",
             gradientColour3: "#E19A3E",
             gradientColour4: "#DA371E",
-            overlayColour: "#ffffff",
+            overlayColour: "#fff",
             blend: "multiply",
             blends: {
               multiply: "Multiply",
@@ -1575,8 +1598,8 @@
                 this.overlayBlend = "overlay"
                 this.overlayColourBlend = "multiply"
                 this.overlayOpacity = 100
-                this.overlayColour = "#ffffff"
-                $(this.$refs.overlayColour).spectrum("set", "#ffffff")
+                this.overlayColour = "#fff"
+                $(this.$refs.overlayColour).spectrum("set", "#fff")
               }
               if (force || this.tab === 3) {
                 this.tileableScale = 2
@@ -1594,12 +1617,12 @@
                 this.fadeToBorder = false
                 this.customEdge = false
                 this.colourOpacity = 100
-                this.colour = "#ffffff"
-                this.customBorderColour = "#000000"
-                this.customEdgeColour = "#000000"
-                $(this.$refs.colour).spectrum("set", "#ffffff")
-                $(this.$refs.customBorderColour).spectrum("set", "#000000")
-                $(this.$refs.customEdgeColour).spectrum("set", "#000000")
+                this.colour = "#fff"
+                this.customBorderColour = "#000"
+                this.customEdgeColour = "#000"
+                $(this.$refs.colour).spectrum("set", "#fff")
+                $(this.$refs.customBorderColour).spectrum("set", "#000")
+                $(this.$refs.customEdgeColour).spectrum("set", "#000")
               }
             },
             finish: () => dialog.onConfirm(),
@@ -2814,6 +2837,7 @@
           addText(text, getArgs(this.content_vue))
         },
         async onBuild() {
+          await getFontTextures("minecraft-ten", true)
           stats.push(...await fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", { headers: { source: "blockbench" } }).then(e => e.json()).catch(() => []))
           const ten = stats.find(e => e.id === "minecraft-ten")
           if (ten) ten.count = Infinity
@@ -3630,9 +3654,7 @@
     return [character, maxX - minX + args.characterSpacing * args.scale[0]]
   }
 
-  function makeName(str) {
-    return str.replace(/\s/g, "_").replace(/😳/g, "a").replace(/😩/g, "'").replace(/┫|┣|\u200b/g, "")
-  }
+  const makeName = str => str.replace(/\s/g, "_").replace(/😳/g, "a").replace(/😩/g, "'").replace(/┫|┣|\u200b/g, "")
 
   function selectHandler() {
     if (Mode.selected.id === "minecraft_title_render") Canvas.scene.traverseVisible(e => {
@@ -3694,20 +3716,18 @@
 
   function updateColour(dialog, v, c) {
     dialog.component.data[v] = c.toHexString()
-    dialog.component.methods.updatePreview.bind(dialog.content_vue)()
+    dialog.content_vue.updatePreview()
   }
 
-  function colourInput(dialog, v) {
-    return {
-      preferredFormat: "hex",
-      color: dialog.component.data[v],
-      showAlpha: false,
-      showInput: true,
-      move: c => updateColour(dialog, v, c),
-      change: c => updateColour(dialog, v, c),
-      hide: c => updateColour(dialog, v, c)
-    }
-  }
+  const colourInput = (dialog, v) => ({
+    preferredFormat: "hex",
+    color: dialog.component.data[v],
+    showAlpha: false,
+    showInput: true,
+    move: c => updateColour(dialog, v, c),
+    change: c => updateColour(dialog, v, c),
+    hide: c => updateColour(dialog, v, c)
+  })
 
   async function getTextureFromFile() {
     try {
@@ -3746,55 +3766,53 @@
     }
   }
 
-  function getArgs(vue, three) {
-    return {
-      font: vue.font,
-      type: vue.textType,
-      row: vue.row,
-      texture: vue.textureSource === "gradient" || vue.textureSource === "tileable" || (vue.textureSource === "file" && vue.customTexture) || (!vue.customTexture && vue.textureSource === "file" && ["gradient", "tileable"].includes(vue.lastTextureSource)) ? "flat" : vue.texture,
-      variant: vue.textureSource === "premade" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "premade") ? vue.variant : null,
-      tileable: vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileable : null,
-      tileableVariant: vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileableVariant : null,
-      characterSpacing: vue.characterSpacing,
-      rowSpacing: vue.rowSpacing,
-      scale: [vue.scaleX, vue.scaleY, vue.scaleZ],
-      colour: vue.colour,
-      blend: vue.blend,
-      hue: vue.hue,
-      saturation: vue.saturation,
-      brightness: vue.brightness,
-      contrast: vue.contrast,
-      customBorder: vue.customBorder,
-      customBorderColour: vue.customBorderColour,
-      fadeToBorder: vue.fadeToBorder,
-      terminators: vue.terminators,
-      customEdge: vue.customEdge,
-      customEdgeColour: vue.customEdgeColour,
-      customTexture: vue.textureSource === "file" ? vue.customTexture : null,
-      customTextureType: vue.customTextureType,
-      customOverlay: vue.overlaySource === "file" ? vue.customOverlay : null,
-      gradientColour0: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour0 : null,
-      gradientColour1: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour1Enabled ? vue.gradientColour1 : null,
-      gradientColour2: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour2Enabled ? vue.gradientColour2 : null,
-      gradientColour3: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour3Enabled ? vue.gradientColour3 : null,
-      gradientColour4: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour4 : null,
-      overlay: vue.overlay,
-      overlayBlend: vue.overlayBlend,
-      overlayColourBlend: vue.overlayColourBlend,
-      overlayColour: vue.overlayColour,
-      smoothGradient: vue.smoothGradient,
-      colourOpacity: vue.colourOpacity,
-      overlayOpacity: vue.overlayOpacity,
-      tileableScale: vue.tileableScale,
-      tileableXOffset: vue.tileableXOffset,
-      tileableYOffset: vue.tileableYOffset,
-      tileableRandomRotations: vue.tileableRandomRotations,
-      tileableRandomMirroring: vue.tileableRandomMirroring,
-      tileableTextureResolution: vue.tileableTextureResolution,
-      edgeBrightness: vue.edgeBrightness,
-      three
-    }
-  }
+  const getArgs = (vue, three) => ({
+    font: vue.font,
+    type: vue.textType,
+    row: vue.row,
+    texture: vue.textureSource === "gradient" || vue.textureSource === "tileable" || (vue.textureSource === "file" && vue.customTexture) || (!vue.customTexture && vue.textureSource === "file" && ["gradient", "tileable"].includes(vue.lastTextureSource)) ? "flat" : vue.texture,
+    variant: vue.textureSource === "premade" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "premade") ? vue.variant : null,
+    tileable: vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileable : null,
+    tileableVariant: vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileableVariant : null,
+    characterSpacing: vue.characterSpacing,
+    rowSpacing: vue.rowSpacing,
+    scale: [vue.scaleX, vue.scaleY, vue.scaleZ],
+    colour: vue.colour,
+    blend: vue.blend,
+    hue: vue.hue,
+    saturation: vue.saturation,
+    brightness: vue.brightness,
+    contrast: vue.contrast,
+    customBorder: vue.customBorder,
+    customBorderColour: vue.customBorderColour,
+    fadeToBorder: vue.fadeToBorder,
+    terminators: vue.terminators,
+    customEdge: vue.customEdge,
+    customEdgeColour: vue.customEdgeColour,
+    customTexture: vue.textureSource === "file" ? vue.customTexture : null,
+    customTextureType: vue.customTextureType,
+    customOverlay: vue.overlaySource === "file" ? vue.customOverlay : null,
+    gradientColour0: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour0 : null,
+    gradientColour1: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour1Enabled ? vue.gradientColour1 : null,
+    gradientColour2: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour2Enabled ? vue.gradientColour2 : null,
+    gradientColour3: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour3Enabled ? vue.gradientColour3 : null,
+    gradientColour4: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour4 : null,
+    overlay: vue.overlay,
+    overlayBlend: vue.overlayBlend,
+    overlayColourBlend: vue.overlayColourBlend,
+    overlayColour: vue.overlayColour,
+    smoothGradient: vue.smoothGradient,
+    colourOpacity: vue.colourOpacity,
+    overlayOpacity: vue.overlayOpacity,
+    tileableScale: vue.tileableScale,
+    tileableXOffset: vue.tileableXOffset,
+    tileableYOffset: vue.tileableYOffset,
+    tileableRandomRotations: vue.tileableRandomRotations,
+    tileableRandomMirroring: vue.tileableRandomMirroring,
+    tileableTextureResolution: vue.tileableTextureResolution,
+    edgeBrightness: vue.edgeBrightness,
+    three
+  })
 
   function areObjectsEqual(obj1, obj2) {
     const keys1 = Object.keys(obj1)
