@@ -1,4 +1,85 @@
 (() => {
+  let plugin
+  const connection = {
+    roots: [
+      `https://wynem.com/assets`,
+      `https://raw.githubusercontent.com/ewanhowell5195/wynem/main/src/assets`,
+      `https://cdn.jsdelivr.net/gh/ewanhowell5195/wynem/src/assets`
+    ],
+    rootIndex: 0
+  }
+  let root = connection.roots[0]
+  const id = "cem_template_loader"
+  const name = "CEM Template Loader"
+  const icon = "keyboard_capslock"
+  const description = "Load template Java Edition entity models for use with OptiFine CEM."
+  const links = {
+    website: {
+      text: "By Ewan Howell",
+      link: "https://ewanhowell.com/",
+      icon: "language",
+      colour: "#33E38E"
+    },
+    discord: {
+      text: "Discord Server",
+      link: "https://discord.ewanhowell.com/",
+      icon: "fab.fa-discord",
+      colour: "#727FFF"
+    },
+    tutorial: {
+      text: "CEM Modelling Tutorial",
+      link: "https://youtu.be/arj2eim42KI",
+      icon: "fab.fa-youtube",
+      colour: "#FF4444"
+    }
+  }
+
+  function loadPlugin() {
+    plugin = Plugin.register(id, {
+      title: name,
+      icon: "icon.png",
+      author: "Ewan Howell",
+      description: description + " Also includes an animation editor, so that you can create custom entity animations.",
+      tags: ["Minecraft: Java Edition", "OptiFine", "Templates"],
+      version: "8.0.0",
+      min_version: "4.9.4",
+      variant: "both",
+      creation_date: "2020-02-02",
+      onload() {
+        loadCEMTemplateLoader()
+        loadOptiFineEntityRestrictions()
+        loadOptiFineAnimationEditor()
+      },
+      onunload() {
+        unloadCEMTemplateLoader()
+        unloadOptiFineEntityRestrictions()
+        unloadOptiFineAnimationEditor()
+      }
+    })
+  }
+
+  async function fetchData(path, fallback) {
+    try {
+      const r = await fetch(`${root}/${path}`)
+      if (r.status !== 200 || r.headers.get("Content-Type")?.startsWith("text/html")) throw new Error
+      if (r.headers.get("Content-Type")?.startsWith("text/plain") || r.headers.get("Content-Type")?.startsWith("application/json")) return r.json()
+      return r
+    } catch {
+      for (let x = connection.rootIndex + 1; x < connection.roots.length; x++) {
+        connection.rootIndex = x
+        try {
+          const r = await fetch(`${connection.roots[x]}/${path}`)
+          if (r.status !== 200) throw new Error
+          root = connection.roots[x]
+          if (r.headers.get("Content-Type")?.startsWith("text/plain") || r.headers.get("Content-Type")?.startsWith("application/json")) return r.json()
+          return r
+        } catch {}
+      }
+      connection.failed = true
+      return fallback ? fallback() : {}
+    }
+  }
+
   // CEM TEMPLATE LOADER
 
   let styles, loader, loaderDialog, modelData, loadingPromise
@@ -321,7 +402,8 @@
           reload() {
             window.cemTemplateLoaderReloaded = true
             plugin.reload()
-          }
+          },
+          close: () => loaderDialog.close()
         },
         template: `
           <div id="cem-container">
@@ -361,7 +443,7 @@
               </label>
               <div id="cem-buttons">
                 <button :disabled="!entity" @click="load">Load</button>
-                <button>Cancel</button>
+                <button @click="close">Cancel</button>
               </div>
             </div>
             <div id="cem-report-issues">
@@ -464,6 +546,7 @@
     }
     BarItems.cem_template_loader_placeholder.delete()
     BarItems.cem_template_loader.children = modelData.categories.map(e => new Action(`cem_template_loader_${e.name.replace(/ /g, "_")}`, {
+      plugin: id,
       name: `${e.name} Entities`,
       description: e.description,
       icon: e.icon,
@@ -529,12 +612,172 @@
 
   // OPTIFINE ENTITY RESTRICTIONS
 
-  function loadOptiFineEntityRestrictions() {
+  let editCheck, jemRestrictionsDialog, originalJEMFormat
 
+  function loadOptiFineEntityRestrictions() {
+    new Setting("jem_restrictions", {
+      value: false,
+      category: "edit",
+      name: "Remove OptiFine Entity Restrictions",
+      description: "Remove the root group restrictions on the OptiFine Entity format. WARNING: You can easily break models with restrictions removed."
+    })
+    new Setting("dialog_jem_restrictions", {
+      category: 'dialogs',
+      value: true,
+      name: "OptiFine Entity Restrictions Dialog",
+      description: 'Show the "OptiFine Entity Restrictions" dialog'
+    })
+    jemRestrictionsDialog = new Dialog({
+      id: "jem_restrictions_dialog",
+      title: "Unsupported Edit",
+      buttons: [],
+      lines: [`<style>
+        #jem_restrictions_dialog label {
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          gap: 5px;
+        }
+        #jem_restrictions_dialog label * {
+          cursor: pointer;
+        }
+        #cem-buttons {
+          display: flex;
+          justify-content: space-between;
+        }
+        #jem_restrictions_dialog button:not(:hover) {
+          background-color: var(--color-selected);
+        }
+      </style>`],
+      component: {
+        data: {
+          message: "",
+          removeRestrictions: false,
+          dontShowAgain: false
+        },
+        methods: {
+          finish() {
+            if (this.removeRestrictions) {
+              settings.jem_restrictions.set(true)
+            }
+            if (this.dontShowAgain) {
+              settings.dialog_jem_restrictions.set(false)
+            }
+            jemRestrictionsDialog.close()
+          }
+        },
+        template: `
+          <div>
+            <h2 style="margin-bottom: 10px;">{{ message }}</h2>
+            <p>The OptiFine Entity format has limitations for the top level groups.<br>You cannot:</p>
+            <p class="markdown">
+              <ul>
+                <li>Add new root groups</li>
+                <li>Remove root groups</li>
+                <li>Rename root groups</li>
+                <li>Move root groups</li>
+                <li>Rotate root groups</li>
+                <li>Move root group pivots</li>
+              </ul>
+            </p>
+            <p>Doing any of the above can, and will, create broken/invalid models.</p>
+            <p>All elements added to OptiFine Entities must be placed within one of the existing groups. If you need to rotate something, create a subgroup and rotate that instead.</p>
+            <br>
+            <label>
+              <input type="checkbox" :checked="removeRestrictions" v-model="removeRestrictions">
+              <div>Remove OptiFine Entity Restrictions</div>
+            </label>
+            <p><strong>WARNING:</strong> It is highly recommended to leave restrictions enabled. This setting can be changed later in settings.</p>
+            <br>
+            <div id="jem-restrictions-footer">
+            <div id="cem-buttons">
+              <label>
+                <input type="checkbox" :checked="dontShowAgain" v-model="dontShowAgain">
+                <div>Don't Show Again</div>
+              </label>
+              <button @click="finish">OK</button>
+            </div>
+          </div>
+        `
+      }
+    })
+    editCheck = () => {
+      if (!settings.jem_restrictions.value && Format.id === "optifine_entity") {
+        const entry = Undo.history[Undo.history.length-1]
+        const check = editCheckProcess(entry)
+        if (check) {
+          if (settings.dialog_jem_restrictions.value) {
+            jemRestrictionsDialog.show()
+            jemRestrictionsDialog.content_vue.message = check
+          } else {
+            Blockbench.showQuickMessage(check, 1200)
+          }
+          Undo.loadSave(entry.before, entry.post)
+          Undo.history.pop()
+          Undo.index = Undo.history.length
+        }
+      }
+    }
+    Blockbench.on("finished_edit", editCheck)
+    originalJEMFormat = {
+      new: Formats.optifine_entity.new,
+      format_page: Formats.optifine_entity.format_page,
+      convertTo: Formats.optifine_entity.convertTo
+    }
+    Formats.optifine_entity.new = () => {
+      if (settings.jem_restrictions.value) originalJEMFormat.new.bind(Formats.optifine_entity)()
+      else openLoader()
+    }
+    Formats.optifine_entity.format_page = JSON.parse(JSON.stringify(Formats.optifine_entity.format_page))
+    Formats.optifine_entity.format_page.content.push({ type: "h3", text: "CEM Template Loader" }, { text: "Creating an OptiFine entity will open CEM Template Loader. It is extremely rare to need a blank OptiFine entity model. You can disable this behavour with **File > Preferences > Settings > Edit > Remove OptiFine Entity Restrictions**, however, this is not recommended." })
+    Formats.optifine_entity.convertTo = () => {
+      originalJEMFormat.convertTo.bind(Formats.optifine_entity)()
+      if (!settings.jem_restrictions.value) {
+        Blockbench.showMessageBox({
+          title: "Conversion Warning",
+          message: "Models converted into OptiFine entities are not valid entity models. If you are converting a model into an OptiFine entity to use it in game, expect it to be broken. Instead load a new template entity model, and copy your elements across into that.",
+          buttons: ["Load Template", "Continue"],
+          icon: "warning"
+        }, button => {
+          if (button === 0) openLoader()
+        })
+      }
+    }
   }
 
   function unloadOptiFineEntityRestrictions() {
-    
+    Blockbench.removeListener("finished_edit", editCheck)
+    jemRestrictionsDialog.close()
+    Formats.optifine_entity.new = originalJEMFormat.new
+    Formats.optifine_entity.format_page = originalJEMFormat.format_page
+    Formats.optifine_entity.convertTo = originalJEMFormat.convertTo
+  }
+
+  function editCheckProcess(entry) {
+    if (entry.before.outliner) {
+      for (const group of entry.before.outliner) {
+        const postGroup = entry.post.outliner.find(e => e.uuid === group.uuid)
+        if (!postGroup) return "You cannot remove root cubes/groups!"
+        if (!group.origin.reduce((a, e, x) => a && e === postGroup.origin[x], true)) {
+          return "You cannot move root groups!"
+        } else if (group.name !== postGroup.name) {
+          return "You cannot rename root groups!"
+        }
+      }
+    }
+    if (entry.post.outliner) {
+      for (const group of entry.post.outliner) {
+        const beforeGroup = entry.before.outliner.find(e => e.uuid === group.uuid)
+        if (!beforeGroup) return "You cannot add new root cubes/groups!"
+      }
+    }
+    if (entry.before.group && entry.post.group && Outliner.root.find(node => node instanceof Group && node.uuid == entry.before.group.uuid)) {
+      if (!entry.before.group.rotation.reduce((a, e, x) => a && e === entry.post.group.rotation[x], true)) {
+        return "You cannot rotate root groups!"
+      } else if (!entry.before.group.origin.reduce((a, e, x) => a && e === entry.post.group.origin[x], true)) {
+        return "You cannot move root group pivots!"
+      }
+    }
   }
 
   // OPTIFINE ANIMATION EDITOR
@@ -549,80 +792,5 @@
 
   // PLUGIN
 
-  const connection = {
-    roots: [
-      `https://wynem.com/assets`,
-      `https://raw.githubusercontent.com/ewanhowell5195/wynem/main/src/assets`,
-      `https://cdn.jsdelivr.net/gh/ewanhowell5195/wynem/src/assets`
-    ],
-    rootIndex: 0
-  }
-  let root = connection.roots[0]
-  const id = "cem_template_loader"
-  const name = "CEM Template Loader"
-  const icon = "keyboard_capslock"
-  const description = "Load template Java Edition entity models for use with OptiFine CEM."
-  const links = {
-    website: {
-      text: "By Ewan Howell",
-      link: "https://ewanhowell.com/",
-      icon: "language",
-      colour: "#33E38E"
-    },
-    discord: {
-      text: "Discord Server",
-      link: "https://discord.ewanhowell.com/",
-      icon: "fab.fa-discord",
-      colour: "#727FFF"
-    },
-    tutorial: {
-      text: "CEM Modelling Tutorial",
-      link: "https://youtu.be/arj2eim42KI",
-      icon: "fab.fa-youtube",
-      colour: "#FF4444"
-    }
-  }
-  const plugin = Plugin.register(id, {
-    title: name,
-    icon: "icon.png",
-    author: "Ewan Howell",
-    description: description + " Also includes an animation editor, so that you can create custom entity animations.",
-    tags: ["Minecraft: Java Edition", "OptiFine", "Templates"],
-    version: "8.0.0",
-    min_version: "4.9.4",
-    variant: "both",
-    creation_date: "2020-02-02",
-    onload() {
-      loadCEMTemplateLoader()
-      loadOptiFineEntityRestrictions()
-      loadOptiFineAnimationEditor()
-    },
-    onunload() {
-      unloadCEMTemplateLoader()
-      unloadOptiFineEntityRestrictions()
-      unloadOptiFineAnimationEditor()
-    }
-  })
-
-  async function fetchData(path, fallback) {
-    try {
-      const r = await fetch(`${root}/${path}`)
-      if (r.status !== 200 || r.headers.get("Content-Type")?.startsWith("text/html")) throw new Error
-      if (r.headers.get("Content-Type")?.startsWith("text/plain") || r.headers.get("Content-Type")?.startsWith("application/json")) return r.json()
-      return r
-    } catch {
-      for (let x = connection.rootIndex + 1; x < connection.roots.length; x++) {
-        connection.rootIndex = x
-        try {
-          const r = await fetch(`${connection.roots[x]}/${path}`)
-          if (r.status !== 200) throw new Error
-          root = connection.roots[x]
-          if (r.headers.get("Content-Type")?.startsWith("text/plain") || r.headers.get("Content-Type")?.startsWith("application/json")) return r.json()
-          return r
-        } catch {}
-      }
-      connection.failed = true
-      return fallback ? fallback() : {}
-    }
-  }
+  loadPlugin()
 })()
