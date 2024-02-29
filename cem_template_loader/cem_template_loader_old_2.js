@@ -1,11 +1,526 @@
 (() => {
-  let entityCategories, groupObserver, animationEditorPanel, animationControlPanel, context, boolMap, rangeMap, specialMap, styles, stopAnimations, updateSelection, docShown, documentation, editorKeybinds, tabChange, loader, editCheck, originalJEMFormat
-  const id = "cem_template_loader_old"
+  let generatorActions, entitySelector, loaderShown, entityData, entityCategories, groupObserver, animationEditorPanel, animationControlPanel, context, boolMap, rangeMap, specialMap, styles, stopAnimations, updateSelection, docShown, documentation, editorKeybinds, tabChange, loader, editCheck, originalJEMFormat
+  const id = "cem_template_loader"
   const name = "CEM Template Loader"
   const icon = "keyboard_capslock"
   const author = "Ewan Howell"
   const description = "Load template Java Edition entity models for use with OptiFine CEM."
+  const links = {
+    website: {
+      text: "By Ewan Howell",
+      link: "https://ewanhowell.com/",
+      icon: "language",
+      colour: "#33E38E"
+    },
+    discord: {
+      text: "Discord Server",
+      link: "https://discord.ewanhowell.com/",
+      icon: "fab.fa-discord",
+      colour: "#727FFF"
+    },
+    tutorial: {
+      text: "CEM Modelling Tutorial",
+      link: "https://youtu.be/arj2eim42KI",
+      icon: "fab.fa-youtube",
+      colour: "#FF4444"
+    }
+  }
   const E = s => $(document.createElement(s))
+  const getBase64FromUrl = url => {
+    return new Promise(async (resolve) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(await (await fetch(url)).blob())
+      reader.onloadend = () => {
+        const base64data = reader.result
+        resolve(base64data)
+      }
+    })
+  }
+  const imageObserver = new IntersectionObserver(function(entries, observer) {
+    entries.forEach(async function(entry) {
+      if ("src" in entry.target.dataset) {
+        if (entry.isIntersecting) {
+          imageObserver.unobserve(entry.target)
+          await fetch(entry.target.dataset.src, { method: "HEAD" }).then(r => {
+            if (r.status >= 400) throw new Error
+            entry.target.style.backgroundImage = `url("${entry.target.dataset.src}")`
+          }).catch(() => {
+            entry.target.style.backgroundImage = 'url("assets/logo_cutout.svg")'
+            entry.target.style.filter = "invert(1)"
+            entry.target.style.opacity = 0.35
+          })
+          delete entry.target.dataset.src
+        }
+      } else imageObserver.unobserve(entry.target)
+    })
+  })
+  const loadCEMTemplateModels = (entityData, data) => {
+    $("#cem_template_sidebar").append(entityData.categories.map(e => E("li").attr("id", `cem_template_tab_${e.name.toLowerCase()}`).append(
+      E("span").addClass("icon_wrapper f_left").append(
+        e.icon.match(/^icon-/) ? E("i").addClass(`${e.icon} icon`) : E("i").addClass("material-icons icon").text(e.icon)
+      ),
+      e.name
+    ).on("click", evt => {
+      $("#cem_template_sidebar>.selected").removeClass("selected")
+      $(evt.currentTarget).addClass("selected")
+      $("#cem_template_page>:not(:last-child)").css("display", "none")
+      const page = $(`#cem_template_page_${e.name.toLowerCase()}`).css("display", "block")
+      page.find(".search_bar>input").select()
+    })))
+    $("#cem_template_sidebar>:first-child").addClass("selected")
+    $("#cem_template_buttons").before(entityData.categories.map((e, i) => E("div").css("display", i === 0 ? "block" : "none").attr("id", `cem_template_page_${e.name.toLowerCase()}`).append(
+      E("h2").text(e.name),
+      E("content").append(
+        E("section").append(
+          E("p").text(e.description)
+        ),
+        E("section").append(
+          E("label").text("Models"),
+          E("div").addClass("search_bar").attr("placeholder", "Search...").css("width", "220px").append(
+            E("input").addClass("dark_bordered").attr("type", "text").on("input", evt => {
+              const query = evt.currentTarget.value.toLowerCase()
+              $(evt.currentTarget).parent().next().find(".cem_template_model").each((i, e) => {
+                const label = $(e).children().eq(1)
+                if (~label.text().toLowerCase().indexOf(query)) {
+                  $(e).css("display", "")
+                } else {
+                  $(e).css("display", "none")
+                }
+              })
+            }),
+            E("i").addClass("material-icons").text("search")
+          ),
+          E("ul").addClass("cem_template_list").append(
+            e.entities.map(f => {
+              const model = entityData.models[typeof f === "string" ? f : f.model || f.name]
+              const image = `https://wynem.com/assets/images/minecraft/renders/${f.name || f}.webp` + (data?.appendToURL ?? "")
+              const imageElement = E("div").addClass("cem_template_image").attr("data-src", image)
+              const element = E("li").addClass("cem_template_model").attr("data-modelid", f.name || f).attr("data-category", e.name).append(
+                imageElement,
+                E("label").text(typeof f === "string" ? f.replace(/_/g, " ") : f.display_name || f.name.replace(/_/g, " "))
+              ).on({
+                click: evt => {
+                  $(".cem_template_model.selected").removeClass("selected")
+                  element.addClass("selected")
+                },
+                dblclick: evt => {
+                  const selectedModel = $(".cem_template_model.selected")
+                  loadModel(selectedModel.attr("data-modelid"), selectedModel.attr("data-category"), $("#cem_template_texture_check").is(":checked"), data)
+                }
+              })
+              if (f.description) {
+                element.attr("title", f.description)
+              } 
+              imageObserver.observe(imageElement[0])
+              return element
+            })
+          )
+        )
+      )
+    )))
+  }
+  const loadEntities = entityData => {
+    const entityCategories = {}
+    for (let category of entityData.categories) {
+      entityCategories[category.name] = {
+        description: category.description,
+        icon: category.icon,
+        entities: {}
+      }
+      for (let entity of category.entities) {
+        if (typeof entity === "string") entity = {
+          name: entity
+        }
+        const model = entityData.models[entity.model || entity.name]
+        entityCategories[category.name].entities[entity.name] = {
+          name: entity.display_name || entity.name.replace(/_/g, " ").replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1)),
+          file_name: entity.file_name || entity.name,
+          model: model.model,
+          texture_name: Array.isArray(entity.texture_name) ? entity.texture_name.map(e => e + ".png") : (entity.texture_name || entity.name) + ".png",
+          texture_data: model.texture_data && (typeof model.texture_data === "string" ? "data:image/png;base64," + model.texture_data : model.texture_data.map(e => "data:image/png;base64," + e)),
+          vanilla_textures: entity.vanilla_textures,
+          popup: entity.popup,
+          popup_width: entity.popup_width
+        }
+      }
+    }
+    return entityCategories
+  }
+  async function loadModel(modelID, categoryName, defaultTexture, data) {
+    if (!categoryName) {
+      const category = Object.entries(entityCategories).find(e => {return e[1].entities[modelID]})
+      if (!category) return Blockbench.showQuickMessage("Unknown CEM template model", 2000)
+      categoryName = category[0]
+    }
+    const entity = entityCategories[categoryName].entities[modelID] 
+    const model = JSON.parse(entity.model)
+    const createNewProject = !$("#cem_template_project_check").is(":checked")
+    if (!Project || createNewProject) {
+      newProject(Formats.optifine_entity)
+      Project.name = entity.file_name
+      Blockbench.setStatusBarText(entity.name)
+    }
+    Formats.optifine_entity.codec.parse(model, "")
+    if (defaultTexture) {
+      try {
+        for (const [idx, textureName] of (entity.vanilla_textures || [entity.texture_name]).entries()) {
+          const r = await fetch(`https://wynem.com/assets/images/minecraft/entities/${modelID}${idx || ""}.png` + (data?.appendToURL ?? ""), {method: "HEAD"})
+          if (r.status < 400) new Texture({name: textureName}).fromDataURL(await getBase64FromUrl(`https://wynem.com/assets/images/minecraft/entities/${modelID}${idx || ""}.png` + (data?.appendToURL ?? ""))).add()
+          else throw new Exception
+        }
+      } catch {
+        if ((typeof entity.texture_data).match(/string|undefined/)) {
+          if (entity.texture_data) new Texture({name: entity.texture_name}).fromDataURL(entity.texture_data).add()
+          else TextureGenerator.addBitmap({
+            name: entity.texture_name,
+            color: new tinycolor("#00000000"),
+            type: "template",
+            rearrange_uv: false,
+            resolution: "16"
+          })  
+        } else for (let i = 0; i < entity.texture_data.length; i++) new Texture({name: entity.texture_name[i]}).fromDataURL(entity.texture_data[i]).add()
+        Blockbench.showQuickMessage("Unable to load vanilla texture", 2000)
+      }
+    } else {
+      if ((typeof entity.texture_data).match(/string|undefined/)) {
+        if (entity.texture_data) new Texture({name: entity.texture_name}).fromDataURL(entity.texture_data).add()
+        else TextureGenerator.addBitmap({
+          name: entity.texture_name,
+          color: new tinycolor("#00000000"),
+          type: "template",
+          rearrange_uv: false,
+          resolution: "16"
+        })  
+      } else for (let i = 0; i < entity.texture_data.length; i++) new Texture({name: entity.texture_name[i]}).fromDataURL(entity.texture_data[i]).add()
+    }
+    Undo.history.length = 0
+    Undo.index = 0
+    entitySelector.hide()
+    if (entity.popup) {
+      const options = {
+        id: "cem_template_loader_popup",
+        title: name,
+        buttons: ["Okay"],
+        lines: [
+          `<div></div>` + (entity.popup_width ? `<style>#cem_template_loader_popup{max-width:min(${entity.popup_width}px, 100%)!important}</style>` : "") + entity.popup
+        ]
+      }
+      if (entity.popup_width) options.width = parseInt(entity.popup_width)
+      new Dialog(options).show()
+    }
+  }
+  function loadInterface(categoryID, data) {
+    categoryID ??= "supported"
+    entitySelector.show()
+    if (!loaderShown) {
+      loaderShown = true
+      loadCEMTemplateModels(entityData, data)
+      $("#cem_template_load_button").on("click", async evt => {
+        const selectedModel = $(".cem_template_model.selected")
+        if (selectedModel.length === 0) return Blockbench.showQuickMessage("Please select a template model")
+        const modelID = selectedModel.attr("data-modelid")
+        await loadModel(modelID, selectedModel.attr("data-category"), $("#cem_template_texture_check").is(":checked"), data)
+      })
+      $("#cem_template_load_button+button").on("click", evt => {
+        entitySelector.hide()
+      })
+    }
+    $("#cem_template_sidebar>.selected").removeClass("selected")
+    $(`#cem_template_tab_${categoryID.toLowerCase()}`).addClass("selected")
+    $("#cem_template_page>:not(:last-child)").css("display", "none")
+    $("#cem_template_wrapper .search_bar>input").val("")
+    $(".cem_template_model").removeClass("selected").css("display", "")
+    const page = $(`#cem_template_page_${categoryID.toLowerCase()}`).css("display", "block")
+    page.find(".search_bar>input").focus()
+  }
+  async function setupPlugin(url, data) {
+    try {
+      entityData = await fetch(url + (data?.appendToURL ?? "")).then(e => e.json())
+      // entityData = JSON.parse(fs.readFileSync("F:/Programming/GitHub/wynem/src/assets/json/cem_template_models.json", "UTF-8"))
+      entitySelector = new Dialog({
+        id: "cem_template_selector",
+        title: name,
+        width: 980,
+        buttons: [],
+        lines: [`
+          <style>
+            #cem_template_selector {
+              max-width: 100% !important;
+            }
+            #cem_template_selector .dialog_content {
+              margin: 0 !important;
+            }
+            #cem_template_wrapper {
+              display: flex;
+              min-height: 541px;
+              min-width: 100%;
+              --color-subtle_text: #91949c;
+              overflow-y: auto;
+            }
+            #cem_template_sidebar {
+              background-color: var(--color-back);
+              flex: 0 0 160px;
+              padding: 16px 0;
+              position: relative;
+            }
+            #cem_template_sidebar li {
+              width: 100%;
+              padding: 6px 20px;
+              border-left: 4px solid transparent;
+              cursor: pointer;
+            }
+            #cem_template_sidebar li:hover {
+              color: var(--color-light);
+            }
+            #cem_template_sidebar li.selected {
+              background-color: var(--color-ui);
+              border-left: 4px solid var(--color-accent);
+            }
+            #cem_template_sidebar li .icon_wrapper {
+              margin: 0 10px 0 -10px;
+            }
+            #cem_template_page {
+              display: flex;
+              flex-direction: column;
+              flex-grow: 1;
+              padding: 5px 12px 45px 20px;
+              position: relative;
+              background-color: var(--color-ui);
+            }
+            #cem_template_page > content {
+              flex-grow: 1;
+            }
+            #cem_template_buttons {
+              flex: 40px 0 0;
+              padding: 8px 8px 8px 20px;
+              display: flex;
+              position: absolute;
+              bottom: 0;
+              right: 0;
+              left: 0;
+            }
+            #cem_template_check_wrapper {
+              display: flex;
+              align-items: center;
+              align-self: stretch;
+            }
+            #cem_template_check_wrapper label {
+              margin: 0 16px 0 8px;
+            }
+            #cem_template_project_check {
+              margin-left: 8px;
+            }
+            #cem_template_load_button {
+              background-color: var(--color-accent);
+              color: var(--color-light);
+              width: 112px;
+              margin-right: 4px;
+            }
+            #cem_template_discord {
+              display: flex;
+              position: absolute;
+              bottom: 12px;
+              left: 0;
+              right: 0;
+              justify-content: center;
+              gap: 5px;
+              text-decoration: none;
+              cursor: pointer;
+            }
+            #cem_template_discord:hover {
+              color: var(--color-light);
+            }
+            #cem_template_discord span {
+              text-decoration: underline;
+            }
+            .cem_template_list {
+              max-height: 384px;
+              width: 100%;
+              overflow-y: auto;
+            }
+            .cem_template_list > li {
+              display: flex;
+              flex-direction: column;
+              position: relative;
+              float: left;
+              width: 124px;
+              height: 92px;
+              margin: 2px;
+              background-color: var(--color-back);
+              cursor: pointer;
+              box-sizing: border-box;
+              padding: 2px 2px 20px;
+              border: 2px solid transparent;
+            }
+            .cem_template_list > li:hover {
+              background-color: var(--color-selected);
+              color: var(--color-light);
+            }
+            .cem_template_list > li.selected {
+              border-color: var(--color-accent);
+              background-color: var(--color-button);
+            }
+            .cem_template_list > li.selected:hover {
+              background-color: var(--color-selected);
+            }
+            .cem_template_image {
+              height: 86px;
+              background-size: contain;
+              background-position: 50%;
+              background-repeat: no-repeat;
+              image-rendering: auto;
+              cursor: pointer;
+            }
+            .cem_template_list > li label {
+              position: absolute;
+              bottom: 0;
+              text-align: center;
+              width: 100%;
+              pointer-events: none;
+              text-transform: capitalize;
+            }
+          </style>
+          <div id="cem_template_wrapper">
+            <ul id="cem_template_sidebar">
+              <a id="cem_template_discord" href="${links.discord.link}">
+                <i class="material-icons">bug_report</i>
+                <span>Report issues</span>
+              </a>
+            </ul>
+            <div id="cem_template_page">
+              <div id="cem_template_buttons">
+                <div id="cem_template_check_wrapper">
+                  <input class="focusable_input" id="cem_template_texture_check" type="checkbox">
+                  <label for="cem_template_texture_check">Load vanilla texture</label>
+                  <input class="focusable_input" id="cem_template_project_check" type="checkbox">
+                  <label for="cem_template_project_check">Load into current project</label>
+                </div>
+                <div class="spacer"></div>
+                <button class="confirm_btn" id="cem_template_load_button">Load</button>
+                <button class="cancel_btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        `]
+      })
+      loaderShown = false
+      entityCategories = loadEntities(entityData)
+      generatorActions = []
+      for (const category of Object.values(entityData.categories)) {
+        generatorActions.push(
+          new Action(category.name.toLowerCase().replace(/\s+/g, "_"), {
+            name: `${category.name} Entities`,
+            description: category.description,
+            icon: category.icon,
+            click: () => loadInterface(category.name, data)
+          })
+        )
+      }
+      generatorActions.push("_", {
+        name: `v${entityData.version}`,
+        id: "cem_template_loader_version",
+        icon: "info"
+      })
+      MenuBar.addAction({
+        name: "Load CEM Template",
+        id,
+        description,
+        children: generatorActions,
+        icon,
+      }, "tools")
+      loader = new ModelLoader(id, {
+        name,
+        description,
+        icon,
+        onStart: () => loadInterface(entityData.categories[0].name, data),
+        format_page: {
+          component: {
+            methods: {
+              load: () => loadInterface(entityData.categories[0].name, data)
+            },
+            template: `
+              <div style="display:flex;flex-direction:column;height:100%">
+                <p class="format_description">${description}</p>
+                <p class="format_target"><b>Target</b> : <span>Minecraft: Java Edition with OptiFine</span> <span>Texturing Templates</span></p>
+                <content>
+                  <h3 class="markdown">How to use:</h3>
+                  <p class="markdown">
+                    <ul>
+                      <li><p>Press <strong>Load CEM Template</strong> and select a model.</p></li>
+                      <li><p>Select your load settings, load the model, then edit the model.</p></li>
+                      <li><p>Export your model as an <strong>OptiFine JEM</strong> to <code>assets/minecraft/optifine/cem</code>, using the provided name.</p></li>
+                    </ul>
+                  </p>
+                  <h3 class="markdown">Do:</h3>
+                  <p class="markdown">
+                    <ul>
+                      <li><p>Edit any of the cubes that were loaded with the template, add your own cubes, and create your own subgroups.</p></li>
+                    </ul>
+                  </p>
+                  <h3 class="markdown">Do not:</h3>
+                  <p class="markdown">
+                    <ul>
+                      <li><p>Edit any of the groups that were loaded with the template, add your own root groups, or remove any built in animations.</p></li>
+                    </ul>
+                  </p>
+                </content>
+                <div class="spacer"></div>
+                <div class="cem-template-loader-links">${Object.values(links).map(e => `
+                  <a href="${e.link}">
+                    ${Blockbench.getIconNode(e.icon, e.colour).outerHTML}
+                    <p>${e.text}</p>
+                  </a>
+                `).join("")}</div>
+                <div class="button_bar">
+                  <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="load()">
+                    <i class="material-icons">${icon}</i>
+                    Load CEM Template
+                  </button>
+                </div>
+              </div>
+            `
+          }
+        }
+      })
+      return true
+    } catch (err) {
+      console.error(err)
+      generatorActions = []
+      generatorActions.push({
+        name: "Connection failed",
+        description: "Could not connect to wynem.com",
+        id: "cem_template_loader_connection_failure",
+        icon: "wifi_off"
+      },
+      "_",
+      new Action("cem_template_loader_retry_connection", {
+        name: `Retry connection`,
+        description: "Attempt to reconnect to wynem.com",
+        icon: "sync",
+        click: async () => {
+          for (let action of generatorActions) if (typeof action.delete === "function") action.delete()
+          MenuBar.removeAction("tools.cem_template_loader")
+          if (await setupPlugin("https://wynem.com/assets/json/cem_template_models.json?rnd=" + Math.random())) Blockbench.showQuickMessage("Reconnected sucessfully", 2000)
+          else{
+            new Dialog({
+              id: "cem_template_loader_connection_failure_dialog",
+              title: name,
+              lines: ['<h2>Connection failed</h2><span>Please check your internet connection and make sure that you can access <a href="https://wynem.com/cem/">wynem.com</a></span>'],
+              "buttons": ["Okay"]
+            }).show()
+          }
+        }
+      }))
+      MenuBar.addAction({
+        name: "Load CEM Template",
+        id,
+        description,
+        children: generatorActions,
+        icon,
+      }, "tools")
+      return false
+    }
+  }
   let frameCount
   const constants = {
     pi: Math.PI,
@@ -903,6 +1418,10 @@
       playing = false
       paused = false
     }
+    function hide() {
+      placeholder.css("display", "block")
+      content.css("display", "none")
+    }
     let group
     updateSelection = () => {
       if (Project.format?.id === "optifine_entity") {
@@ -1436,7 +1955,81 @@
     creation_date: "2020-02-02",
     async onload() {
       addStyles()
+      await setupPlugin("https://wynem.com/assets/json/cem_template_models.json")
       setupAnimationPanel()
+      new Setting("jem_restrictions", {
+        value: false,
+        category: "edit",
+        name: "Remove OptiFine Entity Restrictions",
+        description: "Remove the root group restrictions on the OptiFine Entity format. WARNING: You can easily break models with restrictions removed."
+      })
+      function editCheckProcess(entry) {
+        if (entry.before.outliner) {
+          for (const group of entry.before.outliner) {
+            const postGroup = entry.post.outliner.find(e => e.uuid === group.uuid)
+            if (!postGroup) return "You cannot remove root cubes/groups!"
+            if (!group.origin.reduce((a, e, x) => a && e === postGroup.origin[x], true)) {
+              return "You cannot move root groups!"
+            } else if (group.name !== postGroup.name) {
+              return "You cannot rename root groups!"
+            }
+          }
+        }
+        if (entry.post.outliner) {
+          for (const group of entry.post.outliner) {
+            const beforeGroup = entry.before.outliner.find(e => e.uuid === group.uuid)
+            if (!beforeGroup) return "You cannot add new root cubes/groups!"
+          }
+        }
+        if (entry.before.group && entry.post.group && Outliner.root.find(node => node instanceof Group && node.uuid == entry.before.group.uuid)) {
+          if (!entry.before.group.rotation.reduce((a, e, x) => a && e === entry.post.group.rotation[x], true)) {
+            return "You cannot rotate root groups!"
+          } else if (!entry.before.group.origin.reduce((a, e, x) => a && e === entry.post.group.origin[x], true)) {
+            return "You cannot move root group pivots!"
+          }
+        }
+      }
+      editCheck = () => {
+        if (!settings.jem_restrictions.value && Format.id === "optifine_entity") {
+          const entry = Undo.history[Undo.history.length-1]
+          const check = editCheckProcess(entry)
+          if (check) {
+            Blockbench.showQuickMessage(check, 1200)
+            Undo.loadSave(entry.before, entry.post)
+            Undo.history.pop()
+            Undo.index = Undo.history.length
+          }
+        }
+      }
+      Blockbench.on("finished_edit", editCheck)
+      originalJEMFormat = {
+        new: Formats.optifine_entity.new,
+        format_page: Formats.optifine_entity.format_page,
+        convertTo: Formats.optifine_entity.convertTo
+      }
+      Formats.optifine_entity.new = () => {
+        if (settings.jem_restrictions.value) originalJEMFormat.new.bind(Formats.optifine_entity)()
+        else loadInterface()
+      }
+      Formats.optifine_entity.format_page = JSON.parse(JSON.stringify(Formats.optifine_entity.format_page))
+      Formats.optifine_entity.format_page.content.push({ type: "h3", text: "CEM Template Loader" }, { text: "Creating an OptiFine entity will open CEM Template Loader. It is extremely rare to need a blank OptiFine entity model. You can disable this behavour with **File > Preferences > Settings > Edit > Remove OptiFine Entity Restrictions**, however, this is not recommended." })
+      Formats.optifine_entity.convertTo = () => {
+        originalJEMFormat.convertTo.bind(Formats.optifine_entity)()
+        if (!settings.jem_restrictions.value) {
+          Blockbench.showMessageBox({
+            title: "Conversion Warning",
+            message: "Models converted into OptiFine entities are not valid entity models. If you are converting a model into an OptiFine entity to use in game, expect it to be broken. Instead load a new template entity model, and copy your elements across into the template model.",
+            buttons: ["Load Template", "Continue"],
+            icon: "warning"
+          }, button => {
+            if (button === 0) loadInterface()
+          })
+        }
+      }
+      if (Blockbench.isWeb) {
+        const params = (new URL(location.href)).searchParams
+        if (params.has("plugins") && params.get("plugins").split(",").includes("cem_template_loader") && params.has("model") && params.get("model") !== "") loadModel(params.get("model").toLowerCase(), null, params.has("texture"))
+      }
     },
     onunload() {
       stopAnimations?.(true)
@@ -1445,10 +2038,17 @@
       Blockbench.removeListener("finished_edit", editCheck)
       $("#cem_animation_editor_container>div")[0].removeEventListener("keydown", editorKeybinds)
       groupObserver.disconnect()
+      loader.delete()
       $("[toggle='cem_animation_disable_rotations']").remove()
+      for (const action of generatorActions) action.delete?.()
+      MenuBar.removeAction("tools.cem_template_loader")
       animationEditorPanel.delete()
       animationControlPanel.delete()
       styles.delete()
+      Formats.optifine_entity.new = originalJEMFormat.new
+      Formats.optifine_entity.format_page = originalJEMFormat.format_page
+      Formats.optifine_entity.convertTo = originalJEMFormat.convertTo
+      entitySelector?.close()
       documentation?.close()
       resizeWindow()
     }
