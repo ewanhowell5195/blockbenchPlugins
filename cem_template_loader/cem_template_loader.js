@@ -224,7 +224,6 @@
           grid-template-columns: 160px auto;
           overflow: hidden;
           height: 512px;
-          position: relative;
           display: grid;
         }
         #cem_template_loader > .dialog_wrapper:not(.has_sidebar) {
@@ -339,7 +338,8 @@
         #cem-search > i {
           position: absolute;
           right: 6px;
-          top: 5px;
+          top: 50%;
+          transform: translateY(-50%);
           pointer-events: none;
         }
         #cem-description {
