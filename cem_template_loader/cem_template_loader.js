@@ -272,6 +272,9 @@
           z-index: 1;
           display: none;
         }
+        #cem-report-issues * {
+          cursor: pointer
+        }
         .has_sidebar #cem-report-issues {
           display: initial;
         }
