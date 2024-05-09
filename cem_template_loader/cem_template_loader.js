@@ -438,7 +438,7 @@
             <div v-if="connection" v-for="[name, c] of Object.entries(categories)" class="cem-models" :class="{ hidden: category !== name }">
               <div v-for="model of c.entities" :class="{ selected: entity === model.name, hidden: !model.name.includes(search) }" @click="entity = model.name">
                 <img :src="connection.roots[connection.rootIndex] + '/images/minecraft/renders2/' + model.name + '.webp'" loading="lazy">
-                <div>{{ model.display_name ?? model.name.replace(/_/g, ' ') }}</div>
+                <div>{{ model.display_name ?? model.name.replace(/_/g, " ") }}</div>
               </div>
             </div>
             <div class="cem-spacer">
@@ -635,8 +635,8 @@
       description: "Remove the root group restrictions on the OptiFine Entity format. WARNING: You can easily break models with restrictions removed."
     })
     new Setting("dialog_jem_restrictions", {
-      category: 'dialogs',
       value: true,
+      category: "dialogs",
       name: "OptiFine Entity Restrictions Dialog",
       description: 'Show the "OptiFine Entity Restrictions" dialog'
     })
@@ -824,7 +824,7 @@
     frac: x => x - Math.floor(x),
     log: Math.log,
     pow: Math.pow,
-    random: (seed) => {
+    random: seed => {
       if (!seed) return Math.random()
       seed = constants.frac(seed * 123.34)
       seed += seed * (seed + 45.32)
@@ -855,8 +855,8 @@
     in: (x, ...vals) => vals.includes(x),
     print: (id, int, val) => {
       if (val === undefined) throw Error("Not enough arguments. <strong>print</strong> requires <strong>3</strong> arguments")
-      if (typeof val !== "number") throw Error("<strong>print</strong> can only print numbers, use <strong>printb</strong> instead")
-      if (frameCount % int === 0) console.log(`CEM print(${id}) = ${val}`)
+      if ((settings.ignore_unkown_optifine_animations.value && !(typeof val === "number" || typeof val === "function")) || (!settings.ignore_unkown_optifine_animations.value && typeof val !== "number")) throw Error("<strong>print</strong> can only print numbers, use <strong>printb</strong> instead")
+      if (frameCount % int === 0) console.log(`CEM print(${id}) = ${Number(val)}`)
       return val
     },
     printb: (id, int, val) => {
@@ -869,9 +869,7 @@
       return val ?? id
     },
     lerp: (a, b, c) => b * (1 - a) + c * a,
-    frame_time: 0,
-    move_forward: 0,
-    move_strafing: 0
+    frame_time: 0
   }
   const rangesObj = {
     pos_x: [-128, 0, 128, 0.1],
@@ -926,6 +924,112 @@
   const enabledBooleans = new Set([
     "is_alive", "is_on_ground"
   ])
+  const boneVars = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz", "visible", "visible_boxes"]
+  const renderVars = ["shadow_size", "shadow_opacity", "shadow_offset_x", "shadow_offset_z", "leash_offset_x", "leash_offset_y", "leash_offset_z"]
+  const vars = [
+    "pi",
+    "true",
+    "false",
+    "time",
+    "limb_swing",
+    "limb_speed",
+    "age",
+    "head_pitch",
+    "head_yaw",
+    "player_pos_x",
+    "player_pos_y",
+    "player_pos_z",
+    "player_rot_x",
+    "player_rot_y",
+    "frame_time",
+    "dimension",
+    "rule_index",
+    "health",
+    "hurt_time",
+    "death_time",
+    "anger_time",
+    "max_health",
+    "pos_x",
+    "pos_y",
+    "pos_z",
+    "rot_x",
+    "rot_y",
+    "swing_progress",
+    "id",
+    "sin()",
+    "cos()",
+    "asin()",
+    "acos()",
+    "tan()",
+    "atan()",
+    "atan2()",
+    "torad()",
+    "todeg()",
+    "min()",
+    "max()",
+    "clamp()",
+    "abs()",
+    "floor()",
+    "ceil()",
+    "exp()",
+    "frac()",
+    "log()",
+    "pow()",
+    "random()",
+    "round()",
+    "signum()",
+    "sqrt()",
+    "fmod()",
+    "lerp()",
+    "if()",
+    "print()",
+    "printb()",
+    "between()",
+    "equals()",
+    "in()",
+    ...boolList
+  ]
+  const varLabels = {
+    "sin()": "sin(x)",
+    "cos()": "cos(x)",
+    "asin()": "asin(x)",
+    "acos()": "acos(x)",
+    "tan()": "tan(x)",
+    "atan()": "atan(x)",
+    "atan2()": "atan2(y, x)",
+    "torad()": "torad(deg)",
+    "todeg()": "todeg(rad)",
+    "min()": "min(x, y, …)",
+    "max()": "max(x, y, …)",
+    "clamp()": "clamp(x, min, max)",
+    "abs()": "abs(x)",
+    "floor()": "floor(x)",
+    "ceil()": "ceil(x)",
+    "exp()": "exp(x)",
+    "frac()": "frac(x)",
+    "log()": "log(x)",
+    "pow()": "pow(x, y)",
+    "random()": "random(seed)",
+    "round()": "round(x)",
+    "signum()": "signum(x)",
+    "sqrt()": "sqrt(x)",
+    "fmod()": "fmod(x, y)",
+    "lerp()": "lerp(t, x, y)",
+    "if()": "if(c, v, [c2, v2, …,] v_else)",
+    "print()": "print(id, n, x)",
+    "printb()": "printb(id, n, x)",
+    "between()": "between(x, min, max)",
+    "equals()": "equals(x, y, epsilon)",
+    "in()": "in(x, val1, val2, …)"
+  }
+  globalThis.optifineAnimationVariables = {
+    constants,
+    ranges: rangesObj,
+    booleans: boolList,
+    enabledBooleans: enabledBooleans,
+    autocomplete: vars,
+    autocompleteLabels: varLabels
+  }
   let bools = new Map()
   let ranges = new Map()
   let specials = new Map()
@@ -951,8 +1055,15 @@
     if (anim.length === 0) return ""
     const boolsMatch = anim.matchAll(/(?<=[\s\n(!&|=,]|^)is_[a-z_]+(?=[\s\n)!&|=,]|$)/g)
     for (const bool of boolsMatch) {
-      if (!boolList.has(bool[0])) throw [`Unknown boolean: "<span style="font-weight:600">${bool[0]}</span>" is not a supported boolean`]
-      boolMap.set(bool[0], bools.get(bool[0]) ?? enabledBooleans.has(bool[0]) ? true : false)
+      if (!boolList.has(bool[0])) {
+        if (settings.ignore_unkown_optifine_animations.value) {
+          boolMap.set(bool[0], false)
+        } else {
+          if (!boolList.has(bool[0])) throw [`Unknown boolean: "<span style="font-weight:600">${bool[0]}</span>" is not a supported boolean`]
+        }
+      } else {
+        boolMap.set(bool[0], bools.get(bool[0]) ?? enabledBooleans.has(bool[0]) ? true : false)
+      }
     }
     const check = anim.match(/[^a-z0-9_,\+\-\*\/%!&\|>=<\(\)\[\]:\.\s]/gi)
     if (check) throw [`Unsupported character "<span style="font-weight:600">${check[0]}</span>" in animation "<span style="font-weight:600">${anim.replace(/</g, "&lt;")}</span>"`]
@@ -979,6 +1090,12 @@
   let timescale = 1
   function loadOptiFineAnimationEditor() {
     let steps, playing, paused, currentGroups
+    new Setting("ignore_unkown_optifine_animations", {
+      value: false,
+      category: "edit",
+      name: "Ignore Unknown OptiFine Animations",
+      description: "If an OptiFine animation contains unknown animations, they will be ignored, allowing the animation to play and the model to be exported. WARNING: Unknown animations will cause the model to fail to load when using OptiFine."
+    })
     animationStyles = Blockbench.addCSS(`
       #panel_cem_animation .panel_vue_wrapper {
         flex: 1;
@@ -1454,104 +1571,6 @@
       }
     })
     const reInValue = /:[\s\n]*"[^"]*$/
-    const boneVars = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz", "visible", "visible_boxes"]
-    const renderVars = ["shadow_size", "shadow_opacity", "shadow_offset_x", "shadow_offset_z", "leash_offset_x", "leash_offset_y", "leash_offset_z"]
-    const vars = [
-      "pi",
-      "true",
-      "false",
-      "time",
-      "limb_swing",
-      "limb_speed",
-      "age",
-      "head_pitch",
-      "head_yaw",
-      "player_pos_x",
-      "player_pos_y",
-      "player_pos_z",
-      "player_rot_x",
-      "player_rot_y",
-      "frame_time",
-      "dimension",
-      "rule_index",
-      "health",
-      "hurt_time",
-      "death_time",
-      "anger_time",
-      "max_health",
-      "pos_x",
-      "pos_y",
-      "pos_z",
-      "rot_x",
-      "rot_y",
-      "swing_progress",
-      "id",
-      "sin()",
-      "cos()",
-      "asin()",
-      "acos()",
-      "tan()",
-      "atan()",
-      "atan2()",
-      "torad()",
-      "todeg()",
-      "min()",
-      "max()",
-      "clamp()",
-      "abs()",
-      "floor()",
-      "ceil()",
-      "exp()",
-      "frac()",
-      "log()",
-      "pow()",
-      "random()",
-      "round()",
-      "signum()",
-      "sqrt()",
-      "fmod()",
-      "lerp()",
-      "if()",
-      "print()",
-      "printb()",
-      "between()",
-      "equals()",
-      "in()",
-      ...boolList
-    ]
-    const varLabels = {
-      "sin()": "sin(x)",
-      "cos()": "cos(x)",
-      "asin()": "asin(x)",
-      "acos()": "acos(x)",
-      "tan()": "tan(x)",
-      "atan()": "atan(x)",
-      "atan2()": "atan2(y, x)",
-      "torad()": "torad(deg)",
-      "todeg()": "todeg(rad)",
-      "min()": "min(x, y, …)",
-      "max()": "max(x, y, …)",
-      "clamp()": "clamp(x, min, max)",
-      "abs()": "abs(x)",
-      "floor()": "floor(x)",
-      "ceil()": "ceil(x)",
-      "exp()": "exp(x)",
-      "frac()": "frac(x)",
-      "log()": "log(x)",
-      "pow()": "pow(x, y)",
-      "random()": "random(seed)",
-      "round()": "round(x)",
-      "signum()": "signum(x)",
-      "sqrt()": "sqrt(x)",
-      "fmod()": "fmod(x, y)",
-      "lerp()": "lerp(t, x, y)",
-      "if()": "if(c, v, [c2, v2, …,] v_else)",
-      "print()": "print(id, n, x)",
-      "printb()": "printb(id, n, x)",
-      "between()": "between(x, min, max)",
-      "equals()": "equals(x, y, epsilon)",
-      "in()": "in(x, val1, val2, …)"
-    }
     function filterAndSortList(list, match, blacklist, labels) {
       const result = list.filter(f => f.startsWith(match) && f.length !== match.length)
       list.forEach(f => {
@@ -1940,6 +1959,23 @@
           death_time: specials.get("death_time")?.[1] ? specials.get("death_time")[0] += difference : 0,
           swing_progress: specials.get("swing_progress")?.[1] ? specials.get("swing_progress")[0] += difference / 4 : 0
         }, constants, Object.fromEntries(bools), Object.fromEntries(Array.from(ranges.entries()).map(e => [e[0], e[1][1]])))
+        if (settings.ignore_unkown_optifine_animations.value) {
+          context = new Proxy(context, {
+            get(target, prop) {
+              if (prop in target) return target[prop]
+              const num = e => e ?? 0
+              num.valueOf = () => 0
+              return num
+            }
+          })
+        } else {
+          context = new Proxy(context, {
+            get(target, prop) {
+              if (prop in target) return target[prop]
+              throw new Error(`Unknown variable / function<div style="padding-right:10px">:</div> " <span style="font-weight:600">${prop}</span> "`)
+            }
+          })
+        }
         const parts = new Map()
         for (const part of Group.all) {
           const partObj = {
@@ -2032,7 +2068,7 @@
     tabChange = () => {
       setTimeout(() => {
         group = Group.all[0]
-        if (Format.id === "optifine_entity" && group) {
+        if (Format.id === "optifine_entity" && group && !Group.selected) {
           selectGroup()
         }
       }, 0)
@@ -2191,6 +2227,7 @@
     animationStyles.delete()
     documentation?.close()
     resizeWindow()
+    delete globalThis.optifineAnimationVariables
   }
 
   // OPTIFINE ENTITY EXTENSIONS
@@ -2206,7 +2243,7 @@
     const originalLocatorMenu = Locator.prototype.menu
     const customLocatorMenu = new Menu([
       ...Outliner.control_menu_group,
-      new MenuSeparator('manage'),
+      new MenuSeparator("manage"),
       "rename",
       "toggle_visibility",
       "delete"
@@ -2286,7 +2323,7 @@
           bone.rotate = g.rotation.slice()
         }
         if (g.mirror_uv) {
-          bone.mirrorTexture = 'u'
+          bone.mirrorTexture = "u"
         }
         if (g.cem_attach) {
           bone.attach = true
@@ -2432,7 +2469,7 @@
         Project.texture_width = parseInt(model.textureSize[0]) || 16
         Project.texture_height = parseInt(model.textureSize[1]) || 16
       }
-      if (typeof model.shadowSize == 'number') Project.shadow_size = model.shadowSize
+      if (typeof model.shadowSize == "number") Project.shadow_size = model.shadowSize
       let empty_face = { uv: [0, 0, 0, 0], texture: null }
       if (model.models) {
         model.models.forEach(function(b) {
