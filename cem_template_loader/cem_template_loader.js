@@ -730,7 +730,6 @@
             Undo.index = Undo.history.length
           }
         }
-        updateAttachmentIcon()
       }
     }
     Blockbench.on("finished_edit", editCheck)
@@ -2084,7 +2083,7 @@
     resizeWindow()
     function addAnimationToggles() {
       if (Project.format?.id === "optifine_entity") {
-        const toggle = $(".outliner_toggle")
+        const toggle = $("[toolbar_id='outliner'] > div > [toolbar_item='outliner_toggle']")
         if (toggle.hasClass("enabled")) {
           const toggles = $("#cubes_list .group [toggle='autouv']")
           if (toggles.length) {
