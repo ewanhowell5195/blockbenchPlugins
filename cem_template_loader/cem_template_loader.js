@@ -520,7 +520,7 @@
     loader.delete()
     loaderDialog.close()
     for (const child of BarItems.cem_template_loader.children) {
-      child.delete()
+      child.delete?.()
     }
     BarItems.cem_template_loader.delete()
     delete window.loadCEMTemplateModels
@@ -558,6 +558,12 @@
       icon: e.icon,
       click: () => openLoader(e.name)
     }))
+    BarItems.cem_template_loader.children.push("_", {
+      name: `v${modelData.version}`,
+      id: "cem_template_loader_version",
+      icon: "info",
+      click: () => openLoader()
+    })
     if (MenuBar.menus.tools.label.classList.contains("opened")) {
       MenuBar.menus.tools.show()
     }
