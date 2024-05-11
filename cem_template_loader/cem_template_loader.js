@@ -592,7 +592,10 @@
         for (const [i, name] of textures.entries()) {
           const texture = await fetchData(`images/minecraft/entities/${entity}${i || ""}.png`, () => null)
           if (!texture) throw Error
-          new Texture({ name }).fromDataURL(await getBase64FromBlob(await texture.blob())).add()
+          const tex = new Texture({ name }).fromDataURL(await getBase64FromBlob(await texture.blob())).add()
+          if (!i && textures.length === 1) {
+            tex.use_as_default =  true
+          }
         }
         textureLoaded = true
       } catch {
@@ -604,14 +607,21 @@
       const textureData = Array.isArray(model.texture_data) ? model.texture_data : [model.texture_data]
       const textures = Array.isArray(data.texture_name) && Array.isArray(model.texture_data) ? data.texture_name : [data.texture_name ?? data.name]
       for (const [i, name] of textures.entries()) {
-        if (textureData[i]) new Texture({ name }).fromDataURL("data:image/png;base64," + textureData[i]).add()
-        else TextureGenerator.addBitmap({
-          name,
-          color: new tinycolor("#00000000"),
-          type: "template",
-          rearrange_uv: false,
-          resolution: "16"
-        })
+        let tex
+        if (textureData[i]) {
+          tex = new Texture({ name }).fromDataURL("data:image/png;base64," + textureData[i]).add()
+        } else {
+          tex = TextureGenerator.addBitmap({
+            name,
+            color: new tinycolor("#00000000"),
+            type: "template",
+            rearrange_uv: false,
+            resolution: "16"
+          })
+        }
+        if (!i && textures.length === 1) {
+          tex.use_as_default =  true
+        }
       }
     }
   }
