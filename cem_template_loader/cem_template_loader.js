@@ -42,7 +42,7 @@
       description: description + " Also includes an animation editor, so that you can create custom entity animations.",
       tags: ["Minecraft: Java Edition", "OptiFine", "Templates"],
       version: "8.0.0",
-      min_version: "4.9.4",
+      min_version: "4.10.0",
       variant: "both",
       creation_date: "2020-02-02",
       has_changelog: true,
