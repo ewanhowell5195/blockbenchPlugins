@@ -45,6 +45,8 @@
       min_version: "4.9.4",
       variant: "both",
       creation_date: "2020-02-02",
+      has_changelog: true,
+      website: "https://ewanhowell.com/plugins/cem-template-loader/",
       onload() {
         loadCEMTemplateLoader()
         loadOptiFineEntityRestrictions()
@@ -146,6 +148,36 @@
       #format_page_cem_template_loader div:nth-child(3), #format_page_cem_template_loader content {
         overflow-y: auto;
       }
+      #cem-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .cem-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        background-color: var(--color-ui);
+        display: flex;
+        flex-direction: column;
+        padding: 40px;
+        text-align: center;
+        gap: 16px;
+        overflow-y: auto;
+
+        > * {
+          max-width: 512px;
+          margin: 0 auto !important;
+        }
+
+        > :first-child {
+          margin-top: auto !important;
+        }
+
+        > :last-child {
+          margin-bottom: auto !important;
+        }
+      }
     `)
     loader = new ModelLoader(id, {
       name,
@@ -223,6 +255,7 @@
           overflow: hidden;
           height: 512px;
           display: grid;
+          position: relative;
         }
         #cem_template_loader > .dialog_wrapper:not(.has_sidebar) {
           grid-template-columns: auto;
@@ -243,22 +276,6 @@
         }
         #cem_template_loader .hidden {
           display: none !important;
-        }
-        .cem-overlay {
-          position: absolute;
-          inset: 0;
-          z-index: 2;
-          background-color: var(--color-ui);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          flex-direction: column;
-          padding: 40px;
-          text-align: center;
-          gap: 16px;
-        }
-        .cem-overlay > * {
-          max-width: 512px;
         }
         #cem-report-issues {
           position: absolute;
@@ -285,11 +302,6 @@
         }
         #cem-report-issues > a > div {
           text-decoration: underline;
-        }
-        #cem-container {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
         }
         #cem-footer {
           display: flex;
@@ -420,7 +432,7 @@
               <h1>Connection Failed</h1>
               <p>Failed to load CEM Template data.</p>
               <p>Please make sure you are connected to the internet, and can access this <a href="${root}/json/cem_template_models.json">cem_template_models.json</a> file.</p>
-              <p>If you are unable to access the fonts.json file, it may be blocked by your computer or your internet service provider. If it is not your computer blocking it, you may be able to use a VPN to bypass the block. One good example is <a href="https://1.1.1.1/">Cloudflare WARP</a>, which is a free program that commonly resolves this issue.</p>
+              <p>If you are unable to access the cem_template_models.json file, it may be blocked by your computer or your internet service provider. If it is not your computer blocking it, you may be able to use a VPN to bypass the block. One good example is <a href="https://1.1.1.1/">Cloudflare WARP</a>, which is a free program that commonly resolves this issue.</p>
               <button @click="reload">Retry connection</button>
             </div>
             <div id="cem-header">
@@ -466,7 +478,7 @@
         await loadCEMTemplateModels()
         this.sidebar.build()
         if (!modelData.categories) {
-          return loaderData.$forceUpdate()
+          return this.content_vue.$forceUpdate()
         }
         const categories = modelData.categories.map(e => [e.name, e])
         loaderData.categories = Object.fromEntries(categories)
@@ -1348,78 +1360,6 @@
       #cem_animation_doc_button {
         cursor: pointer;
       }
-      #cem_animation_documentation .dialog_content {
-        margin: 0;
-        position: relative;
-      }
-      #cem_doc {
-        margin: 16px;
-      }
-      #cem_doc > div {
-        display: none;
-      }
-      #cem_doc * {
-        white-space: pre-wrap;
-      }
-      #cem_doc h2 {
-        font-size: 25px;
-      }
-      #cem_doc > div > :first-child {
-        margin-top: -8px;
-      }
-      #cem_doc h2:not(:first-child) {
-        padding-top: 16px;
-      }
-      #cem_doc td:not(:last-child) {
-        padding-right: 16px;
-      }
-      #cem_doc code, #cem_doc pre {
-        background-color: var(--color-back);
-        padding: 0 4px;
-        border: 1px solid var(--color-border);
-        user-select: text;
-        cursor: text;
-        font-family: var(--font-code)
-      }
-      #cem_doc pre {
-        margin-bottom: 16px;
-      }
-      #cem_doc img {
-        margin: 8px;
-        box-shadow: 0 3px 10px #0006;
-      }
-      #cem_doc_tabs {
-        background-color: var(--color-frame);
-        display: flex;
-        gap: 2px;
-        padding: 4px 4px 0;
-        position: sticky;
-        top: 0;
-        border-bottom: 4px solid var(--color-ui);
-      }
-      #cem_doc_tabs > div {
-        padding: 4px 12px;
-        cursor: pointer;
-        border-top: 2px solid transparent;
-        background-color: var(--color-back);
-      }
-      #cem_doc_tabs > div.selected {
-        background-color: var(--color-ui);
-        border-top-color: var(--color-accent);
-        cursor: default;
-      }
-      .cem_doc_table_list td:first-child {
-        font-weight: 600;
-        white-space: nowrap !important;
-        display: list-item;
-        list-style: inside;
-        font-family: var(--font-code);
-      }
-      .cem-doc-tab-link {
-        text-decoration: underline;
-        cursor: pointer;
-        color: var(--color-accent);
-      }
       #cem_animation_format_button {
         position: absolute;
         top: 12px;
@@ -2149,82 +2089,171 @@
       subtree: true
     })
     addAnimationToggles()
+    globalThis.optifineAnimationDocumentation = {
+      custom: []
+    }
     async function showDocumentation() {
-      if (!docShown) {
-        let docData
-        try {
-          const r = await fetch("https://wynem.com/assets/json/cem_animation_doc.json")
-          if (r.status !== 200) throw Error
-          docData = await r.json()
-        } catch (err) {
-          console.error(err)
-          return new Dialog({
-            id: "cem_template_loader_connection_failure_dialog",
-            title: "CEM Animation Documentation",
-            lines: ['<h2>Connection failed</h2><span>Please check your internet connection and make sure that you can access <a href="https://wynem.com/cem/">wynem.com</a></span>'],
-            buttons: ["Okay"]
-          }).show()
+      if (optifineAnimationDocumentation.shown) {
+        optifineAnimationDocumentation.dialog.show()
+      } else {
+        if (!optifineAnimationDocumentation.data) {
+          optifineAnimationDocumentation.data = await fetchData("json/cem_animation_doc.json")
+          optifineAnimationDocumentation.data.tabs ??= []
         }
-        docShown = true
-        documentation = new Dialog({
+        optifineAnimationDocumentation.shown = true
+        const tabs = [...optifineAnimationDocumentation.data.tabs, ...optifineAnimationDocumentation.custom]
+        optifineAnimationDocumentation.dialog = new Dialog({
           id: "cem_animation_documentation",
           title: "CEM Animation Documentation",
-          width: 780,
-          lines: [`
-            <div id="cem_doc_tabs"></div>
-            <div id="cem_doc_container"><div id="cem_doc"></div></div>
-          `],
-          buttons: []
-        }).show()
-        const doc = $("#cem_doc")
-        const tabs = $("#cem_doc_tabs")
-        for (const tab of docData.tabs) {
-          const name = tab.name.replace(/ /g, "_")
-          tabs.append(E("div").attr("id", `cem_doc_tab_${tab.name.replace(/ /g, "-")}`).html(tab.name).on("click", evt => {
-            $("#cem_doc_tabs>div").removeClass("selected")
-            $("#cem_doc>div").removeClass("selected")
-            $(evt.target).addClass("selected")
-            $(`#cem_doc_page_${name}`).addClass("selected")
-            $("#cem_animation_documentation .dialog_content")[0].scrollTo(0, 0)
-          }))
-          const page = E("div").attr("id", `cem_doc_page_${name}`).appendTo(doc)
-          for (const element of tab.elements) {
-            if (element.type === "heading") page.append(E("h2").html(element.text))
-            else if (element.type === "text") page.append(E("p").html(element.text))
-            else if (element.type === "code") page.append(E("pre").html(element.text))
-            else if (element.type === "table") {
-              const table = E("table").appendTo(page)
-              if (element.tableType === "list") table.addClass("cem_doc_table_list")
-              for (const row of element.rows) {
-                const tr = E("tr").appendTo(table)
-                for (const [i, cell] of row.entries()) {
-                  tr.append(E("td").html(cell))
+          width: 980,
+          buttons: [],
+          sidebar: {
+            pages: Object.fromEntries(tabs.map(e => [e.name, {
+              label: e.name,
+              icon: e.icon
+            }])),
+            onPageSwitch(page) {
+              optifineAnimationDocumentation.dialog.content_vue.page = page
+            }
+          },
+          lines: [`<style>
+            #cem_animation_documentation {
+              .dialog_wrapper {
+                grid-template-rows: auto 0px;
+                min-height: min(100vh - 120px, 512px);
+                max-height: calc(100vh - 120px);
+                display: grid;
+                position: relative;
+              }
+
+              .dialog_content {
+                margin: 0;
+                max-height: initial;
+                overflow-x: hidden;
+                max-height: calc(100vh - 120px);
+              }
+
+              .page {
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+                user-select: text;
+              }
+
+              h1 {
+                margin: 0;
+                line-height: 100%;
+                font-size: 30px;
+                padding-bottom: 8px;
+
+                &:not(:first-child) {
+                  padding-top: 24px;
                 }
               }
+
+              :is(code, pre) {
+                background-color: var(--color-back);
+                padding: 0 4px;
+                border: 1px solid var(--color-border);
+                cursor: text;
+                font-family: var(--font-code);
+              }
+
+              pre {
+                width: 100%;
+              }
+
+              .cem-doc-table-list td:first-child {
+                font-weight: 600;
+                white-space: nowrap !important;
+                display: list-item;
+                list-style: inside;
+                font-family: var(--font-code);
+              }
+
+              .cem-doc-tab-link {
+                text-decoration: underline;
+                cursor: pointer;
+                color: var(--color-accent);
+              }
+
+              td:not(:last-child) {
+                padding-right: 16px;
+              }
+
+               img {
+                margin: 8px;
+                box-shadow: 0 3px 10px #0006;
+              }
+
+              p {
+                white-space: pre-wrap;
+              }
+
+              hr {
+                width: 100%;
+                margin-bottom: 0;
+              }
             }
-            else if (element.type === "image") page.append(E("img").attr({
-              src: element.url,
-              width: element.width,
-              height: element.height
-            }))
+          </style>`],
+          component: {
+            data: {
+              version: optifineAnimationDocumentation.data.version,
+              optifineVersion: optifineAnimationDocumentation.data.optifineVersion,
+              tabs,
+              connection,
+              page: tabs[0]?.name
+            },
+            methods: {
+              reload() {
+                window.cemTemplateAnimationDocReloaded = true
+                plugin.reload()
+              }
+            },
+            template: `
+              <div id="cem-container">
+                <div v-if="connection?.failed" class="cem-overlay">
+                  <h1>Connection Failed</h1>
+                  <p>Failed to load CEM Animation documentation.</p>
+                  <p>Please make sure you are connected to the internet, and can access this <a href="${root}/json/cem_animation_doc.json">cem_animation_doc.json</a> file.</p>
+                  <p>If you are unable to access the cem_animation_doc.json file, it may be blocked by your computer or your internet service provider. If it is not your computer blocking it, you may be able to use a VPN to bypass the block. One good example is <a href="https://1.1.1.1/">Cloudflare WARP</a>, which is a free program that commonly resolves this issue.</p>
+                  <button @click="reload">Retry connection</button>
+                </div>
+                <div v-for="tab of tabs" v-if="page === tab.name" class="page">
+                  <template v-for="element of tab.elements">
+                    <h1 v-if="element.type === 'heading'">{{ element.text }}</h1>
+                    <p v-else-if="element.type === 'text'" v-html="element.text"></p>
+                    <pre v-else-if="element.type === 'code'">{{ element.text }}</pre>
+                    <img v-else-if="element.type === 'image'" :src="element.url" :width="element.width" :height="element.height">
+                    <table v-else-if="element.type === 'table'" :class="{ 'cem-doc-table-list': element.tableType === 'list' }">
+                      <tr v-for="row of element.rows">
+                        <td v-for="cell of row" v-html="cell"></td>
+                      </tr>
+                    </table>
+                  </template>
+                  <hr>
+                  <p>Documentation version: <span style="font-family:var(--font-code)">{{ version }}<span><br>Updated to: <span style="font-family:var(--font-code)">OptiFine {{ optifineVersion }}<span></p>
+                </div>
+              </div>
+            `
+          },
+          onBuild() {
+            this.object.querySelector("#cem-container").addEventListener("click", e => {
+              if (e.target.classList.contains("cem-doc-tab-link")) {
+                this.content_vue.page = e.target.textContent
+                this.sidebar.page = e.target.textContent
+                this.sidebar.build()
+              }
+            })
           }
-        }
-        $("#cem_doc_tabs>:first-child").addClass("selected")
-        $("#cem_doc>:first-child").addClass("selected")
-        $(".cem_doc_tab_link").on("click", evt => {
-          $("#cem_doc_tabs>div").removeClass("selected")
-          $("#cem_doc>div").removeClass("selected")
-          $(`#cem_doc_tab_${evt.target.textContent.replace(/ /g, "-")}`).addClass("selected")
-          $(`#cem_doc_page_${evt.target.textContent}`).addClass("selected")
-          $("#cem_animation_documentation .dialog_content")[0].scrollTo(0, 0)
-        })
-        if (Blockbench.isWeb) $(".cem-doc-display-desktop").css("display", "none")
-        else $(".cem-doc-display-web").css("display", "none")
-        doc.append(
-          E("hr"),
-          E("p").html(`Documentation version:   <span style="font-family:var(--font-code)">v${docData.version}</span>\nUpdated to:   <span style="font-family:var(--font-code)">OptiFine ${docData.optifineVersion}</span>`)
-        )
-      } else documentation.show()
+        }).show()
+      }
+    }
+    if (window.cemTemplateAnimationDocReloaded) {
+      delete window.cemTemplateAnimationDocReloaded
+      showDocumentation()
     }
   }
 
@@ -2238,9 +2267,10 @@
     animationEditorPanel.delete()
     animationControlPanel.delete()
     animationStyles.delete()
-    documentation?.close()
+    optifineAnimationDocumentation.dialog?.close()
     resizeWindow()
     delete globalThis.optifineAnimationVariables
+    delete globalThis.optifineAnimationDocumentation
   }
 
   // PLUGIN
