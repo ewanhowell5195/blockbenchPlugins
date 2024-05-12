@@ -47,6 +47,8 @@
       creation_date: "2020-02-02",
       has_changelog: true,
       website: "https://ewanhowell.com/plugins/cem-template-loader/",
+      repository: "https://github.com/ewanhowell5195/blockbenchPlugins/tree/main/cem_template_loader",
+      bug_tracker: "https://github.com/ewanhowell5195/blockbenchPlugins/issues/new?title=[CEM Template Loader]",
       onload() {
         loadCEMTemplateLoader()
         loadOptiFineEntityRestrictions()
