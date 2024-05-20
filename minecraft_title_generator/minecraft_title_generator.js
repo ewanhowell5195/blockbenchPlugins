@@ -96,7 +96,7 @@
     author: "Ewan Howell",
     description,
     tags: ["Minecraft", "Title", "Logo"],
-    version: "1.5.0",
+    version: "1.5.1",
     min_version: "4.8.0",
     variant: "both",
     creation_date: "2023-06-10",
@@ -265,7 +265,7 @@
               create: () => format.new()
             },
             template: `
-              <div style="display:flex;flex-direction:column;height:100%">
+              <div class="ewan-format-page" style="display:flex;flex-direction:column;height:100%">
                 <p class="format_description">${description}</p>
                 <p class="format_target"><b>Target</b> : <span>Logos</span> <span>Renders</span> <span>Thumbnails</span></p>
                 <content>

@@ -43,7 +43,7 @@
     author,
     description,
     tags: ["Preview Scenes", "Blockbench"],
-    version: "1.1.1",
+    version: "1.1.2",
     min_version: "4.8.3",
     variant: "both",
     creation_date: "2022-10-14",
@@ -284,7 +284,7 @@
         format_page: {
           component: {
             template: `
-              <div style="display:flex;flex-direction:column;height:100%">
+              <div class="ewan-format-page" style="display:flex;flex-direction:column;height:100%">
                 <p class="format_description">${description}</p>
                 <p class="format_target"><b>Target</b> : <span>Blockbench</span></p>
                 <content>
