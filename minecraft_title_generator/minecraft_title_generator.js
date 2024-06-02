@@ -96,7 +96,7 @@
     author: "Ewan Howell",
     description,
     tags: ["Minecraft", "Title", "Logo"],
-    version: "1.5.1",
+    version: "1.5.2",
     min_version: "4.8.0",
     variant: "both",
     creation_date: "2023-06-10",
@@ -767,6 +767,11 @@
                       this.update(this.tabToUpdate)
                       this.tabToUpdate = false
                     }
+                  },
+                  checkResolution() {
+                    if (this.resolution > 2048) {
+                      this.resolution = 2048
+                    }
                   }
                 },
                 template: `
@@ -1132,7 +1137,7 @@
                 </div>
               </div>
               <div style="margin-right:-20px">Antialiasing:</div>
-              <input type="checkbox" :checked="antialias" v-model="antialias" @input="if (resolution > 2048) resolution = 2048">
+              <input type="checkbox" :checked="antialias" v-model="antialias" @input="resolution = Math.min(resolution, 2048)">
             </div>
           </div>
         `

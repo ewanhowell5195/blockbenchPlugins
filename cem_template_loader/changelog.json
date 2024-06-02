@@ -844,5 +844,18 @@
         ]
       }
     ]
+  },
+  "8.0.1": {
+    "title": "8.0.1",
+    "date": "2024-06-02",
+    "author": "Ewan Howell",
+    "categories": [
+      {
+        "title": "Bug Fixes",
+        "list": [
+          "Fixed Vue.js warnings"
+        ]
+      }
+    ]
   }
 }
