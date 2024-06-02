@@ -96,7 +96,7 @@
     author: "Ewan Howell",
     description,
     tags: ["Minecraft", "Title", "Logo"],
-    version: "1.5.2",
+    version: "1.5.1",
     min_version: "4.8.0",
     variant: "both",
     creation_date: "2023-06-10",

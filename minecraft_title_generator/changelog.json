@@ -343,7 +343,7 @@
   },
   "1.5.1": {
     "title": "1.5.1",
-    "date": "2024-05-20",
+    "date": "2024-06-02",
     "author": "Ewan Howell",
     "categories": [
       {
@@ -351,14 +351,7 @@
         "list": [
           "Added a class to the format page so it can be easily targetted by themes"
         ]
-      }
-    ]
-  },
-  "1.5.2": {
-    "title": "1.5.2",
-    "date": "2024-06-02",
-    "author": "Ewan Howell",
-    "categories": [
+      },
       {
         "title": "Bug Fixes",
         "list": [

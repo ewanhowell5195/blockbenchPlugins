@@ -834,7 +834,8 @@
           "The CEM Animation Editor can now be extended by other plugins",
           "The CEM Animation Documentation can now be extended by other plugins",
           "Added CDN url fallback system",
-          "The external model JSON file's version number will now be separated from the plugin's version number. I have reset that version number to 2.0.0 and it will increase separately from the plugin's version number from now on"
+          "The external model JSON file's version number will now be separated from the plugin's version number. I have reset that version number to 2.0.0 and it will increase separately from the plugin's version number from now on",
+          "Added a class to the format page so it can be easily targetted by themes"
         ]
       },
       {
