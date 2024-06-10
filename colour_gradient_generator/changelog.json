@@ -1,0 +1,62 @@
+{
+  "1.0.0": {
+    "title": "1.0.0",
+    "date": "2022-06-02",
+    "author": "Ewan Howell",
+    "categories": [
+      {
+        "title": "New Features",
+        "list": [
+          "Initial release"
+        ]
+      }
+    ]
+  },
+  "1.0.1": {
+    "title": "1.0.1",
+    "date": "2022-06-05",
+    "author": "Ewan Howell",
+    "categories": [
+      {
+        "title": "Changes",
+        "list": [
+          "Updated the plugin about"
+        ]
+      }
+    ]
+  },
+  "1.1.0": {
+    "title": "1.1.0",
+    "date": "2022-10-22",
+    "author": "Ewan Howell",
+    "categories": [
+      {
+        "title": "Technical Changes",
+        "list": [
+          "Stored data is now removed when uninstalling the plugin"
+        ]
+      }
+    ]
+  },
+  "1.2.0": {
+    "title": "1.2.0",
+    "date": "2023-01-19",
+    "author": "Ewan Howell",
+    "categories": [
+      {
+        "title": "Technical Changes",
+        "list": [
+          "Updated for Blockbench 4.6"
+        ]
+      }
+    ]
+  },
+  "2.0.0": {
+    "title": "2.0.0",
+    "date": "2024-06-10",
+    "author": "Ewan Howell",
+    "categories": [
+      {}
+    ]
+  }
+}
