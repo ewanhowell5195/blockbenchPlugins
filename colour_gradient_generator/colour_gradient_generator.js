@@ -21,7 +21,9 @@
         steps: storage.steps ?? 9,
         angle: storage.angle ?? 45,
         replace: storage.replace ?? false,
-        smallRanges: storage.smallRanges ?? true
+        smallRanges: storage.smallRanges ?? true,
+        brightnessRange: storage.brightnessRange ?? 1,
+        brightnessOffset: storage.brightnessOffset ?? 0
       }
       dialog = new Dialog({
         id,
@@ -32,11 +34,23 @@
           #colour-gradient-preview {
             display: flex;
             overflow-x: hidden;
+            padding-bottom: 8px;
 
             > div {
               background-color: red;
               flex: 1;
               height: 80px;
+              position: relative;
+
+              &.primary::before {
+                content: "";
+                position: absolute;
+                bottom: -8px;
+                height: 4px;
+                left: 0;
+                right: 0;
+                background-color: var(--color-accent);
+              }
             }
           }
 
@@ -67,7 +81,9 @@
         component: {
           data: {
             data,
-            colour: ColorPanel.get()
+            colour: ColorPanel.get(),
+            minBrightnessOffset: Math.min(0, data.brightnessOffset),
+            maxBrightnessOffset: Math.max(0, data.brightnessOffset)
           },
           methods: {
             save() {
@@ -86,15 +102,49 @@
 
               if (hsl.h >= 100 && hsl.h < 260) angle *= -1
 
-              const darker = Math.floor(this.data.steps * hsl.l)
-              const lighter = this.data.steps - darker - 1
+              let minLightness = Math.max(0, hsl.l - this.data.brightnessRange * hsl.l)
+              let maxLightness = Math.min(1, hsl.l + this.data.brightnessRange * (1 - hsl.l))
+
+              let darker = Math.min(this.data.steps - 1, Math.floor((this.data.steps * (hsl.l - minLightness) / (maxLightness - minLightness)).toFixed(10)))
+              let lighter = this.data.steps - darker - 1
+
+              this.minBrightnessOffset = darker > 0 && lighter > 0 ? -lighter : 0
+              this.maxBrightnessOffset = darker > 0 && lighter > 0 ? darker : 0
+              this.data.brightnessOffset = Math.max(this.minBrightnessOffset, Math.min(this.maxBrightnessOffset, this.data.brightnessOffset))
+
+              if (isNaN(darker)) {
+                darker = Math.floor(this.data.steps / 2)
+                lighter = this.data.steps - darker - 1
+              }
+
+              const position = (darker + 1) / (this.data.steps + 1)
+
+              let darkFraction = 1
+              let lightFraction = 1
+
+              if (darker > 0 && lighter > 0) {
+                if (this.data.brightnessOffset < 0) {
+                  const inside = lighter - Math.abs(this.data.brightnessOffset)
+                  const ratio = (darker - this.data.brightnessOffset) / darker
+                  lightFraction = inside / (ratio * lighter)
+                  maxLightness = Math.min(1, hsl.l + this.data.brightnessRange * lightFraction * (1 - hsl.l))
+                } else {
+                  const inside = darker - Math.abs(this.data.brightnessOffset)
+                  const ratio = (lighter + this.data.brightnessOffset) / lighter
+                  darkFraction = inside / (ratio * darker)
+                  minLightness = Math.max(0, hsl.l - this.data.brightnessRange * darkFraction * hsl.l)
+                }
+              }
+
+              darker = darker - this.data.brightnessOffset
+              lighter = lighter + this.data.brightnessOffset
 
               const colours = []
 
               for (let x = darker - 1; x >= 0; x--) {
                 const col = colour.toHsl()
-                col.l = Math.lerp(hsl.l, 0, (x + 1) / (darker + 1))
-                col.h = toPositiveAngle(col.h + Math.lerp(0, -angle / 2, (x + 1) / (darker + 1)))
+                col.l = Math.lerp(hsl.l, minLightness, (x + 1) / (darker + 1))
+                col.h = toPositiveAngle(col.h + Math.lerp(0, -angle * position * darkFraction, (x + 1) / (darker + 1)))
                 colours.push(tinycolor(col).toHexString())
               }
 
@@ -102,14 +152,14 @@
 
               for (let x = lighter - 1; x >= 0; x--) {
                 const col = colour.toHsl()
-                col.l = Math.lerp(1, hsl.l, (x + 1) / (lighter + 1))
-                col.h = toPositiveAngle(col.h + Math.lerp(angle / 2, 0, (x + 1) / (lighter + 1)))
+                col.l = Math.lerp(maxLightness, hsl.l, (x + 1) / (lighter + 1))
+                col.h = toPositiveAngle(col.h + Math.lerp(angle * (1 - position) * lightFraction, 0, (x + 1) / (lighter + 1)))
                 colours.push(tinycolor(col).toHexString())
               }
 
               this.save()
 
-              return colours
+              return new Set(colours)
             }
           },
           mounted() {
@@ -142,8 +192,22 @@
                 <numeric-input class="tool disp_text" v-model.number="data.angle" :min="data.smallRanges ? -120 : -360" :max="data.smallRanges ? 120 : 360" :step="1" />
               </div>
               <br>
+              <h2>Brightness Range</h2>
+              <p>The range of the brightness included in the gradient</p>
+              <div class="bar slider_input_combo">
+                <input type="range" class="tool disp_range" v-model.number="data.brightnessRange" min="0" :max="1" step="0.001" />
+                <numeric-input class="tool disp_text" v-model.number="data.brightnessRange" :min="0" :max="1" :step="0.001" />
+              </div>
+              <br>
+              <h2>Colour Offset</h2>
+              <p>Adjust the position of the selected colour within the gradient spectrum</p>
+              <div class="bar slider_input_combo">
+                <input type="range" class="tool disp_range" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" step="1" />
+                <numeric-input class="tool disp_text" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" :step="1" />
+              </div>
+              <br>
               <div id="colour-gradient-preview">
-                <div v-for="col in palette" :style="{ backgroundColor: col }"></div>
+                <div v-for="col in palette" :class="{ primary: col === colour }" :style="{ backgroundColor: col }"></div>
               </div>
               <br>
               <label class="checkbox-row">
@@ -175,7 +239,6 @@
         click: () => dialog.show()
       })
       Toolbars.palette.add(action)
-      dialog.show()
     },
     onuninstall() {
       localStorage.removeItem("colour_gradient_steps")
