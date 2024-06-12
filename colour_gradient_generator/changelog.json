@@ -53,10 +53,24 @@
   },
   "2.0.0": {
     "title": "2.0.0",
-    "date": "2024-06-10",
+    "date": "2024-06-13",
     "author": "Ewan Howell",
     "categories": [
-      {}
+      {
+        "title": "New Features",
+        "list": [
+          "Added a live colour palette preview",
+          "Added a new \"Brightness Range\" slider",
+          "Added a new \"Colour Offset\" slider",
+          "Added a toggle to limit the ranges to smaller ones, making it easier to be more precise"
+        ]
+      },
+      {
+        "title": "Technical Changes",
+        "list": [
+          "Rewritten from the ground up"
+        ]
+      }
     ]
   }
 }

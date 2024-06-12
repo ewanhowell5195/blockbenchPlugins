@@ -1,14 +1,25 @@
 <div id="about-content">
-  <p>This plugin adds a way to edit both plugin and theme files in a text editor of your choice, and have them automatically update inside Blockbench upon you saving the file.</p>
-  <p>When a plugin file is being watched for changes, it's <code>about.md</code> file will be automatically watched for changes too.</p>
-  <p>Theme files support both <code>.bbtheme</code> and <code>.css</code> files being watched.</p>
+  <p>This plugin generates hue shifted colour gradient palettes from a single colour.</p>
+  <h2>Example</h2>
+  <h3>Input Colour</h3>
+  <div class="about-colour-gradient">
+    <div style="background-color: #C14D34;"></div>
+    <div></div>
+  </div>
+  <h3>Output Gradient Palette</h3>
+  <div class="about-colour-gradient">
+    <div style="background-color: #260A11;"></div>
+    <div style="background-color: #4D151C;"></div>
+    <div style="background-color: #741F21;"></div>
+    <div style="background-color: #9A312A;"></div>
+    <div style="background-color: #C14D34;"></div>
+    <div style="background-color: #D27A58;"></div>
+    <div style="background-color: #DDA482;"></div>
+    <div style="background-color: #E9C9AB;"></div>
+    <div style="background-color: #F4E7D5;"></div>
+  </div>
   <h2>How to use</h2>
-  <h3>Watching files</h3>
-  <p>To watch a file, have a theme or plugin file ready, then go to <strong>Help > Developer > Live Dev Reloader</strong>. From here, select <strong>Watch plugin or theme file</strong>, then select your plugin or theme file.</p>
-  <h3>Unwatching files</h3>
-  <p>To stop watching a file, go to <strong>Help > Developer > Live Dev Reloader</strong> and select <strong>Stop watching plugin or theme file</strong>.</p>
-  <h3>Persistent mode</h3>
-  <p>To have a plugin or theme continue to be watched next time Blockbench is loaded, enable persistent mode. This can be found at <strong>Help > Developer > Live Dev Reloader > Persist after restart</strong>.</p>
+  <p>To use this plugin, go into paint mode and change the colour palette mode to <strong>Palette</strong> or <strong>Both</strong>. You can then select the <strong>Generate Colour Gradient</strong> button <i class="icon material-icons" style="translate:0 5px;">gradient</i> to start creating your gradient palette.</p>
 </div>
 <style>
   .about {
@@ -20,6 +31,34 @@
   #about-content {
     overflow-y: auto;
     min-height: 128px;
+  }
+  .about-colour-gradient {
+    display: flex;
+    filter: drop-shadow(0 3px 10px #0006);
+    padding: 0 20px;
+  }
+  .about-colour-gradient > div {
+    flex: 1;
+    aspect-ratio: 1;
+    position: relative;
+  }
+  .about-colour-gradient > div:nth-child(2):last-child {
+    flex: 8;
+    aspect-ratio: 0;
+  }
+  .about-colour-gradient > div:nth-child(5)::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -8px;
+    height: 4px;
+    background-color: var(--color-accent);
+  }
+  #about-markdown-links {
+    display: flex;
+    justify-content: space-around;
+    margin: 20px 20px 0;
   }
   #about-markdown-links > a {
     display: flex;
@@ -54,13 +93,13 @@
     margin: 0;
   }
 </style>
-<div id="about-markdown-links" style="display:flex;justify-content:space-around;margin:20px 20px 0">
+<div id="about-markdown-links">
   <a href="https://ewanhowell.com/">
-    <i class="material-icons icon" style="color:rgb(51, 227, 142)">language</i>
+    <i class="material-icons icon" style="color: rgb(51, 227, 142);">language</i>
     <p>By Ewan Howell</p>
   </a>
   <a href="https://discord.ewanhowell.com/">
-    <i class="fa_big icon fab fa-discord" style="color:rgb(114, 127, 255)"></i>
+    <i class="fa_big icon fab fa-discord" style="color: rgb(114, 127, 255);"></i>
     <p>Discord Server</p>
   </a>
 </div>

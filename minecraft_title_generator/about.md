@@ -3,7 +3,6 @@
   <p>This plugin adds a new format that allows you to create Minecraft-styled title models that you can render in high quality.</p>
   <h2>Getting started</h2>
   <p>To use this plugin, start by creating a new <strong>Minecraft Title</strong> project from the start screen, or go to <strong>File > New > Minecraft Title</strong> You can then use the pop-up dialog to add some text to the project. Don't forget to set the text type! You can add more text by using the <strong>Add Text</strong> button <i class="icon material-icons" style="translate:0 5px">text_fields</i> in the outliner.</p>
-  <br><br>
   <p>Once you are done configuring your text, you can go to the <strong>Render</strong> tab at the top right to produce a high-quality render of your title. The <strong>Position Camera</strong> button <i class="icon material-icons" style="translate:0 5px">auto_mode</i> will set the camera angle for you.</p>
 </div>
 <style>

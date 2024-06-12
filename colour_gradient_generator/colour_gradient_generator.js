@@ -42,7 +42,8 @@
           #colour-gradient-preview {
             display: flex;
             overflow-x: hidden;
-            padding-bottom: 8px;
+            filter: drop-shadow(0 3px 10px #0006);
+            padding: 0 20px 8px;
 
             > div {
               background-color: red;
