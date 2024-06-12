@@ -1,6 +1,14 @@
 (() => {
   let action, dialog, data
   const id = "colour_gradient_generator"
+  const defaults = {
+    steps: 9,
+    angle: 45,
+    replace: false,
+    smallRanges: true,
+    brightnessRange: 1,
+    brightnessOffset: 0
+  }
   Plugin.register(id, {
     title: "Colour Gradient Generator",
     icon: "icon.png",
@@ -18,12 +26,12 @@
     onload() {
       const storage = JSON.parse(localStorage.getItem("colour_gradient_generator") ?? "{}")
       data = { 
-        steps: storage.steps ?? 9,
-        angle: storage.angle ?? 45,
-        replace: storage.replace ?? false,
-        smallRanges: storage.smallRanges ?? true,
-        brightnessRange: storage.brightnessRange ?? 1,
-        brightnessOffset: storage.brightnessOffset ?? 0
+        steps: storage.steps ?? defaults.steps,
+        angle: storage.angle ?? defaults.angle,
+        replace: storage.replace ?? defaults.replace,
+        smallRanges: storage.smallRanges ?? defaults.smallRanges,
+        brightnessRange: storage.brightnessRange ?? defaults.brightnessRange,
+        brightnessOffset: storage.brightnessOffset ?? defaults.brightnessOffset
       }
       dialog = new Dialog({
         id,
@@ -55,6 +63,20 @@
           }
 
           #colour_gradient_generator {
+            .header-bar {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+
+              > i {
+                cursor: pointer;
+
+                &:hover {
+                  color: var(--color-light);
+                }
+              }
+            }
+
             .sp-replacer {
               width: 100%;
               display: flex;
@@ -76,11 +98,22 @@
                 cursor: pointer;
               }
             }
+
+            .disabled {
+              opacity: .5;
+              position: relative;
+              cursor: not-allowed;
+
+              > * {
+                pointer-events: none;
+              }
+            }
           }
         </style>`],
         component: {
           data: {
             data,
+            defaults,
             colour: ColorPanel.get(),
             minBrightnessOffset: Math.min(0, data.brightnessOffset),
             maxBrightnessOffset: Math.max(0, data.brightnessOffset)
@@ -92,6 +125,14 @@
             clamp() {
               this.data.steps = Math.min(32, this.data.steps)
               this.data.angle = Math.max(-120, Math.min(120, this.data.angle))
+            },
+            reset() {
+              this.data.steps = defaults.steps
+              this.data.angle = defaults.angle
+              this.data.replace = defaults.replace
+              this.data.smallRanges = defaults.smallRanges
+              this.data.brightnessRange = defaults.brightnessRange
+              this.data.brightnessOffset = defaults.brightnessOffset
             }
           },
           computed: {
@@ -175,35 +216,50 @@
           },
           template: `
             <div>
+              <div title="Reset values back to their defaults" class="dialog_close_button" style="right: 30px; z-index: 3;" @click="reset"><i class="material-icons">replay</i></div>
               <h2>Colour</h2>
               <input ref="colour" />
               <br>
-              <h2>Colour Count</h2>
+              <div class="header-bar">
+                <h2>Colour Count</h2>
+                <i title="Reset" class="material-icons" @click="data.steps = defaults.steps">replay</i>
+              </div>
               <p>The number of colours to include in the gradient</p>
               <div class="bar slider_input_combo">
                 <input type="range" class="tool disp_range" v-model.number="data.steps" min="3" :max="data.smallRanges ? 32 : 256" step="1" />
                 <numeric-input class="tool disp_text" v-model.number="data.steps" :min="3" :max="data.smallRanges ? 32 : 256" :step="1" />
               </div>
               <br>
-              <h2>Hue Shifting Angle</h2>
+              <div class="header-bar">
+                <h2>Hue Shifting Angle</h2>
+                <i title="Reset" class="material-icons" @click="data.angle = defaults.angle">replay</i>
+              </div>
               <p>The amount of degrees over which the hue shifting occurs</p>
               <div class="bar slider_input_combo">
                 <input type="range" class="tool disp_range" v-model.number="data.angle" :min="data.smallRanges ? -120 : -360" :max="data.smallRanges ? 120 : 360" step="1" />
                 <numeric-input class="tool disp_text" v-model.number="data.angle" :min="data.smallRanges ? -120 : -360" :max="data.smallRanges ? 120 : 360" :step="1" />
               </div>
               <br>
-              <h2>Brightness Range</h2>
+              <div class="header-bar">
+                <h2>Brightness Range</h2>
+                <i title="Reset" class="material-icons" @click="data.brightnessRange = defaults.brightnessRange">replay</i>
+              </div>
               <p>The range of the brightness included in the gradient</p>
               <div class="bar slider_input_combo">
                 <input type="range" class="tool disp_range" v-model.number="data.brightnessRange" min="0" :max="1" step="0.001" />
                 <numeric-input class="tool disp_text" v-model.number="data.brightnessRange" :min="0" :max="1" :step="0.001" />
               </div>
               <br>
-              <h2>Colour Offset</h2>
-              <p>Adjust the position of the selected colour within the gradient spectrum</p>
-              <div class="bar slider_input_combo">
-                <input type="range" class="tool disp_range" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" step="1" />
-                <numeric-input class="tool disp_text" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" :step="1" />
+              <div :class="{ disabled: !minBrightnessOffset && !maxBrightnessOffset }">
+                <div class="header-bar">
+                  <h2>Colour Offset</h2>
+                  <i title="Reset" class="material-icons" @click="data.brightnessOffset = defaults.brightnessOffset">replay</i>
+                </div>
+                <p>Adjust the position of the selected colour within the gradient spectrum</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" step="1" />
+                  <numeric-input class="tool disp_text" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" :step="1" />
+                </div>
               </div>
               <br>
               <div id="colour-gradient-preview">
