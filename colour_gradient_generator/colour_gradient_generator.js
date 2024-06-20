@@ -24,8 +24,8 @@
     creation_date: "2022-06-02",
     has_changelog: true,
     onload() {
-      const storage = JSON.parse(localStorage.getItem("colour_gradient_generator") ?? "{}")
-      data = { 
+      const storage = JSON.parse(localStorage.getItem(id) ?? "{}")
+      data = {
         steps: storage.steps ?? defaults.steps,
         angle: storage.angle ?? defaults.angle,
         replace: storage.replace ?? defaults.replace,
@@ -121,7 +121,7 @@
           },
           methods: {
             save() {
-              localStorage.setItem("colour_gradient_generator", JSON.stringify(this.data))
+              localStorage.setItem(id, JSON.stringify(this.data))
             },
             clamp() {
               this.data.steps = Math.min(32, this.data.steps)
