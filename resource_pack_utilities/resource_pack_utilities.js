@@ -777,7 +777,7 @@
         }
       `,
       template: `
-        <div class="progress-text">{{ total === null ? "Loading..." : displayedCurrent === total ? "Finished" : "Processing..." }}</div>
+        <div class="progress-text">{{ total === null ? "Loading…" : displayedCurrent === total ? "Finished" : "Processing…" }}</div>
         <div class="progress-bar-container">
           <div class="progress-bar" :style="{ width: 'calc(' + progressPercentage + '% - 8px)' }"></div>
         </div>
@@ -1268,7 +1268,7 @@
     packCreator: {
       name: "Pack Creator",
       tagline: "Create template resource packs and get the vanilla assets.",
-      description: "Pack Creator is a tool that allows you to create template resource packs, as well as get the vanilla textures, models, sounds, etc....",
+      description: "Pack Creator is a tool that allows you to create template resource packs, as well as get the vanilla textures, models, sounds, etc…",
       component: {
         data: {
           folder: null,
@@ -1321,12 +1321,12 @@
             <div class="col spacer">
               <h3>Output Location:</h3>
               <folder-selector v-model="folder">the folder to optimise the CIT properties of</folder-selector>
-              <input-row v-model="name" placeholder="Enter name..." width="120" :required="attemptedStart && !name.length">Pack Name</input-row>
-              <input-row v-model="description" placeholder="Enter description..." width="120">Pack Description</input-row>
+              <input-row v-model="name" placeholder="Enter name…" width="120" :required="attemptedStart && !name.length">Pack Name</input-row>
+              <input-row v-model="description" placeholder="Enter description…" width="120">Pack Description</input-row>
               <version-selector />
               <div>
                 <checkbox-row v-model="assets" @input="assetsToggle">Import vanilla assets</checkbox-row>
-                <checkbox-row v-model="objects" :disabled="!assets">Also include objects (sounds, languages, panorama, etc...)</checkbox-row>
+                <checkbox-row v-model="objects" :disabled="!assets">Also include objects (sounds, languages, panorama, etc…)</checkbox-row>
               </div>
             </div>
             <div class="col">
