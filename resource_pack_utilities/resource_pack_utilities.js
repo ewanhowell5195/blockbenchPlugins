@@ -1,11 +1,17 @@
 (() => {
   const path = require("node:path")
   const os = require("node:os")
-  let dialog, action
+  let dialog, action, styles
   const id = "resource_pack_utilities"
   const name = "Resource Pack Utilities"
   const icon = "construction"
   const description = "Utilities for working with resource packs"
+
+  const releasePattern = new RegExp("^[\\d\\.]+$")
+  const manifest = {
+    latest: {},
+    versions: []
+  }
 
   const setupPlugin = () => Plugin.register(id, {
     title: name,
@@ -59,6 +65,22 @@
           }
         }
       }
+      styles = Blockbench.addCSS(`
+        @keyframes shake {
+          0%, 100% {
+            transform: translateX(0);
+            outline: 0 solid transparent;
+          }
+          12.5%, 62.5% {
+            transform: translateX(10px);
+            outline: 4px solid var(--color-danger);
+          }
+          37.5%, 87.5% {
+            transform: translateX(-10px);
+            outline: 4px solid var(--color-danger);
+          }
+        }
+      `)
       dialog = new Dialog({
         id,
         title: name,
@@ -166,6 +188,11 @@
             background-color: var(--color-back);
             position: relative;
             padding: 8px 40px 16px 16px;
+
+            h1 {
+              font-weight: 600;
+              color: var(--color-light);
+            }
           }
 
           #back-button {
@@ -200,11 +227,29 @@
 
           .utility {
             margin: 16px;
+            display: flex;
+            gap: 16px;
+            flex-direction: column;
 
-            > div {
+            > div, .col {
               display: flex;
               gap: 16px;
               flex-direction: column;
+            }
+
+            .row {
+              display: flex;
+              gap: 48px;
+              flex-direction: row;
+            }
+          }
+
+          .component-checkboxRow > .disabled {
+            cursor: not-allowed;
+
+            * {
+              color: var(--color-subtle_text);
+              cursor: not-allowed;
             }
           }
 
@@ -215,27 +260,25 @@
           data: {
             utility: null,
             utilities,
-            processing: false
+            status: {
+              processing: false,
+              finished: false
+            }
           },
           components: Object.fromEntries(Object.entries(utilities).map(([k, v]) => {
-            v.component.props = {
-              value: {
-                type: Boolean,
-                default: false
-              }
-            }
+            v.component.props = ["value"]
             const data = v.component.data
             v.component.data = function() {
               return {
                 ...data,
-                processing: this.value
+                status: this.value
               }
             }
             v.component.watch = {
               value(val) {
-                this.processing = val
+                this.status = val
               },
-              processing(val) {
+              status(val) {
                 this.$emit("input", val)
               }
             }
@@ -249,8 +292,8 @@
             return [k, Vue.extend(v.component)]
           })),
           watch: {
-            processing(val) {
-              if (val) {
+            status(val) {
+              if (val.processing) {
                 const styles = document.createElement("style")
                 styles.id = `${id}-processing-styles`
                 styles.innerHTML = `
@@ -325,7 +368,7 @@
               <div v-if="utility" id="header">
                 <h1>{{ utilities[utility].name }}</h1>
                 <span>{{ utilities[utility].description }}</span>
-                <button id="back-button" @click="utility = null" :disabled="processing"><i class="material-icons">arrow_back</i> Back</button>
+                <button id="back-button" @click="utility = null; status.finished = false" :disabled="status.processing"><i class="material-icons">arrow_back</i> Back</button>
                 <button v-if="utilities[utility].info" id="info-button" class="material-icons icon" @click="showInfo">info</button>
               </div>
               <div v-if="utility === null" id="home">
@@ -334,12 +377,18 @@
                   <div>{{ data.tagline }}</div>
                 </div>
               </div>
-              <component v-for="(data, id) in utilities" v-if="utility === id" :is="id" v-model="processing"></component>
+              <component v-for="(data, id) in utilities" v-if="utility === id" :is="id" v-model="status"></component>
             </div>
           `
         },
         onConfirm(r, e) {
           if (Keybinds.extra.confirm.keybind.isTriggered(e)) return false
+        },
+        async onBuild() {
+          const data = await fetch("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json").then(e => e.json())
+          data.versions.splice(data.versions.findIndex(e => e.id === "1.6"), 1)
+          manifest.latest = data.latest
+          manifest.versions = data.versions.slice(0, data.versions.findIndex(e => e.id === "13w24a") + 1)
         }
       })
       action = new Action({
@@ -350,12 +399,13 @@
         click: () => dialog.show()
       })
       MenuBar.addAction(action, "tools")
-      // dialog.show()
-      // dialog.content_vue.utility = "citOptimiser"
+      dialog.show()
+      dialog.content_vue.utility = "packCreator"
     },
     onunload() {
       dialog.close()
       action.delete()
+      styles.delete()
       document.getElementById(`${id}-processing-styles`)?.remove()
     }
   })
@@ -453,9 +503,9 @@
       `
     },
     checkboxRow: {
-      props: ["value"],
+      props: ["value", "disabled"],
       styles: `
-        .checkbox-row {
+        label {
           display: flex;
           gap: 4px;
           align-items: center;
@@ -467,19 +517,35 @@
         }
       `,
       template: `
-        <label class="checkbox-row">
-          <input type="checkbox" :checked="value" @input="$emit('input', $event.target.checked)">
+        <label :class="{ disabled }">
+          <input type="checkbox" :checked="value" :disabled="disabled" @input="$emit('input', $event.target.checked)">
           <div><slot></slot></div>
         </label>
       `
     },
-    ignoreList: {
-      props: {
-        value: {
-          type: Array,
-          default: () => []
+    inputRow: {
+      props: ["value", "placeholder", "width", "required"],
+      styles: `
+        display: flex;
+        gap: 8px;
+        align-items: center;
+
+        input {
+          flex: 1;
         }
-      },
+
+        .required {
+          border: 1px solid var(--color-error);
+          animation: shake .5s ease-in-out;
+        }
+      `,
+      template: `
+        <div :style="{ width: width ? width.toString() + 'px' : 'initial' }"><slot></slot>:</div>
+        <input type="text" :class="{ required }" :placeholder="placeholder" :value="value" @input="$emit('input', $event.target.value)">
+      `
+    },
+    ignoreList: {
+      props: ["value"],
       data() {
         return {
           newWord: "",
@@ -560,11 +626,7 @@
       `
     },
     outputLog: {
-      props: {
-        value: {
-          type: Array
-        }
-      },
+      props: ["value"],
       data() {
         return {
           logs: [],
@@ -665,14 +727,7 @@
       `
     },
     progressBar: {
-      props: {
-        current: {
-          type: Number
-        },
-        total: {
-          type: Number
-        }
-      },
+      props: ["current", "total"],
       data() {
         return {
           displayedCurrent: 0,
@@ -727,6 +782,71 @@
           <div class="progress-bar" :style="{ width: 'calc(' + progressPercentage + '% - 8px)' }"></div>
         </div>
         <div>{{ displayedCurrent }} / {{ total }} - {{ progressPercentage }}%</div>
+      `
+    },
+    versionSelector: {
+      props: {
+        width: {
+          default: 120
+        }
+      },
+      data() {
+        return {
+          version: manifest.versions.find(e => releasePattern.test(e.id))?.id,
+          snapshots: false,
+          manifest,
+          releasePattern
+        }
+      },
+      watch: {
+        manifest: {
+          handler(val) {
+            if (this.snapshots) {
+              this.version = val.versions.find(e => !releasePattern.test(e.id)).id
+            } else {
+              this.version = val.versions.find(e => releasePattern.test(e.id)).id
+            }
+          },
+          deep: true
+        }
+      },
+      methods: {
+        change() {
+          this.version = this.manifest.versions.find(e => this.snapshots ? !releasePattern.test(e.id) : releasePattern.test(e.id)).id
+          this.manifest.versions.find(e => {
+            return releasePattern.test(e.id)
+          })
+        }
+      },
+      styles: `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        bb-select {
+          flex: 1;
+          min-width: 100px;
+          cursor: pointer;
+        }
+
+        label {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          cursor: pointer;
+
+          * {
+            cursor: pointer;
+          }
+        }
+      `,
+      template: `
+        <div :style="{ width: width.toString() + 'px' }">Minecraft Version:</div>
+        <select-input v-model="version" :options="Object.fromEntries(manifest.versions.filter(e => snapshots ? !releasePattern.test(e.id) : releasePattern.test(e.id)).map(e => [e.id, e.id]))" />
+        <label>
+          <input type="checkbox" v-model="snapshots" @change="change">
+          <div>Snapshots</div>
+        </label>
       `
     }
   }
@@ -803,18 +923,19 @@
           },
           ignoreList: [],
           outputLog: [],
-          finished: false,
           done: 0,
-          total: null
+          total: null,
+          cancelled: false
         },
         methods: {
           async execute() {
             if (!(await confirm("Run JSON Optimiser?", `Are you sure you want to run JSON Optimiser over the following folder:\n<code>${formatPath(this.folder)}</code>\n\nMake a backup first if you would like to keep an un-optimised version of the folder.`))) return
             this.outputLog = []
-            this.finished = false
-            this.processing = true
+            this.status.finished = false
+            this.status.processing = true
             this.done = 0
             this.total = null
+            this.cancelled = false
 
             const mcmetaKeys = [ "credit", "animation", "villager", "texture", "pack", "language", "filter", "overlays", "gui" ]
             const animationKeys = [ "interpolate", "width", "height", "frametime", "frames" ]
@@ -884,6 +1005,7 @@
             let afterTotal = 0
 
             for (const file of files) {
+              if (this.cancelled) break
               const shortened = formatPath(file.slice(this.folder.length)).replace(/^\//, "")
               const before = (await fs.promises.stat(file)).size
               beforeTotal += before
@@ -1021,30 +1143,33 @@
               this.outputLog.push(`${shortened}\nBefore: ${formatBytes(before)}\nAfter: ${formatBytes(after)}`)
               this.done++
             }
+            this.total = this.done
             this.outputLog.push(`Compressed ${this.total} files\nBefore: ${formatBytes(beforeTotal)}\nAfter: ${formatBytes(afterTotal)}\nSaved: ${formatBytes(beforeTotal - afterTotal)}`)
-            this.processing = false
-            this.finished = true
+            this.status.processing = false
+            this.status.finished = true
           }
         },
         template: `
-          <div v-if="!processing && !finished">
-            <h3>Folder to optimise:</h3>
+          <div v-if="!status.processing && !status.finished">
+            <h3>Folder to Optimise:</h3>
             <folder-selector v-model="folder">the folder to optimise the JSON of</folder-selector>
-            <div style="display: flex; justify-content: space-between;">
+            <div class="row">
               <div>
                 <checkbox-row v-model="types.json">Optimise <code>.json</code> files</checkbox-row>
                 <checkbox-row v-model="types.mcmeta">Optimise <code>.mcmeta</code> files</checkbox-row>
                 <checkbox-row v-model="types.jem">Optimise <code>.jem</code> files</checkbox-row>
                 <checkbox-row v-model="types.jpm">Optimise <code>.jpm</code> files</checkbox-row>
               </div>
-              <ignore-list v-model="ignoreList"></ignore-list>
+              <div class="spacer"></div>
+              <ignore-list v-model="ignoreList" />
             </div>
-            <button :disabled="!folder" @click="execute">Start</button>
+            <button :disabled="!folder" @click="execute">Optimise</button>
           </div>
           <div v-else>
-            <progress-bar :current="done" :total="total"></progress-bar>
-            <output-log v-model="outputLog"></output-log>
-            <button :disabled="processing" @click="finished = false">Done</button>
+            <progress-bar :current="done" :total="total" />
+            <output-log v-model="outputLog" />
+            <button v-if="status.processing" @click="cancelled = true">Cancel</button>
+            <button v-else @click="status.finished = false">Done</button>
           </div>
         `
       }
@@ -1068,18 +1193,19 @@
           folder: null,
           ignoreList: [],
           outputLog: [],
-          finished: false,
           done: 0,
-          total: null
+          total: null,
+          cancelled: false
         },
         methods: {
           async execute() {
             if (!(await confirm("Run CIT Optimiser?", `Are you sure you want to run CIT Optimiser over the following folder:\n<code>${formatPath(this.folder)}</code>\n\nMake a backup first if you would like to keep an un-optimised version of the folder.`))) return
             this.outputLog = []
-            this.finished = false
-            this.processing = true
+            this.status.finished = false
+            this.status.processing = true
             this.done = 0
             this.total = null
+            this.cancelled = false
 
             const files = []
             for await (const file of getFiles(this.folder)) {
@@ -1096,6 +1222,7 @@
             let afterTotal = 0
 
             for (const file of files) {
+              if (this.cancelled) break
               const shortened = formatPath(file.slice(this.folder.length)).replace(/^\//, "")
               const before = (await fs.promises.stat(file)).size
               beforeTotal += before
@@ -1116,29 +1243,110 @@
               this.outputLog.push(`${shortened}\nBefore: ${formatBytes(before)}\nAfter: ${formatBytes(after)}`)
               this.done++
             }
+            this.total = this.done
             this.outputLog.push(`Compressed ${this.total} files\nBefore: ${formatBytes(beforeTotal)}\nAfter: ${formatBytes(afterTotal)}\nSaved: ${formatBytes(beforeTotal - afterTotal)}`)
-            this.processing = false
-            this.finished = true
+            this.status.processing = false
+            this.status.finished = true
           }
         },
         template: `
-          <div v-if="!processing && !finished">
-            <h3>Folder to optimise:</h3>
+          <div v-if="!status.processing && !status.finished">
+            <h3>Folder to Optimise:</h3>
             <folder-selector v-model="folder">the folder to optimise the CIT properties of</folder-selector>
-            <ignore-list v-model="ignoreList" style="align-self: flex-start;"></ignore-list>
-            <button :disabled="!folder" @click="execute">Start</button>
+            <ignore-list v-model="ignoreList" style="align-self: flex-start;" />
+            <button :disabled="!folder" @click="execute">Optimise</button>
           </div>
           <div v-else>
-            <progress-bar :current="done" :total="total"></progress-bar>
-            <output-log v-model="outputLog"></output-log>
-            <button :disabled="processing" @click="finished = false">Done</button>
+            <progress-bar :current="done" :total="total" />
+            <output-log v-model="outputLog" />
+            <button v-if="status.processing" @click="cancelled = true">Cancel</button>
+            <button v-else @click="status.finished = false">Done</button>
           </div>
+        `
+      }
+    },
+    packCreator: {
+      name: "Pack Creator",
+      tagline: "Create template resource packs and get the vanilla assets.",
+      description: "Pack Creator is a tool that allows you to create template resource packs, as well as get the vanilla textures, models, sounds, etc....",
+      component: {
+        data: {
+          folder: null,
+          name: "",
+          description: "",
+          attemptedStart: false,
+          assets: false,
+          objects: false,
+          create: {
+            blockstates: false,
+            models: false,
+            optifine: false,
+            textures: false,
+            sounds: false,
+            emissive: false
+          }
+        },
+        created() {
+          this.folder = formatPath(path.join(settings.minecraft_directory.value, "resourcepacks"))
+        },
+        methods: {
+          async execute() {
+            this.name = this.name.trim()
+            this.description = this.description.trim()
+            if (!this.name) {
+              return this.attemptedStart = true
+            }
+            this.staus.processing = true
+            this.status.finished = true
+            console.log(this.name, this.description)
+          },
+          assetsToggle() {
+            if (!this.vanillaAssets) {
+              this.objects = false
+            }
+          },
+          optifineToggle() {
+            if (!this.create.optifine) {
+              this.create.emissive = false
+            }
+          },
+          emissiveToggle() {
+            if (this.create.emissive) {
+              this.create.optifine = true
+            }
+          }
+        },
+        template: `
+          <div class="row">
+            <div class="col spacer">
+              <h3>Output Location:</h3>
+              <folder-selector v-model="folder">the folder to optimise the CIT properties of</folder-selector>
+              <input-row v-model="name" placeholder="Enter name..." width="120" :required="attemptedStart && !name.length">Pack Name</input-row>
+              <input-row v-model="description" placeholder="Enter description..." width="120">Pack Description</input-row>
+              <version-selector />
+              <div>
+                <checkbox-row v-model="assets" @input="assetsToggle">Import vanilla assets</checkbox-row>
+                <checkbox-row v-model="objects" :disabled="!assets">Also include objects (sounds, languages, panorama, etc...)</checkbox-row>
+              </div>
+            </div>
+            <div class="col">
+              <h3>Create Folders:</h3>
+              <div>
+                <checkbox-row v-model="create.blockstates">blockstates</checkbox-row>
+                <checkbox-row v-model="create.models">models</checkbox-row>
+                <checkbox-row v-model="create.optifine" @input="optifineToggle">optifine</checkbox-row>
+                <checkbox-row v-model="create.textures">textures</checkbox-row>
+                <checkbox-row v-model="create.sounds">sounds</checkbox-row>
+              </div>
+              <h3>Create Files:</h3>
+              <checkbox-row v-model="create.emissive" @input="emissiveToggle">emissive.properties</checkbox-row>
+            </div>
+          </div>
+          <button :disabled="!folder" @click="execute">Create</button>
         `
       }
     }
   }
-
-  // Plugin
 
   setupPlugin()
 })()
