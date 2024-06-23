@@ -58,7 +58,7 @@
         }
       })
       new Setting("cache_directory", {
-        value: directory,
+        value: "",
         category: "defaults",
         type: "click",
         name: `${name} - Cache Directory`,
@@ -1488,7 +1488,7 @@
       component: {
         data: {
           folder: null,
-          name: "testtest",
+          name: "",
           description: "",
           attemptedStart: false,
           assets: false,
