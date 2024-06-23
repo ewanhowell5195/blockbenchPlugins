@@ -1007,7 +1007,7 @@
       },
       data() {
         return {
-          version: this.value ?? manifest.versions.find(e => releasePattern.test(e.id))?.id,
+          version: this.value || manifest.versions.find(e => releasePattern.test(e.id))?.id,
           snapshots: false,
           manifest,
           releasePattern
