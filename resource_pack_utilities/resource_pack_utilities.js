@@ -9,7 +9,7 @@
   const description = "Utilities for working with resource packs"
 
   const releasePattern = new RegExp("^[\\d\\.]+$")
-  const invalidDirPattern = new RegExp('[\\\\/:*?"<>|]')
+  const invalidDirPattern = new RegExp('[\\\\/:*?"<>|`]')
   const manifest = {
     latest: {},
     versions: []
@@ -87,6 +87,12 @@
         }
       }
       styles = Blockbench.addCSS(`
+        .rpu-code {
+          background-color: var(--color-back);
+          border: 1px solid var(--color-border);
+          padding: 0 2px;
+        }
+
         @keyframes shake {
           0%, 100% {
             transform: translateX(0);
@@ -410,6 +416,28 @@
           data.versions.splice(data.versions.findIndex(e => e.id === "1.6"), 1)
           manifest.latest = data.latest
           manifest.versions = data.versions.slice(0, data.versions.findIndex(e => e.id === "13w24a") + 1)
+        },
+        async onOpen() {
+          if (!await exists(settings.minecraft_directory.value)) {
+            new Dialog({
+              title: "The .minecraft directory was not found",
+              lines: ['When prompted, please select your <code class="rpu-code">.minecraft</code> folder'],
+              width: 450,
+              buttons: ["dialog.ok"],
+              onClose() {
+                const dir = Blockbench.pickDirectory({
+                  title: "Select your .minecraft folder",
+                  startpath: settings.minecraft_directory.value
+                })
+                if (dir) {
+                  settings.minecraft_directory.value = dir
+                  Settings.saveLocalStorages()
+                } else {
+                  dialog.close()
+                }
+              }
+            }).show()
+          }
         }
       })
       action = new Action({
@@ -421,8 +449,8 @@
       })
       MenuBar.addAction(action, "tools")
       document.addEventListener("keydown", copyText)
-      // dialog.show()
-      // dialog.content_vue.utility = "packCreator"
+      dialog.show()
+      dialog.content_vue.utility = "packCreator"
     },
     onunload() {
       document.removeEventListener("keydown", copyText)
@@ -576,16 +604,27 @@
   async function cacheDirectory() {
     if (!await exists(settings.cache_directory.value)) {
       outputLog.push("Cache directory not found. Please set a new one")
-      let dir
-      while (!dir) {
-        dir = Blockbench.pickDirectory({
-          title: "Select a folder to cache downloaded content",
-          startpath: settings.cache_directory.value
-        })
-      }
-      settings.cache_directory.value = dir
-      Settings.saveLocalStorages()
-      outputLog.push(`Cache directory set to \`${settings.cache_directory.value}\``)
+      return new Promise(fulfil => {
+        new Dialog({
+          title: "The cache directory was not found",
+          lines: ["When prompted, please select a folder to cache downloaded content"],
+          width: 512,
+          buttons: ["dialog.ok"],
+          onClose() {
+            let dir
+            while (!dir) {
+              dir = Blockbench.pickDirectory({
+                title: "Select a folder to cache downloaded content",
+                startpath: settings.cache_directory.value
+              })
+            }
+            settings.cache_directory.value = dir
+            Settings.saveLocalStorages()
+            outputLog.push(`Cache directory set to \`${formatPath(settings.cache_directory.value)}\``)
+            fulfil()
+          }
+        }).show()
+      })
     }
   }
 
@@ -865,7 +904,7 @@
           container.scrollTop = container.scrollHeight
         },
         copy() {
-          navigator.clipboard.writeText(this.value.join("\n\n"))
+          navigator.clipboard.writeText(this.value.join("\n\n").replaceAll("`", ""))
           Blockbench.showQuickMessage("Log copied")
         },
         save() {
@@ -873,7 +912,7 @@
             extensions: ["txt"],
             type: "Text file",
             name: "log",
-            content: this.value.join("\n\n")
+            content: this.value.join("\n\n").replaceAll("`", "")
           }, () => Blockbench.showQuickMessage("Saved log"))
         }
       },
@@ -925,7 +964,7 @@
       `,
       template: `
         <div class="log" ref="log">
-          <div v-for="(log, index) in logs" :key="index" v-html="log.replace(/\`([^\`]*)\`/g, '<code>$1</code>')"></div>
+          <div v-for="(log, index) in logs" :key="index" v-html="log.replace(/\`([^\`]*)\`/g, '<code>$1</code>').replaceAll('\uE000', '\`')"></div>
         </div>
         <div class="buttons">
           <button class="has-icon" @click="copy">
@@ -994,7 +1033,7 @@
         <div class="progress-bar-container">
           <div class="progress-bar" :style="{ width: 'calc(' + progressPercentage + '% - 8px)' }"></div>
         </div>
-        <div v-if="typeof total === 'number'">{{ displayedDone }} / {{ total }} - {{ progressPercentage }}%</div>
+        <div v-if="typeof total === 'number' && total">{{ displayedDone }} / {{ total }} - {{ progressPercentage }}%</div>
         <div v-else>{{ progressPercentage }}%</div>
       `
     },
@@ -1025,8 +1064,11 @@
           },
           deep: true
         },
-        version(val) {
-          this.$emit("input", val)
+        version: {
+          handler(val) {
+            this.$emit("input", val)
+          },
+          immediate: true
         }
       },
       methods: {
@@ -1229,7 +1271,7 @@
               try {
                 data = JSON.parse((await fs.promises.readFile(file, "utf-8")).trim())
               } catch (err) {
-                outputLog.push(`Skipping ${shortened} as it could not be read`)
+                outputLog.push(`Skipping \`${shortened}\` as it could not be read`)
                 this.done++
                 continue
               }
@@ -1266,7 +1308,7 @@
                 if (file.endsWith(".png.mcmeta")) {
                   if (!fs.existsSync(file.slice(0, -7))) {
                     fs.rmSync(file)
-                    outputLog.push(`${shortened}\nBefore: ${formatBytes(before)}\nAfter: 0 B`)
+                    outputLog.push(`\`${shortened}\`\nBefore: ${formatBytes(before)}\nAfter: 0 B`)
                     this.done++
                     continue
                   }
@@ -1356,7 +1398,7 @@
               await fs.promises.writeFile(file, JSON.stringify(data), "utf-8")
               const after = (await fs.promises.stat(file)).size
               afterTotal += after
-              outputLog.push(`${shortened}\nBefore: ${formatBytes(before)}\nAfter: ${formatBytes(after)}`)
+              outputLog.push(`\`${shortened}\`\nBefore: ${formatBytes(before)}\nAfter: ${formatBytes(after)}`)
               this.done++
             }
             this.total = this.done
@@ -1446,7 +1488,7 @@
               try {
                 data = (await fs.promises.readFile(file, "utf-8")).trim()
               } catch (err) {
-                outputLog.push(`Skipping ${shortened} as it could not be read`)
+                outputLog.push(`Skipping \`${shortened}\` as it could not be read`)
                 this.done++
                 continue
               }
@@ -1456,7 +1498,7 @@
               await fs.promises.writeFile(file, data, "utf-8")
               const after = (await fs.promises.stat(file)).size
               afterTotal += after
-              outputLog.push(`${shortened}\nBefore: ${formatBytes(before)}\nAfter: ${formatBytes(after)}`)
+              outputLog.push(`\`${shortened}\`\nBefore: ${formatBytes(before)}\nAfter: ${formatBytes(after)}`)
               this.done++
             }
             this.total = this.done
@@ -1521,7 +1563,7 @@
             this.done = 0
             this.total = 0
             if (invalidDirPattern.test(this.name)) {
-              outputLog.push(`The name cannot include the following characters: \`\\\/:*?"<>|\``)
+              outputLog.push(`The name cannot include the following characters: \`\\\/:*?"<>|\uE000\``)
               this.status.finished = true
               return
             }
@@ -1577,8 +1619,14 @@
             if (this.assets) {
               outputLog.push("Extracting vanilla assets…")
               const entries = Object.entries(jar.files)
-              const totalBefore = this.total
-              this.total += entries.length
+              let totalAssets = entries.length
+              let objectsEntries
+              if (this.objects) {
+                const assetsIndex = await getVersionAssetsIndex(this.version)
+                objectsEntries = Object.entries(assetsIndex.objects)
+                totalAssets += objectsEntries.length
+              }
+              this.total += totalAssets
               const paths = new Set
               for (const [file, data] of entries) {
                 paths.add(path.join(folder, path.dirname(file)))
@@ -1591,7 +1639,7 @@
                   this.status.finished = true
                   this.status.processing = false
                   outputLog.push("Cancelled")
-                  this.total = totalBefore + i
+                  this.total = this.done
                   return
                 }
                 const files = []
@@ -1613,18 +1661,14 @@
               if (this.objects) {
                 outputLog.push("Extracting objects…")
                 const version = getVersion(this.version)
-                const assetsIndex = await getVersionAssetsIndex(this.version)
                 let root
                 if (Date.parse(version.releaseTime) >= 1403106748000 || version.data.assets === "1.7.10") {
                   root = "assets"
                 } else {
                   root = "assets/minecraft"
                 }
-                const entries = Object.entries(assetsIndex.objects)
-                const totalBefore = this.total
-                this.total += entries.length
                 const paths = new Set
-                for (const [file, data] of entries) {
+                for (const [file, data] of objectsEntries) {
                   if (file.startsWith("icons/")) continue
                   paths.add(path.join(folder, root, path.dirname(file)))
                 }
@@ -1632,16 +1676,16 @@
                   await fs.promises.mkdir(path, { recursive: true })
                 }
                 cacheDirectory()
-                for (let i = 0; i < entries.length; i += 256) {
+                for (let i = 0; i < objectsEntries.length; i += 256) {
                   if (this.cancelled) {
                     this.status.finished = true
                     this.status.processing = false
                     outputLog.push("Cancelled")
-                    this.total = totalBefore + i
+                    this.total = this.done
                     return
                   }
                   const files = []
-                  for (const [file, data] of entries.slice(i, i + 256)) {
+                  for (const [file, data] of objectsEntries.slice(i, i + 256)) {
                     if (file === "pack.mcmeta" || file.startsWith("icons/")) {
                       this.done++
                       continue
