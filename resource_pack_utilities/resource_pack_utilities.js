@@ -271,7 +271,7 @@
 
             .row {
               display: flex;
-              gap: 48px;
+              gap: 40px;
               flex-direction: row;
             }
           }
@@ -2110,7 +2110,7 @@
                 <h3>Pack to Clean:</h3>
                 <folder-selector v-model="folder">the folder to clean the contents of</folder-selector>
                 <version-selector v-model="version" />
-                <checkbox-row v-model="objects">Clean objects (sounds, languages, panorama, etc…)</checkbox-row>
+                <checkbox-row v-model="objects">Also clean objects (sounds, languages, panorama, etc…)</checkbox-row>
               </div>
               <ignore-list v-model="ignoreList" />
             </div>
