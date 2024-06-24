@@ -10,6 +10,8 @@
 
   const releasePattern = new RegExp("^[\\d\\.]+$")
   const invalidDirPattern = new RegExp('[\\\\/:*?"<>|`]')
+  const simpleFilePattern = new RegExp("\\.(fsh|vsh|glsl|txt|ogg|zip|icns)$")
+
   const manifest = {
     latest: {},
     versions: []
@@ -185,15 +187,16 @@
             margin: 16px;
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
 
             > div {
-              flex: 1 1 0px;
               background-color: var(--color-back);
-              padding: 8px 16px 16px;
+              padding: 12px 16px 16px;
               cursor: pointer;
               display: flex;
               flex-direction: column;
               gap: 8px;
+              width: calc(33.333% - 16px / 3);
 
               * {
                 cursor: pointer;
@@ -208,6 +211,8 @@
               font-weight: 700;
               font-size: 28px;
               color: var(--color-light);
+              line-height: 100%;
+              margin: 0;
             }
           }
 
@@ -450,7 +455,7 @@
       MenuBar.addAction(action, "tools")
       document.addEventListener("keydown", copyText)
       // dialog.show()
-      // dialog.content_vue.utility = "packCreator"
+      // dialog.content_vue.utility = "packCleaner"
     },
     onunload() {
       document.removeEventListener("keydown", copyText)
@@ -481,7 +486,12 @@
   }
 
   async function loadImage(imagePath) {
-    const imageData = await fs.promises.readFile(imagePath)
+    let imageData
+    if (typeof imagePath === "object") {
+      imageData = imagePath
+    } else {
+      imageData = await fs.promises.readFile(imagePath)
+    }
     const base64Data = imageData.toString("base64")
     const img = new Image()
     img.src = `data:image/png;base64,${base64Data}`
@@ -496,6 +506,31 @@
       buttons: ["dialog.confirm", "dialog.cancel"],
       width: 512
     }, b => fulfil(!b)))
+  }
+
+  function showMessage(title, message) {
+    return new Promise(fulfil => {
+      new Dialog({
+        id: `${id}-message`,
+        title,
+        lines: [
+          `<style>#${id}-message {
+            .dialog_content {
+              white-space: pre-wrap;
+            }
+
+            code {
+              background-color: var(--color-back);
+              border: 1px solid var(--color-border);
+              padding: 0 2px;
+            }
+          }</style>`,
+          message
+        ],
+        buttons: ["dialog.ok"],
+        onClose: () => fulfil()
+      }).show()
+    })
   }
 
   function formatPath(path) {
@@ -698,6 +733,26 @@
     return jar
   }
 
+  function objectsEqual(obj1, obj2) {
+    if (obj1 === obj2) {
+      return true
+    }
+    if (obj1 == null || typeof obj1 !== "object" || obj2 == null || typeof obj2 !== "object") {
+      return false
+    }
+    const keys1 = Object.keys(obj1)
+    const keys2 = Object.keys(obj2)
+    if (keys1.length !== keys2.length) {
+      return false
+    }
+    for (const key of keys1) {
+      if (!(key in obj2) || !objectsEqual(obj1[key], obj2[key])) {
+        return false
+      }
+    }
+    return true
+  }
+
   const components = {
     folderSelector: {
       props: ["value"],
@@ -741,6 +796,9 @@
         input {
           flex: 1;
           pointer-events: none;
+          direction: rtl;
+          text-overflow: ellipsis;
+          text-align: left;
         }
       `,
       template: `
@@ -860,7 +918,7 @@
       `,
       template: `
         <h3>Ignore List</h3>
-        <p>Files and folders that include these terms will be ignored</p>
+        <p>Files and folders that include these terms will<br>be ignored</p>
         <div>
           <input type="text" placeholder="Enter term" v-model="newWord" ref="input" @keydown.enter="addWord">
           <button class="material-icons" @click="addWord">add</button>
@@ -1172,7 +1230,7 @@
       `,
       component: {
         data: {
-          folder: null,
+          folder: "",
           types: {
             json: true,
             mcmeta: true,
@@ -1187,7 +1245,7 @@
         },
         methods: {
           async execute() {
-            if (!(await confirm("Run JSON Optimiser?", `Are you sure you want to run JSON Optimiser over the following folder:\n<code>${formatPath(this.folder)}</code>\n\nMake a backup first if you would like to keep an un-optimised version of the folder.`))) return
+            if (!await confirm("Run JSON Optimiser?", `Are you sure you want to run JSON Optimiser over the following folder:\n<code>${formatPath(this.folder)}</code>\n\nMake a backup first if you would like to keep an un-optimised version of the folder.`)) return
             outputLog.length = 0
             this.status.finished = false
             this.status.processing = true
@@ -1246,15 +1304,16 @@
 
             const files = []
             for await (const file of getFiles(this.folder)) {
+              const shortened = formatPath(file.slice(this.folder.length)).replace(/^\//, "")
               if (
                 (file.endsWith(".json") && !this.types.json) ||
                 (file.endsWith(".mcmeta") && !this.types.mcmeta) ||
                 (file.endsWith(".jem") && !this.types.jem) ||
                 (file.endsWith(".jpm") && !this.types.jpm) ||
                 !(file.endsWith(".json") || file.endsWith(".mcmeta") || file.endsWith(".jem") || file.endsWith(".jpm")) ||
-                this.ignoreList.some(item => file.toLowerCase().includes(item))
+                this.ignoreList.some(item => shortened.toLowerCase().includes(item))
               ) continue
-              files.push(file)
+              files.push([file, shortened])
             }
 
             this.total = files.length
@@ -1262,9 +1321,8 @@
             let beforeTotal = 0
             let afterTotal = 0
 
-            for (const file of files) {
+            for (const [file, shortened] of files) {
               if (this.cancelled) break
-              const shortened = formatPath(file.slice(this.folder.length)).replace(/^\//, "")
               const before = (await fs.promises.stat(file)).size
               beforeTotal += before
               let data
@@ -1409,16 +1467,17 @@
         },
         template: `
           <div v-if="!status.processing && !status.finished">
-            <h3>Folder to Optimise:</h3>
-            <folder-selector v-model="folder">the folder to optimise the JSON of</folder-selector>
             <div class="row">
-              <div>
-                <checkbox-row v-model="types.json">Optimise <code>.json</code> files</checkbox-row>
-                <checkbox-row v-model="types.mcmeta">Optimise <code>.mcmeta</code> files</checkbox-row>
-                <checkbox-row v-model="types.jem">Optimise <code>.jem</code> files</checkbox-row>
-                <checkbox-row v-model="types.jpm">Optimise <code>.jpm</code> files</checkbox-row>
+              <div class="col spacer">
+                <h3>Folder to Optimise:</h3>
+                <folder-selector v-model="folder">the folder to optimise the JSON of</folder-selector>
+                <div>
+                  <checkbox-row v-model="types.json">Optimise <code>.json</code> files</checkbox-row>
+                  <checkbox-row v-model="types.mcmeta">Optimise <code>.mcmeta</code> files</checkbox-row>
+                  <checkbox-row v-model="types.jem">Optimise <code>.jem</code> files</checkbox-row>
+                  <checkbox-row v-model="types.jpm">Optimise <code>.jpm</code> files</checkbox-row>
+                </div>
               </div>
-              <div class="spacer"></div>
               <ignore-list v-model="ignoreList" />
             </div>
             <button :disabled="!folder" @click="execute">Optimise</button>
@@ -1448,7 +1507,7 @@
       `,
       component: {
         data: {
-          folder: null,
+          folder: "",
           ignoreList: [],
           outputLog,
           done: 0,
@@ -1457,7 +1516,7 @@
         },
         methods: {
           async execute() {
-            if (!(await confirm("Run CIT Optimiser?", `Are you sure you want to run CIT Optimiser over the following folder:\n<code>${formatPath(this.folder)}</code>\n\nMake a backup first if you would like to keep an un-optimised version of the folder.`))) return
+            if (!await confirm("Run CIT Optimiser?", `Are you sure you want to run CIT Optimiser over the following folder:\n<code>${formatPath(this.folder)}</code>\n\nMake a backup first if you would like to keep an un-optimised version of the folder.`)) return
             outputLog.length = 0
             this.status.finished = false
             this.status.processing = true
@@ -1467,11 +1526,12 @@
 
             const files = []
             for await (const file of getFiles(this.folder)) {
+              const shortened = formatPath(file.slice(this.folder.length)).replace(/^\//, "")
               if (
                 !file.endsWith(".properties") ||
-                this.ignoreList.some(item => file.toLowerCase().includes(item))
+                this.ignoreList.some(item => shortened.toLowerCase().includes(item))
               ) continue
-              files.push(file)
+              files.push([file, shortened])
             }
 
             this.total = files.length
@@ -1479,9 +1539,8 @@
             let beforeTotal = 0
             let afterTotal = 0
 
-            for (const file of files) {
+            for (const [file, shortened] of files) {
               if (this.cancelled) break
-              const shortened = formatPath(file.slice(this.folder.length)).replace(/^\//, "")
               const before = (await fs.promises.stat(file)).size
               beforeTotal += before
               let data
@@ -1509,9 +1568,13 @@
         },
         template: `
           <div v-if="!status.processing && !status.finished">
-            <h3>Folder to Optimise:</h3>
-            <folder-selector v-model="folder">the folder to optimise the CIT properties of</folder-selector>
-            <ignore-list v-model="ignoreList" style="align-self: flex-start;" />
+            <div class="row">
+              <div class="col spacer">
+                <h3>Folder to Optimise:</h3>
+                <folder-selector v-model="folder">the folder to optimise the CIT properties of</folder-selector>
+              </div>
+              <ignore-list v-model="ignoreList" style="align-self: flex-start;" />
+            </div>
             <button :disabled="!folder" @click="execute">Optimise</button>
           </div>
           <div v-else>
@@ -1529,7 +1592,7 @@
       description: "Pack Creator is a tool that allows you to create template resource packs, as well as get the vanilla textures, models, sounds, etc…",
       component: {
         data: {
-          folder: null,
+          folder: "",
           name: "",
           description: "",
           attemptedStart: false,
@@ -1558,6 +1621,9 @@
             this.description = this.description.trim()
             if (!this.name) {
               return this.attemptedStart = true
+            }
+            if (this.assets) {
+              await showMessage("Vanilla assets notice", "The vanilla assets are only to be used as a template!\n\nBefore releasing your resource pack, make sure to remove any unmodified vanilla assets from your resource pack.\n\nYou can use the <code>Pack Cleaner</code> utility to quickly and easily remove all unmodified assets from your pack.")
             }
             outputLog.length = 0
             this.done = 0
@@ -1675,7 +1741,7 @@
                 for (const path of paths) {
                   await fs.promises.mkdir(path, { recursive: true })
                 }
-                cacheDirectory()
+                await cacheDirectory()
                 for (let i = 0; i < objectsEntries.length; i += 256) {
                   if (this.cancelled) {
                     this.status.finished = true
@@ -1797,6 +1863,231 @@
               </div>
             </div>
             <button :disabled="!folder" @click="execute">Create</button>
+          </div>
+          <div v-else>
+            <progress-bar :done="done" :total="total" />
+            <output-log v-model="outputLog" />
+            <button v-if="status.processing" @click="cancelled = true">Cancel</button>
+            <button v-else @click="status.finished = false">Done</button>
+          </div>
+        `
+      }
+    },
+    packCleaner: {
+      name: "Pack Cleaner",
+      tagline: "Remove unmodified vanilla assets from a resource pack.",
+      description: "Pack Cleaner is a tool that will go through all the files in a resource pack and compare them against the vanilla assets, removing them if they are unmodified.",
+      component: {
+        data: {
+          folder: "",
+          ignoreList: [],
+          outputLog,
+          done: 0,
+          total: null,
+          cancelled: false,
+          version: "",
+          objects: false
+        },
+        methods: {
+          async execute() {
+            if (!await confirm("Run Pack Cleaner?", `Are you sure you want to run Pack Cleaner over the following folder:\n<code>${formatPath(this.folder)}</code>\n\nMake a backup first if you would like to keep an un-altered version of the folder.`)) return
+            outputLog.length = 0
+            this.status.finished = false
+            this.status.processing = true
+            this.done = 0
+            this.total = null
+            this.cancelled = false
+
+            const jar = await getVersionJar(this.version)
+
+            const files = []
+            for await (const file of getFiles(this.folder)) {
+              const shortened = formatPath(file.slice(this.folder.length)).replace(/^\//, "")
+              if (
+                shortened === "pack.mcmeta" ||
+                shortened === "pack.png" ||
+                this.ignoreList.some(item => shortened.toLowerCase().includes(item))
+              ) continue
+              files.push([file, shortened])
+            }
+
+            this.total = files.length
+
+            let removed = 0
+
+            async function checkFile(file, shortened, fileBuffer, assetBuffer) {
+              try {
+                let remove
+                if (file.endsWith(".json")) {
+                  if (fileBuffer.equals(assetBuffer)) {
+                    remove = true
+                  } else {
+                    const fileData = JSON.parse(fileBuffer)
+                    const assetData = JSON.parse(assetBuffer)
+                    if (objectsEqual(fileData, assetData)) {
+                      remove = true
+                    }
+                  }
+                } else if (file.endsWith(".png.mcmeta")) {
+                  if (!await exists(file.slice(0, -7))) {
+                    try {
+                      await fs.promises.unlink(file)
+                      outputLog.push(`Removed \`${shortened}\``)
+                      removed++
+                    } catch {}
+                  }
+                } else if (file.endsWith(".png")) {
+                  if (fileBuffer.equals(assetBuffer)) {
+                    remove = true
+                  } else if (fileBuffer.readUint32BE(16) === assetBuffer.readUint32BE(16) && fileBuffer.readUint32BE(20) === assetBuffer.readUint32BE(20)) {
+                    const fileImg = await loadImage(fileBuffer)
+                    const assetImg = await loadImage(assetBuffer)
+                    const fileCanvas = new CanvasFrame(fileImg.width, fileImg.height)
+                    const assetCanvas = new CanvasFrame(assetImg.width, assetImg.height)
+                    fileCanvas.ctx.drawImage(fileImg, 0, 0)
+                    assetCanvas.ctx.drawImage(assetImg, 0, 0)
+                    fileImgData = fileCanvas.ctx.getImageData(0, 0, fileImg.width, fileImg.height).data
+                    assetImgData = assetCanvas.ctx.getImageData(0, 0, assetImg.width, assetImg.height).data
+                    let same = true
+                    for (let i = fileImgData.length - 1; i >= 0; i--) {
+                      same &&= fileImgData[i] === assetImgData[i]
+                    }
+                    if (same) {
+                      const mcmeta = file + ".mcmeta"
+                      const mcmetaShortened = shortened + ".mcmeta"
+                      if (await exists(mcmeta)) {
+                        if (mcmetaShortened in jar.files) {
+                          const mcmetaBuffer = await fs.promises.readFile(mcmeta)
+                          let removeMcmeta
+                          if (mcmetaBuffer.equals(jar.files[mcmetaShortened].content)) {
+                            removeMcmeta = true
+                          } else {
+                            const mcmetaFile = JSON.parse(mcmetaBuffer)
+                            const mcmetaAsset = JSON.parse(jar.files[mcmetaShortened].content)
+                            if (objectsEqual(mcmetaFile, mcmetaAsset)) {
+                              remove = true
+                              removeMcmeta = true
+                            }
+                          }
+                          if (removeMcmeta) {
+                            await fs.promises.unlink(mcmeta)
+                            outputLog.push(`Removed \`${mcmetaShortened}\``)
+                            removed++
+                          }
+                        }
+                      } else if (!(mcmetaShortened in jar.files)) {
+                        remove = true
+                      }
+                    }
+                  }
+                } else if (simpleFilePattern.test(file) && fileBuffer.equals(assetBuffer)) {
+                  remove = true
+                }
+                if (remove) {
+                  try {
+                    await fs.promises.unlink(file)
+                    outputLog.push(`Removed \`${shortened}\``)
+                    removed++
+                  } catch {}
+                }
+              } catch {
+                outputLog.push(`Failed to process \`${shortened}\`, skipping…`)
+              }
+            }
+
+            const objectsFiles = {}
+            if (this.objects) {
+              await cacheDirectory()
+              const assetsIndex = await getVersionAssetsIndex(this.version)
+              const entries = Object.entries(assetsIndex.objects)
+              const version = getVersion(this.version)
+              let root
+              if (Date.parse(version.releaseTime) >= 1403106748000 || version.data.assets === "1.7.10") {
+                root = "assets"
+              } else {
+                root = "assets/minecraft"
+              }
+              for (let i = 0; i < entries.length; i += 256) {
+                if (this.cancelled) {
+                  this.status.finished = true
+                  this.status.processing = false
+                  outputLog.push("Cancelled")
+                  this.total = this.done
+                  return
+                }
+                const downloads = []
+                for (const [file, data] of entries.slice(i, i + 256)) {
+                  if (file === "pack.mcmeta") continue
+                  downloads.push(new Promise(async fulfil => {
+                    const objectPath = `${data.hash.slice(0, 2)}/${data.hash}`
+                    const assetPath = `${root}/${file}`
+                    const vanillaObjectPath = path.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
+                    if (await exists(vanillaObjectPath)) {
+                      objectsFiles[assetPath] = vanillaObjectPath
+                    } else {
+                      const cacheObjectPath = path.join(settings.cache_directory.value, "objects", objectPath)
+                      if (!await exists(cacheObjectPath)) {
+                        const object = new Uint8Array(await fetch(`https://resources.download.minecraft.net/${objectPath}`).then(e => e.arrayBuffer()))
+                        await fs.promises.mkdir(path.dirname(cacheObjectPath), { recursive: true })
+                        await fs.promises.writeFile(cacheObjectPath, object)
+                        outputLog.push(`Downloaded \`${root}/${file}\` to the cache`)
+                      }
+                      objectsFiles[assetPath] = cacheObjectPath
+                    }
+                    fulfil()
+                  }))
+                }
+                await Promise.all(downloads)
+              }
+            }
+
+            for (const [file, shortened] of files) {
+              if (this.cancelled) break
+              if (!await exists(file)) continue
+              if (shortened in objectsFiles) {
+                await checkFile(file, shortened, await fs.promises.readFile(file), await fs.promises.readFile(objectsFiles[shortened]))
+              } else if (shortened in jar.files) {
+                await checkFile(file, shortened, await fs.promises.readFile(file), jar.files[shortened].content)
+              }
+              this.done++
+            }
+
+            const deleteEmptyFolders = async folderPath => {
+              try {
+                const entries = await fs.promises.readdir(folderPath, { withFileTypes: true })
+                for (const entry of entries) {
+                  const fullPath = path.join(folderPath, entry.name)
+                  if (entry.isDirectory()) {
+                    await deleteEmptyFolders(fullPath)
+                    if ((await fs.promises.readdir(fullPath)).length === 0) {
+                      await fs.promises.rmdir(fullPath)
+                      outputLog.push(`Deleted empty folder \`${formatPath(fullPath.slice(this.folder.length)).replace(/^\//, "")}\``)
+                    }
+                  }
+                }
+              } catch {}
+            }
+
+            await deleteEmptyFolders(this.folder)
+
+            this.total = this.done
+            outputLog.push(`Removed ${removed} files`)
+            this.status.processing = false
+            this.status.finished = true
+          }
+        },
+        template: `
+          <div v-if="!status.processing && !status.finished">
+            <div class="row">
+              <div class="col spacer">
+                <h3>Pack to Clean:</h3>
+                <folder-selector v-model="folder">the folder to clean the contents of</folder-selector>
+                <version-selector v-model="version" />
+                <checkbox-row v-model="objects">Clean objects (sounds, languages, panorama, etc…)</checkbox-row>
+              </div>
+              <ignore-list v-model="ignoreList" />
+            </div>
+            <button :disabled="!folder" @click="execute">Clean</button>
           </div>
           <div v-else>
             <progress-bar :done="done" :total="total" />
