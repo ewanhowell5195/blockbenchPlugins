@@ -449,8 +449,8 @@
       })
       MenuBar.addAction(action, "tools")
       document.addEventListener("keydown", copyText)
-      dialog.show()
-      dialog.content_vue.utility = "packCreator"
+      // dialog.show()
+      // dialog.content_vue.utility = "packCreator"
     },
     onunload() {
       document.removeEventListener("keydown", copyText)
