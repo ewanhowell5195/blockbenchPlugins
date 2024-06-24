@@ -1246,12 +1246,21 @@
         methods: {
           async execute() {
             if (!await confirm("Run JSON Optimiser?", `Are you sure you want to run JSON Optimiser over the following folder:\n<code>${formatPath(this.folder)}</code>\n\nMake a backup first if you would like to keep an un-optimised version of the folder.`)) return
+
             outputLog.length = 0
             this.status.finished = false
             this.status.processing = true
             this.done = 0
             this.total = null
             this.cancelled = false
+
+            if (!await exists(this.folder)) {
+              this.status.finished = true
+              this.status.processing = false
+              this.total = 0
+              outputLog.push(`The folder \`${formatPath(this.folder)}\` was not found`)
+              return
+            }
 
             const mcmetaKeys = [ "credit", "animation", "villager", "texture", "pack", "language", "filter", "overlays", "gui" ]
             const animationKeys = [ "interpolate", "width", "height", "frametime", "frames" ]
@@ -1517,12 +1526,21 @@
         methods: {
           async execute() {
             if (!await confirm("Run CIT Optimiser?", `Are you sure you want to run CIT Optimiser over the following folder:\n<code>${formatPath(this.folder)}</code>\n\nMake a backup first if you would like to keep an un-optimised version of the folder.`)) return
+
             outputLog.length = 0
             this.status.finished = false
             this.status.processing = true
             this.done = 0
             this.total = null
             this.cancelled = false
+
+            if (!await exists(this.folder)) {
+              this.status.finished = true
+              this.status.processing = false
+              this.total = 0
+              outputLog.push(`The folder \`${formatPath(this.folder)}\` was not found`)
+              return
+            }
 
             const files = []
             for await (const file of getFiles(this.folder)) {
@@ -1891,12 +1909,21 @@
         methods: {
           async execute() {
             if (!await confirm("Run Pack Cleaner?", `Are you sure you want to run Pack Cleaner over the following folder:\n<code>${formatPath(this.folder)}</code>\n\nMake a backup first if you would like to keep an un-altered version of the folder.`)) return
+            
             outputLog.length = 0
             this.status.finished = false
             this.status.processing = true
             this.done = 0
             this.total = null
             this.cancelled = false
+
+            if (!await exists(this.folder)) {
+              this.status.finished = true
+              this.status.processing = false
+              this.total = 0
+              outputLog.push(`The folder \`${formatPath(this.folder)}\` was not found`)
+              return
+            }
 
             const jar = await getVersionJar(this.version)
 
