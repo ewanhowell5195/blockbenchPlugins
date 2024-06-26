@@ -2222,7 +2222,7 @@
       description: "Lang Stripper is a tool that will go through all the language files in an resource pack and remove any entries that have not been modified.",
       component: {
         data: {
-          folder: "C:/Users/ewanh/AppData/Roaming/.minecraft/resourcepacks/1.21 copy",
+          folder: "",
           outputLog,
           done: 0,
           total: null,
