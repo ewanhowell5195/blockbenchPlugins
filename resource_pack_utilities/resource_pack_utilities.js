@@ -2218,7 +2218,7 @@
     },
     langStripper: {
       name: "Lang Stripper",
-      tagline: "Remove all unedited lines from a Minecraft language file.",
+      tagline: "Remove all unedited entries from a Minecraft language file.",
       description: "Lang Stripper is a tool that will go through all the language files in an resource pack and remove any entries that have not been modified.",
       component: {
         data: {
