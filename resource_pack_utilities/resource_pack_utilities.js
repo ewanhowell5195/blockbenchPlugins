@@ -540,7 +540,7 @@
       MenuBar.addAction(action, "tools")
       MenuBar.addAction(action2, "tools")
       document.addEventListener("keydown", copyText)
-      dialog.show()
+      // dialog.show()
       // dialog.content_vue.utility = "langStripper"
     },
     onunload() {
