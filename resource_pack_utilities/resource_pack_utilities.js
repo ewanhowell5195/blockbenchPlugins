@@ -2,7 +2,9 @@
   const path = require("node:path")
   const zlib = require("node:zlib")
   const os = require("node:os")
-  let dialog, action, styles
+
+  let dialog, action, action2, styles, storage
+
   const id = "resource_pack_utilities"
   const name = "Resource Pack Utilities"
   const icon = "construction"
@@ -40,6 +42,8 @@
     creation_date: "2024-06-18",
     has_changelog: true,
     async onload() {
+      storage = JSON.parse(localStorage.getItem(id) ?? "{}")
+      storage.favourites ??= []
       let directory
       if (os.platform() === "win32") {
         directory = path.join(os.homedir(), "AppData", "Roaming", ".minecraft")
@@ -191,26 +195,52 @@
           }
 
           #home {
-            margin: 16px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-
             > div {
-              background-color: var(--color-back);
-              padding: 12px 16px 16px;
-              cursor: pointer;
-              display: flex;
-              flex-direction: column;
+              margin: 16px;
               gap: 8px;
-              width: calc(33.333% - 16px / 3);
+              flex-wrap: wrap;
+              display: flex;
 
-              * {
+              > div {
+                background-color: var(--color-back);
+                padding: 12px 16px 16px 16px;
                 cursor: pointer;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                width: calc(50% - 8px);
+                position: relative;
+
+                * {
+                  cursor: pointer;
+                }
+
+                &:hover {
+                  background-color: var(--color-button);
+                }
               }
 
-              &:hover {
-                background-color: var(--color-button);
+              + div {
+                border-top: 1px solid var(--color-border);
+                padding-top: 16px;
+              }
+
+              .fa-star {
+                position: absolute;
+                top: 16px;
+                right: 16px;
+
+                &.fa {
+                  color: #f9c300;
+
+                  &:hover {
+                    filter: brightness(1.2);
+                  }
+                }
+
+                &.far:hover {
+                  color: var(--color-light);
+                }
               }
             }
 
@@ -220,6 +250,10 @@
               color: var(--color-light);
               line-height: 100%;
               margin: 0;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              padding-right: 28px;
             }
           }
 
@@ -231,6 +265,14 @@
             h1 {
               font-weight: 600;
               color: var(--color-light);
+              display: flex;
+              gap: 8px;
+              align-items: center;
+
+              > i {
+                font-size: 30px;
+                min-width: 30px;
+              }
             }
           }
 
@@ -293,7 +335,8 @@
             status: {
               processing: false,
               finished: false
-            }
+            },
+            favourites: storage.favourites
           },
           components: Object.fromEntries(Object.entries(utilities).map(([k, v]) => {
             v.component.props = ["value"]
@@ -391,20 +434,40 @@
                 ],
                 width: 780
               }).show()
+            },
+            favourite(id) {
+              this.favourites.unshift(id)
+              save()
+              sortUtilities()
+            },
+            unfavourite(id) {
+              this.favourites.splice(this.favourites.indexOf(id), 1)
+              save()
+              sortUtilities()
             }
           },
           template: `
             <div>
               <div v-if="utility" id="header">
-                <h1>{{ utilities[utility].name }}</h1>
+                <h1><i class="material-icons icon">{{ utilities[utility].icon }}</i> {{ utilities[utility].name }}</h1>
                 <span>{{ utilities[utility].description }}</span>
                 <button id="back-button" @click="utility = null; status.finished = false" :disabled="status.processing"><i class="material-icons">arrow_back</i> Back</button>
                 <button v-if="utilities[utility].info" id="info-button" class="material-icons icon" @click="showInfo">info</button>
               </div>
               <div v-if="utility === null" id="home">
-                <div v-for="(data, id) in utilities" @click="utility = id">
-                  <h3>{{ data.name }}</h3>
-                  <div>{{ data.tagline }}</div>
+                <div v-if="Object.keys(utilities).filter(e => favourites.includes(e)).length">
+                  <div v-for="id in favourites" v-if="id in utilities" @click="utility = id">
+                    <h3><i class="material-icons icon">{{ utilities[id].icon }}</i> {{ utilities[id].name }}</h3>
+                    <div>{{ utilities[id].tagline }}</div>
+                    <i class="fa_big fa fa-star" @click.stop="unfavourite(id)"></i>
+                  </div>
+                </div>
+                <div v-if="Object.keys(utilities).filter(e => !favourites.includes(e)).length">
+                  <div v-for="(data, id) in utilities" v-if="!favourites.includes(id)" @click="utility = id">
+                    <h3><i class="material-icons icon">{{ data.icon }}</i> {{ data.name }}</h3>
+                    <div>{{ data.tagline }}</div>
+                    <i class="fa_big far fa-star" @click.stop="favourite(id)"></i>
+                  </div>
                 </div>
               </div>
               <component v-for="(data, id) in utilities" v-if="utility === id" :is="id" v-model="status"></component>
@@ -448,21 +511,52 @@
         name,
         description,
         icon,
-        click: () => dialog.show()
+        click: () => dialog.show(),
+        condition: () => !Object.keys(utilities).filter(e => storage.favourites.includes(e)).length,
       })
+      action2 = new Action({
+        id: id + 2,
+        name,
+        description,
+        icon,
+        click: () => dialog.show(),
+        condition: () => Object.keys(utilities).filter(e => storage.favourites.includes(e)).length,
+        children: [
+          {
+            name: "Show all",
+            icon: "menu",
+            click: () => dialog.show()
+          },
+          ...Object.entries(utilities).map(([id, data]) => new Action({
+            id,
+            name: data.name,
+            description: data.tagline,
+            icon: data.icon,
+            condition: () => storage.favourites.includes(id)
+          }))
+        ]
+      })
+      sortUtilities()
       MenuBar.addAction(action, "tools")
+      MenuBar.addAction(action2, "tools")
       document.addEventListener("keydown", copyText)
-      // dialog.show()
+      dialog.show()
       // dialog.content_vue.utility = "langStripper"
     },
     onunload() {
       document.removeEventListener("keydown", copyText)
       dialog.close()
       action.delete()
+      action2.delete()
+      Object.keys(utilities).forEach(e => BarItems[e].delete())
       styles.delete()
       document.getElementById(`${id}-processing-styles`)?.remove()
     }
   })
+
+  function save() {
+    localStorage.setItem(id, JSON.stringify(storage))
+  }
 
   const getFiles = async function*(dir) {
     const dirents = await fs.promises.readdir(dir, { withFileTypes: true })
@@ -765,6 +859,14 @@
 
   function jsonToLang(json) {
     return Object.entries(json).map(e => e.join("=")).join("\n")
+  }
+
+  function sortUtilities() {
+    action2.children.sort((a, b) => {
+      if (a.name === "Show all") return -Infinity
+      if (b.name === "Show all") return Infinity
+      return storage.favourites.findIndex(e => e === a.id) - storage.favourites.findIndex(e => e === b.id)
+    })
   }
 
   const components = {
@@ -1252,6 +1354,7 @@
   const utilities = {
     jsonOptimiser: {
       name: "JSON Optimiser",
+      icon: "code",
       tagline: "Optimise every JSON file in a folder.",
       description: "JSON Optimiser is a tool that will go through all JSON files in a folder and optimise them to be as small as possible, minifying them and removing any unnecessary data.",
       info: `
@@ -1584,6 +1687,7 @@
     },
     citOptimiser: {
       name: "CIT Optimiser",
+      icon: "coffee",
       tagline: "Optimise the OptiFine CIT properties files in a folder.",
       description: "CIT Optimiser is a tool that will go through all properties files in an OptiFine CIT folder and optimise them to be as small as possible, removing any unnecessary data.",
       info: `
@@ -1688,6 +1792,7 @@
     },
     packCreator: {
       name: "Pack Creator",
+      icon: "create_new_folder",
       tagline: "Create template resource packs and get the vanilla assets.",
       description: "Pack Creator is a tool that allows you to create template resource packs, as well as get the vanilla textures, models, sounds, etc…",
       component: {
@@ -1984,6 +2089,7 @@
     },
     packCleaner: {
       name: "Pack Cleaner",
+      icon: "mop",
       tagline: "Remove unmodified vanilla assets from a resource pack.",
       description: "Pack Cleaner is a tool that will go through all the files in a resource pack and compare them against the vanilla assets, removing them if they are unmodified.",
       component: {
@@ -2218,6 +2324,7 @@
     },
     langStripper: {
       name: "Lang Stripper",
+      icon: "content_cut",
       tagline: "Remove all unedited entries from a Minecraft language file.",
       description: "Lang Stripper is a tool that will go through all the language files in an resource pack and remove any entries that have not been modified.",
       component: {
