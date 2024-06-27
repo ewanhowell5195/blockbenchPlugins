@@ -523,7 +523,7 @@
         condition: () => Object.keys(utilities).filter(e => storage.favourites.includes(e)).length,
         children: [
           {
-            name: "Show all",
+            name: "Open",
             icon: "menu",
             click: () => dialog.show()
           },
@@ -532,6 +532,10 @@
             name: data.name,
             description: data.tagline,
             icon: data.icon,
+            click() {
+              dialog.show()
+              dialog.content_vue.utility = id
+            },
             condition: () => storage.favourites.includes(id)
           }))
         ]
