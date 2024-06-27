@@ -2258,6 +2258,8 @@
               return
             }
 
+            const removed = []
+
             const processFile = async (type, filePath, assetPath, assetBuffer) => {
               try {
                 const file = await fs.promises.readFile(filePath, "utf-8")
@@ -2270,20 +2272,20 @@
                   fileData = langToJSON(file)
                   assetData = langToJSON(asset)
                 }
-                let removed = 0
+                let changes = 0
                 for (const key in fileData) {
                   if (fileData[key] === assetData[key]) {
                     delete fileData[key]
-                    removed++
-                    output.log(`Removed \`${key}\` from \`${assetPath}\``)
+                    removed.push(`Removed \`${key}\` from \`${assetPath}\``)
+                    changes++
                   }
                 }
-                output.log(`Processed \`${assetPath}\`: Stripped \`${removed}\` entries`)
-                if (removed) {
+                output.log(`Processed \`${assetPath}\`: Stripped \`${removed.length}\` entries`)
+                if (changes) {
                   if (type === ".json") {
-                    await fs.promises.writeFile(filePath, JSON.stringify(fileData, null, 2))
+                    // await fs.promises.writeFile(filePath, JSON.stringify(fileData, null, 2))
                   } else {
-                    await fs.promises.writeFile(filePath, jsonToLang(fileData))
+                    // await fs.promises.writeFile(filePath, jsonToLang(fileData))
                   }
                 }
               } catch {
@@ -2358,6 +2360,10 @@
                 const langPath = `assets/minecraft/lang/${lang}`
                 await processFile(path.extname(lang), path.join(this.folder, langPath), langPath, await getLang(lang, langPath))
               }
+            }
+
+            for (const remove of removed) {
+              output.log(remove)
             }
 
             output.info("Finished")
