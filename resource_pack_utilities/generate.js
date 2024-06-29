@@ -13,10 +13,10 @@ fs.writeFileSync("about.md", `
   <p>To use this plugin, go <strong>Tools > Resource Pack Utilities</strong>, then select the utility you would like to use.</p>
   <h2>Utilities</h2>
   <ul>
-    ${Object.values(resourcePackUtilities).sort((a, b) => a.name.localeCompare(b.name)).map(e => `<li>
+    ${Object.values(resourcePackUtilities).sort((a, b) => a.name.localeCompare(b.name)).map(e => `    <li>
       <h3 style="margin-bottom: -4px; font-weight: 600;">${e.name}</h3>
       <p>${e.description}</p>
-    </li>`).join(`\n\n`)}
+    </li>`).join(`\n`)}
   </ul>
 </div>
 <style>
