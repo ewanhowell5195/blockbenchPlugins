@@ -32,7 +32,7 @@
     icon: "icon.png",
     author: "Ewan Howell",
     description,
-    tags: ["Minecraft: Java Edition", "Resource Packs", "Utility"],
+    tags: ["Minecraft: Java Edition", "Resource Packs", "Utilities"],
     version: "1.0.0",
     min_version: "4.10.0",
     variant: "desktop",
