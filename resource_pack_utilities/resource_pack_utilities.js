@@ -8,7 +8,7 @@
   const id = "resource_pack_utilities"
   const name = "Resource Pack Utilities"
   const icon = "construction"
-  const description = "Utilities for working with resource packs"
+  const description = "A collection of utilities to assist with resource pack creation."
 
   const releasePattern = new RegExp("^[\\d\\.]+$")
   const invalidDirPattern = new RegExp('[\\\\/:*?"<>|`]')
@@ -32,7 +32,7 @@
     icon: "icon.png",
     author: "Ewan Howell",
     description,
-    tags: ["yes"],
+    tags: ["Minecraft: Java Edition", "Resource Packs", "Utility"],
     version: "1.0.0",
     min_version: "4.10.0",
     variant: "desktop",
@@ -330,6 +330,15 @@
             width: calc(100% - 32px);
           }
 
+          .no-results {
+            padding: 0 !important;
+            background-color: initial !important;
+            text-align: center;
+            width: 100% !important;
+            height: 128px;
+            justify-content: center;
+          }
+
           ${Object.entries(components).filter((([k, v]) => v.styles)).map(([k, v]) => `.component-${k} { ${v.styles} }`).join("")}
           ${Object.entries(utilities).filter((([k, v]) => v.component.styles)).map(([k, v]) => `.utility-${k} { ${v.component.styles} }`).join("")}
         }</style>`],
@@ -452,6 +461,15 @@
               sortUtilities()
             }
           },
+          computed: {
+            utilityList() {
+              const sorted = Object.entries(this.utilities).sort((a, b) => a[0].localeCompare(b[0]))
+              if (this.search.length) {
+                return sorted.filter(e => e[0].toLowerCase().includes(this.search.replace(/\s/g, '')))
+              }
+              return sorted.filter(e => !this.favourites.includes(e[0]))
+            }
+          },
           template: `
             <div>
               <div v-if="utility" id="header">
@@ -462,8 +480,8 @@
               </div>
               <div v-if="utility === null" id="home">
                 <div class="search_bar">
-                  <input type="text" class="dark_bordered" placeholder="Search…" v-model="search">
-                  <i class="material-icons">search</i>
+                  <input type="text" class="dark_bordered" placeholder="Search…" v-model="search" ref="search">
+                  <i :class="{ active: search }" class="material-icons" @click="search = ''; $refs.search.focus()">{{ search ? "clear" : "search" }}</i>
                 </div>
                 <div v-if="!search.length && Object.keys(utilities).filter(e => favourites.includes(e)).length">
                   <div v-for="id in favourites" v-if="id in utilities" @click="utility = id">
@@ -473,7 +491,8 @@
                   </div>
                 </div>
                 <div v-if="Object.keys(utilities).filter(e => !favourites.includes(e)).length">
-                  <div v-for="([id, data]) in Object.entries(utilities).sort((a, b) => a[0].localeCompare(b[0]))" v-if="search.length ? id.toLowerCase().includes(search.replace(/\\s/g, '')) : !favourites.includes(id)" @click="utility = id">
+                  <div v-if="!utilityList.length" class="no-results">No results…</div>
+                  <div v-for="([id, data]) in utilityList" v-if="search.length ? id.toLowerCase().includes(search.replace(/\\s/g, '')) : !favourites.includes(id)" @click="utility = id">
                     <h3><i class="material-icons icon">{{ data.icon }}</i> {{ data.name }}</h3>
                     <div>{{ data.tagline }}</div>
                     <i v-if="favourites.includes(id)" class="fa_big fa fa-star" @click.stop="unfavourite(id)"></i>
@@ -2516,6 +2535,8 @@
       }
     }
   }
+
+  globalThis.resourcePackUtilities = utilities
 
   setupPlugin()
 })()

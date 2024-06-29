@@ -1,33 +1,22 @@
+const fs = require("fs")
+
+globalThis.Plugin = {
+  register: () => {}
+}
+
+require("./resource_pack_utilities.js")
+
+fs.writeFileSync("about.md", `
 <div id="about-content">
   <p>This plugin contains a collection of utilities to assist with resource pack creation.</p>
   <h2>How to use</h2>
   <p>To use this plugin, go <strong>Tools > Resource Pack Utilities</strong>, then select the utility you would like to use.</p>
   <h2>Utilities</h2>
   <ul>
-    <li>
-      <h3 style="margin-bottom: -4px; font-weight: 600;">CIT Optimiser</h3>
-      <p>CIT Optimiser is a tool that will go through all properties files in an OptiFine CIT folder and optimise them to be as small as possible, removing any unnecessary data.</p>
-    </li>
-
-<li>
-      <h3 style="margin-bottom: -4px; font-weight: 600;">JSON Optimiser</h3>
-      <p>JSON Optimiser is a tool that will go through all JSON files in a folder and optimise them to be as small as possible, minifying them and removing any unnecessary data.</p>
-    </li>
-
-<li>
-      <h3 style="margin-bottom: -4px; font-weight: 600;">Lang Stripper</h3>
-      <p>Lang Stripper is a tool that will go through all the language files in an resource pack and remove any entries that have not been modified.</p>
-    </li>
-
-<li>
-      <h3 style="margin-bottom: -4px; font-weight: 600;">Pack Cleaner</h3>
-      <p>Pack Cleaner is a tool that will go through all the files in a resource pack and compare them against the vanilla assets, removing them if they are unmodified.</p>
-    </li>
-
-<li>
-      <h3 style="margin-bottom: -4px; font-weight: 600;">Pack Creator</h3>
-      <p>Pack Creator is a tool that allows you to create template resource packs, as well as get the vanilla textures, models, sounds, etc…</p>
-    </li>
+    ${Object.values(resourcePackUtilities).sort((a, b) => a.name.localeCompare(b.name)).map(e => `<li>
+      <h3 style="margin-bottom: -4px; font-weight: 600;">${e.name}</h3>
+      <p>${e.description}</p>
+    </li>`).join(`\n\n`)}
   </ul>
 </div>
 <style>
@@ -89,3 +78,4 @@
     <p>Discord Server</p>
   </a>
 </div>
+`.trim())
