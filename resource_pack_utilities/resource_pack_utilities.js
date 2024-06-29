@@ -208,7 +208,7 @@
                 display: flex;
                 flex-direction: column;
                 gap: 8px;
-                width: calc(50% - 8px);
+                width: calc(50% - 4px);
                 position: relative;
 
                 * {
@@ -325,6 +325,11 @@
             }
           }
 
+          .search_bar {
+            float: initial;
+            width: calc(100% - 32px);
+          }
+
           ${Object.entries(components).filter((([k, v]) => v.styles)).map(([k, v]) => `.component-${k} { ${v.styles} }`).join("")}
           ${Object.entries(utilities).filter((([k, v]) => v.component.styles)).map(([k, v]) => `.utility-${k} { ${v.component.styles} }`).join("")}
         }</style>`],
@@ -336,7 +341,8 @@
               processing: false,
               finished: false
             },
-            favourites: storage.favourites
+            favourites: storage.favourites,
+            search: ""
           },
           components: Object.fromEntries(Object.entries(utilities).map(([k, v]) => {
             v.component.props = ["value"]
@@ -455,7 +461,11 @@
                 <button v-if="utilities[utility].info" id="info-button" class="material-icons icon" @click="showInfo">info</button>
               </div>
               <div v-if="utility === null" id="home">
-                <div v-if="Object.keys(utilities).filter(e => favourites.includes(e)).length">
+                <div class="search_bar">
+                  <input type="text" class="dark_bordered" placeholder="Search…" v-model="search">
+                  <i class="material-icons">search</i>
+                </div>
+                <div v-if="!search.length && Object.keys(utilities).filter(e => favourites.includes(e)).length">
                   <div v-for="id in favourites" v-if="id in utilities" @click="utility = id">
                     <h3><i class="material-icons icon">{{ utilities[id].icon }}</i> {{ utilities[id].name }}</h3>
                     <div>{{ utilities[id].tagline }}</div>
@@ -463,10 +473,11 @@
                   </div>
                 </div>
                 <div v-if="Object.keys(utilities).filter(e => !favourites.includes(e)).length">
-                  <div v-for="(data, id) in utilities" v-if="!favourites.includes(id)" @click="utility = id">
+                  <div v-for="([id, data]) in Object.entries(utilities).sort((a, b) => a[0].localeCompare(b[0]))" v-if="search.length ? id.toLowerCase().includes(search.replace(/\\s/g, '')) : !favourites.includes(id)" @click="utility = id">
                     <h3><i class="material-icons icon">{{ data.icon }}</i> {{ data.name }}</h3>
                     <div>{{ data.tagline }}</div>
-                    <i class="fa_big far fa-star" @click.stop="favourite(id)"></i>
+                    <i v-if="favourites.includes(id)" class="fa_big fa fa-star" @click.stop="unfavourite(id)"></i>
+                    <i v-else class="fa_big far fa-star" @click.stop="favourite(id)"></i>
                   </div>
                 </div>
               </div>
