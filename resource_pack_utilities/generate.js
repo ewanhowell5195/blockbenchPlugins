@@ -14,7 +14,7 @@ fs.writeFileSync("about.md", `
   <h2>Utilities</h2>
   <ul>
     ${Object.values(resourcePackUtilities).sort((a, b) => a.name.localeCompare(b.name)).map(e => `<li>
-      <h3 style="margin-bottom: -4px; font-weight: 600;">${e.name}</h3>
+      <h3>${e.name}</h3>
       <p>${e.description}</p>
     </li>`).join(`\n    `)}
   </ul>
@@ -29,6 +29,10 @@ fs.writeFileSync("about.md", `
   #about-content {
     overflow-y: auto;
     min-height: 128px;
+  }
+  #about-content h3 {
+    margin-bottom: -4px;
+    font-weight: 600;
   }
   #about-markdown-links {
     display: flex;
