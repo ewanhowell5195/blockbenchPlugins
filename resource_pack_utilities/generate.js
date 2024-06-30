@@ -4,6 +4,8 @@ globalThis.Plugin = {
   register: () => {}
 }
 
+globalThis.Formats = {}
+
 require("./resource_pack_utilities.js")
 
 fs.writeFileSync("about.md", `
