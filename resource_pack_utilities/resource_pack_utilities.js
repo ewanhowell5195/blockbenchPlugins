@@ -2424,9 +2424,9 @@
                 output.log(`Processed \`${assetPath}\`: Stripped \`${removed.length}\` entries`)
                 if (changes) {
                   if (type === ".json") {
-                    // await fs.promises.writeFile(filePath, JSON.stringify(fileData, null, 2))
+                    await fs.promises.writeFile(filePath, JSON.stringify(fileData, null, 2))
                   } else {
-                    // await fs.promises.writeFile(filePath, jsonToLang(fileData))
+                    await fs.promises.writeFile(filePath, jsonToLang(fileData))
                   }
                 }
               } catch {
