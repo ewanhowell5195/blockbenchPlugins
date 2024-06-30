@@ -35,7 +35,7 @@
     website: `https://ewanhowell.com/plugins/${id.replace(/_/g, "-")}/`,
     repository: `https://github.com/ewanhowell5195/blockbenchPlugins/tree/main/${id}`,
     bug_tracker: `https://github.com/ewanhowell5195/blockbenchPlugins/issues?title=[${name}]`,
-    creation_date: "2024-06-29",
+    creation_date: "2024-07-01",
     has_changelog: true,
     async onload() {
       storage = JSON.parse(localStorage.getItem(id) ?? "{}")
