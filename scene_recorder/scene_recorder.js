@@ -2,6 +2,8 @@
   const child_process = require("child_process")
   const path = require("path")
 
+  const originalFormats = {}
+
   let formats, ffmpegPath
   const id = "scene_recorder"
   const name = "Scene Recorder"
@@ -21,11 +23,35 @@
       if (await checkFFmpeg()) return
 
       formats = {
+        gif: {
+          name: "GIF",
+          process: (vars, options) => processFFmpeg(vars, options, {
+            name: "GIF",
+            extension: "gif",
+            command: ["-lavfi", "split[v][pg];[pg]palettegen=reserve_transparent=1:stats_mode=single[pal];[v][pal]paletteuse=new=1:dither=bayer:bayer_scale=3"]
+          })
+        },
         mp4: {
           name: "MP4 Video",
           process: (vars, options) => processFFmpeg(vars, options, {
             name: "MP4 Video",
             extension: "mp4",
+            command: ["-c:v", options.mp4Codec, "-pix_fmt", "yuv420p", "-vf", "scale=floor(iw/2)*2:floor(ih/2)*2", "-an"]
+          })
+        },
+        mkv: {
+          name: "MKV Video",
+          process: (vars, options) => processFFmpeg(vars, options, {
+            name: "MKV Video",
+            extension: "mkv",
+            command: ["-c:v", options.mp4Codec, "-pix_fmt", "yuv420p", "-vf", "scale=floor(iw/2)*2:floor(ih/2)*2", "-an"]
+          })
+        },
+        mov: {
+          name: "MOV Video",
+          process: (vars, options) => processFFmpeg(vars, options, {
+            name: "MOV Video",
+            extension: "mov",
             command: ["-c:v", options.mp4Codec, "-pix_fmt", "yuv420p", "-vf", "scale=floor(iw/2)*2:floor(ih/2)*2", "-an"]
           })
         },
@@ -44,12 +70,48 @@
             extension: "webp",
             command: ["-loop", 0]
           })
+        },
+        spritesheet: {
+          name: "Spritesheet",
+          process: (vars, options) => processFFmpeg(vars, options, {
+            name: "Spritesheet",
+            extension: "png",
+            format: "image2",
+            validate(vars) {
+              if (vars.canvas_height * vars.frames > 300000) {
+                Blockbench.showMessageBox({
+                  title: "Spritesheet too large",
+                  message: `The generated spritesheet would be <code>${(vars.canvas_height * vars.frames).toLocaleString()}</code> pixels tall. The maximum supported height is <code>300,000</code>`
+                })
+                return
+              }
+              return true
+            },
+            preprocess(vars, options, args, buffers, file) {
+              const streams = new Array(buffers.length).fill().map((e, i) => `[s${i}]`).join("")
+              let filter = `split=${buffers.length}${streams};${new Array(buffers.length).fill().map((e, i) => `[s${i}]trim=start_frame=${i}:end_frame=${i + 1}[s${i}]`).join(";")};${streams}vstack=${buffers.length}`
+              let filterType
+              if (filter.length > 1024) {
+                args.file = true
+                fs.writeFileSync(file, filter, "utf-8")
+                filter = file
+                filterType = "-filter_complex_script"
+              } else {
+                filterType = "-lavfi"
+              }
+              args.command = ["-frames:v", 1, "-update", 1, filterType, filter]
+            }
+          })
         }
       }
 
       for (const [id, format] of Object.entries(formats)) {
+        if (ScreencamGIFFormats[id]) {
+          originalFormats[id] = ScreencamGIFFormats[id]
+        } else {
+          Screencam.gif_options_dialog.form.format.options[id] = format.name
+        }
         ScreencamGIFFormats[id] = format
-        Screencam.gif_options_dialog.form.format.options[id] = format.name
       }
 
       insertToForm("mp4Codec", {
@@ -61,14 +123,18 @@
           libx265: "H.265",
           "libvpx-vp9": "VP9"
         },
-        condition: form => ["mp4"].includes(form.format)
+        condition: form => ["mp4", "mkv", "mov"].includes(form.format)
       }, 1)
     },
     onunload() {
       Screencam.gif_options_dialog.close()
       for (const id of Object.keys(formats)) {
-        delete ScreencamGIFFormats[id]
-        delete Screencam.gif_options_dialog.form.format.options[id]
+        if (originalFormats[id]) {
+          ScreencamGIFFormats[id] = originalFormats[id]
+        } else {
+          delete ScreencamGIFFormats[id]
+          delete Screencam.gif_options_dialog.form.format.options[id]
+        }
       }
       delete Screencam.gif_options_dialog.form.mp4Codec
       Screencam.gif_options_dialog.build()
@@ -76,6 +142,7 @@
   })
 
   async function processFFmpeg(vars, options, args) {
+    if (args.validate && !args.validate(vars)) return
     const buffers = []
     for (const [i, canvas] of vars.frame_canvases.entries()) {
       const blob = await new Promise(canvas.toBlob.bind(canvas))
@@ -90,7 +157,10 @@
     })
     if (!file) return
     Blockbench.showQuickMessage("Processing...")
-    await ffmpeg(buffers, ["-framerate", options.fps, "-i", "-", ...args.command, "-y", file])
+    if (args.preprocess) {
+      args.preprocess(vars, options, args, buffers, file)
+    }
+    await ffmpeg(buffers, ["-framerate", options.fps, "-i", "-", ...args.command, "-f", args.format ?? args.extension, "-y", file])
     Blockbench.showQuickMessage(`Saved as ${file}`)
   }
 
@@ -109,10 +179,11 @@
     })
     for (const frame of frames) p.stdin.write(frame)
     p.stdin.end()
-    let out = ""
-    for await (const chunk of p.stderr) {
-      out += chunk
-    }
+    // let out = ""
+    // for await (const chunk of p.stderr) {
+    //   out += chunk
+    // }
+    // console.log(out)
     return p.promise
   }
 
