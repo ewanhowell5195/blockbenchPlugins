@@ -4,7 +4,7 @@
 
   const originalFormats = {}
 
-  let formats, ffmpegPath
+  let formats, ffmpegPath, dialog
   const id = "scene_recorder"
   const name = "Scene Recorder"
   const E = s => $(document.createElement(s))
@@ -12,14 +12,23 @@
     title: name,
     icon: "icon.png",
     author: "Ewan Howell",
-    description: "Add a new scene recorder where you can record your model in a large variety of formats.",
+    description: "Extend the GIF recorder new formats to record your model with. Improve the built-in GIF format.",
     tags: ["Recording", "Media"],
     version: "2.0.0",
     min_version: "4.8.0",
     variant: "desktop",
     creation_date: "2022-12-14",
+    has_changelog: true,
     async onload() {
       Screencam.gif_options_dialog.close()
+      Screencam.gif_options_dialog.onOpen = async () => {
+        if (await checkFFmpeg()) {
+          Screencam.gif_options_dialog.close()
+        } else {
+          delete Screencam.gif_options_dialog.onOpen
+        }
+      }
+
       if (await checkFFmpeg()) return
 
       formats = {
@@ -127,17 +136,21 @@
       }, 1)
     },
     onunload() {
-      Screencam.gif_options_dialog.close()
-      for (const id of Object.keys(formats)) {
-        if (originalFormats[id]) {
-          ScreencamGIFFormats[id] = originalFormats[id]
-        } else {
-          delete ScreencamGIFFormats[id]
-          delete Screencam.gif_options_dialog.form.format.options[id]
+      dialog?.close()
+      if (formats) {
+        Screencam.gif_options_dialog.close()
+        delete Screencam.gif_options_dialog.onOpen
+        for (const id of Object.keys(formats)) {
+          if (originalFormats[id]) {
+            ScreencamGIFFormats[id] = originalFormats[id]
+          } else {
+            delete ScreencamGIFFormats[id]
+            delete Screencam.gif_options_dialog.form.format.options[id]
+          }
         }
+        delete Screencam.gif_options_dialog.form.mp4Codec
+        Screencam.gif_options_dialog.build()
       }
-      delete Screencam.gif_options_dialog.form.mp4Codec
-      Screencam.gif_options_dialog.build()
     }
   })
 
@@ -207,75 +220,66 @@
       title: "Missing FFmpeg",
       width: 610,
       buttons: [],
-      lines: [`
-        <style>
-          dialog#no-ffmpeg .dialog_content {
-            margin-top: 0;
-            overflow-x: clip;
+      lines: [`<style>dialog#no-ffmpeg {
+        .dialog_content {
+          margin-top: 0;
+          overflow-x: clip;
+        }
+
+        iframe {
+          display: block;
+          margin-top: 16px;
+        }
+
+        .button-bar {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+          margin-top: 16px;
+        }
+      }</style>`],
+      component: {
+        methods: {
+          async select() {
+            const file = electron.dialog.showOpenDialogSync()
+            if (!file) return
+            try {
+              const p = spawn(file[0], [], {
+                stdio: ["ignore", "ignore", "pipe"]
+              })
+              let out = ""
+              for await (const chunk of p.stderr) out += chunk
+              if (!out.startsWith("ffmpeg")) return Blockbench.showQuickMessage("Invalid FFmpeg file")
+            } catch {
+              return Blockbench.showQuickMessage("Invalid FFmpeg file")
+            }
+            localStorage.setItem("ffmpegPath", file[0])
+            dialog.close()
+            Plugins.all.find(e => e.id === id).reload()
+          },
+          reload() {
+            Plugins.all.find(e => e.id === id).reload()
+            Blockbench.showQuickMessage(`Reloaded ${name}`)
+          },
+          close() {
+            dialog.close()
           }
-          dialog#no-ffmpeg .ffmpeg-button {
-            background-color: var(--color-button);
-            color: var(--color-text)!important;
-            min-height: 32px;
-            padding: 0 16px;
-            text-decoration: none!important;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            margin: 10px 0 20px;
-          }
-          dialog#no-ffmpeg .ffmpeg-button:hover {
-            background-color: var(--color-accent);
-            color: var(--color-accent_text) !important;
-          }
-          dialog#no-ffmpeg .ffmpeg-button:active {
-            text-decoration: underline!important;
-          }
-          dialog#no-ffmpeg .button-bar {
-            display: flex;
-            justify-content: flex-end;
-            gap: 3px;
-            margin-top: 20px;
-          }
-          dialog#no-ffmpeg .spacer {
-            flex: 1;
-          }
-        </style>
-        <h1>Missing FFmpeg</h1>
-        <p>FFmpeg is required to use this plugin</p>
-        <a class="ffmpeg-button" href="https://ffmpeg.org/download.html">Download FFmpeg</a>
-        ${process.platform === "linux" ? "" : `<iframe width="560" height="315" src="${process.platform === "darwin" ? "https://www.youtube.com/embed/H1o6MWnmwpY" : "https://www.youtube.com/embed/jZLqNocSQDM"}" frameborder="0" allow="" allowfullscreen></iframe>`}
-        <div class="button-bar">
-          <button id="ffmpeg-select">Select FFmpeg executable manually</button>
-          <div class="spacer"></div>
-          <button id="ffmpeg-reload">Reload plugin</button>
-          <button id="ffmpeg-close">Close</button>
-        </div>
-      `]
-    }).show()
-    $("#ffmpeg-select").on("click", async e => {
-      const file = electron.dialog.showOpenDialogSync()
-      if (!file) return
-      try {
-        const p = spawn(file[0], [], {
-          stdio: ["ignore", "ignore", "pipe"]
-        })
-        let out = ""
-        for await (const chunk of p.stderr) out += chunk
-        if (!out.startsWith("ffmpeg")) return Blockbench.showQuickMessage("Invalid FFmpeg file")
-      } catch {
-        return Blockbench.showQuickMessage("Invalid FFmpeg file")
+        },
+        template: `
+          <div>
+            <h1>Missing FFmpeg</h1>
+            <p>FFmpeg is required to use this plugin: <a style="color: var(--color-accent);" href="https://ffmpeg.org/download.html">Download FFmpeg</a></p>
+            ${process.platform === "linux" ? "" : `<iframe width="560" height="315" src="${process.platform === "darwin" ? "https://www.youtube.com/embed/H1o6MWnmwpY" : "https://www.youtube.com/embed/jZLqNocSQDM"}" frameborder="0" allow="" allowfullscreen></iframe>`}
+            <div class="button-bar">
+              <button @click="select">Select FFmpeg executable manually</button>
+              <div style="flex: 1;"></div>
+              <button @click="reload">Reload plugin</button>
+              <button @click="close">Close</button>
+            </div>
+          </div>
+        `
       }
-      localStorage.setItem("ffmpegPath", file[0])
-      dialog.close()
-      Plugins.all.find(e => e.id === id).reload()
-    })
-    $("#ffmpeg-reload").on("click", e => {
-      dialog.close()
-      Plugins.all.find(e => e.id === id).reload()
-      Blockbench.showQuickMessage(`Reloaded ${name}`)
-    })
-    $("#ffmpeg-close").on("click", e => dialog.close())
+    }).show()
     return true
   }
 
