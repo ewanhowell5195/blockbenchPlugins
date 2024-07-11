@@ -17,6 +17,9 @@
     version: "2.0.0",
     min_version: "4.10.0",
     variant: "desktop",
+    website: `https://ewanhowell.com/plugins/${id.replace(/_/g, "-")}/`,
+    repository: `https://github.com/ewanhowell5195/blockbenchPlugins/tree/main/${id}`,
+    bug_tracker: `https://github.com/ewanhowell5195/blockbenchPlugins/issues?title=[${name}]`,
     creation_date: "2022-12-14",
     has_changelog: true,
     async onload() {
