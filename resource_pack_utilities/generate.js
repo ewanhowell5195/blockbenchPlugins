@@ -8,6 +8,8 @@ globalThis.Formats = {}
 
 require("./resource_pack_utilities.js")
 
+const utilities = Object.values(resourcePackUtilities).sort((a, b) => a.name.localeCompare(b.name))
+
 const description = `<p>This plugin contains a collection of utilities to assist with resource pack creation.</p>
   <h2>How to use</h2>
   <p>To use this plugin, go <strong>Tools > Resource Pack Utilities</strong>, then select the utility you would like to use.</p>
@@ -17,7 +19,7 @@ fs.writeFileSync("about.md", `
 <div id="about-content">
   ${description}
   <ul>
-    ${Object.values(resourcePackUtilities).sort((a, b) => a.name.localeCompare(b.name)).map(e => `<li>
+    ${utilities.map(e => `<li>
       <h3>${e.name}</h3>
       <p>${e.description}</p>
     </li>`).join(`\n    `)}
@@ -90,6 +92,6 @@ fs.writeFileSync("about.md", `
 
 const data = JSON.parse(fs.readFileSync("E:/Programming/GitHub/ewanhowell/src/assets/json/plugins/resource-pack-utilities.json"))
 
-data.description = description + `<ul>${Object.values(resourcePackUtilities).sort((a, b) => a.name.localeCompare(b.name)).map(e => `<li><h3 style="margin-bottom: 4px;">${e.name}</h3><p>${e.description}</p>`).join("")}</ul>`
+data.description = description + `<ul>${utilities.map(e => `<li><h3 style="margin-bottom: 4px;">${e.name}</h3><p>${e.description}</p>`).join("")}</ul>`
 
 fs.writeFileSync("E:/Programming/GitHub/ewanhowell/src/assets/json/plugins/resource-pack-utilities.json", JSON.stringify(data, null, 2))
