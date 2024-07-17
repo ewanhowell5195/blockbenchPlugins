@@ -108,11 +108,11 @@
             outline: 0 solid transparent;
           }
           12.5%, 62.5% {
-            transform: translateX(10px);
+            transform: translateX(8px);
             outline: 4px solid var(--color-danger);
           }
           37.5%, 87.5% {
-            transform: translateX(-10px);
+            transform: translateX(-8px);
             outline: 4px solid var(--color-danger);
           }
         }
@@ -126,44 +126,43 @@
         lines: [`<style>#${id} {
           .dialog_content {
             margin: 0;
+            max-height: calc(100vh - 128px);
           }
 
-          button:disabled {
-            opacity: .5;
-            cursor: not-allowed;
+          button {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
 
-            &:hover {
-              background-color: var(--color-button);
-              color: var(--color-text) !important;
-            }
-          }
-
-          button.has-icon {
-            text-decoration: none;
-
-            &:focus span {
-              text-decoration: underline
-            }
-          }
-
-          button.material-icons {
-            min-width: 32px;
-            padding: 0;
-
-            &:focus {
-              text-decoration: none;
-              color: var(--color-light);
-            }
-
-            &.icon {
-              background-color: initial;
-
-              &:focus {
-                color: var(--color-text) !important;
-              }
+            &:disabled {
+              opacity: .5;
+              cursor: not-allowed;
 
               &:hover {
-                color: var(--color-light) !important;
+                background-color: var(--color-button);
+                color: var(--color-text) !important;
+              }
+            }
+
+            &.material-icons {
+              min-width: 32px;
+              padding: 0;
+
+              &:focus {
+                text-decoration: none;
+                color: var(--color-light);
+              }
+
+              &.icon {
+                background-color: initial;
+
+                &:focus {
+                  color: var(--color-text) !important;
+                }
+
+                &:hover {
+                  color: var(--color-light) !important;
+                }
               }
             }
           }
@@ -303,10 +302,13 @@
           }
 
           .utility {
-            margin: 16px;
+            margin: 16px 8px 16px 16px;
+            padding-right: 8px;
             display: flex;
             gap: 16px;
             flex-direction: column;
+            max-height: calc(100vh - 286px);
+            overflow-y: auto;
 
             > div, .col {
               display: flex;
@@ -576,7 +578,7 @@
       MenuBar.addAction(action2, "tools")
       document.addEventListener("keydown", copyText)
       // dialog.show()
-      // dialog.content_vue.utility = "missingTextures"
+      // dialog.content_vue.utility = "mojangConverter"
     },
     onunload() {
       document.removeEventListener("keydown", copyText)
@@ -940,6 +942,55 @@
     branchToString(tree)
 
     return lines.join("\n")
+  }
+
+  function rowBlank(imageData, width, y) {
+    for (let x = 0; x < width; ++x) if (imageData.data[y * width * 4 + x * 4 + 3] !== 0) return false
+    return true
+  }
+
+  function columnBlank(imageData, width, x, top, bottom) {
+    for (let y = top; y < bottom; ++y) if (imageData.data[y * width * 4 + x * 4 + 3] !== 0) return false
+    return true
+  }
+
+  class Canvas extends CanvasFrame {
+    constructor(width, height) {
+      super(width, height)
+      this.canvas.ctx = this.ctx
+      this.canvas.trim = this.trim
+      return this.canvas
+    }
+
+    trim() {
+      const imageData = this.ctx.getImageData(0, 0, this.width, this.height)
+      let top = 0, bottom = imageData.height, left = 0, right = imageData.width
+      while (top < bottom && rowBlank(imageData, this.width, top)) ++top
+      while (bottom - 1 > top && rowBlank(imageData, this.width, bottom - 1)) --bottom
+      while (left < right && columnBlank(imageData, this.width, left, top, bottom)) ++left
+      while (right - 1 > left && columnBlank(imageData, this.width, right - 1, top, bottom)) --right
+      if (top === bottom && bottom === left && left === right) {
+        this.width = 1
+        this.height = 1
+        return this
+      }
+      const trimmed = this.ctx.getImageData(left, top, right - left, bottom - top);
+      const copy = new Canvas(this.width, this.height)
+      copy.width = trimmed.width
+      copy.height = trimmed.height
+      copy.ctx.putImageData(trimmed, 0, 0)
+      this.width = copy.width
+      this.height = copy.height
+      this.ctx.clearRect(0, 0, this.width, this.height)
+      this.ctx.drawImage(copy, 0, 0)
+      return this
+    }
+  }
+
+  function imageToCanvas(img) {
+    const canvas = new Canvas(img.width, img.height)
+    canvas.ctx.drawImage(img, 0, 0)
+    return canvas
   }
 
   // Constants
@@ -1378,11 +1429,11 @@
           <div v-for="(log, index) in logs.slice(-1000)" :key="index" :class="log[0]" v-html="log[1].replace(/\`([^\`]*)\`/g, '<code>$1</code>').replaceAll('\uE000', '\`')"></div>
         </div>
         <div class="buttons">
-          <button class="has-icon" @click="copy">
+          <button @click="copy">
             <i class="material-icons">content_copy</i>
             <span>Copy Log</span>
           </button>
-          <button class="has-icon" @click="save">
+          <button @click="save">
             <i class="material-icons">save</i>
             <span>Save Log</span>
           </button>
@@ -1539,7 +1590,269 @@
         <div :style="{ width: width ? width.toString() + 'px' : 'initial' }"><slot></slot>:</div>
         <select-input v-model="value" :options="options" />
       `
-    }
+    },
+    fileInput: {
+      props: {
+        value: {},
+        type: {
+          default: tl("data.image"),
+        },
+        extensions: {
+          default: ["png"]
+        },
+        multiple: {
+          type: Boolean
+        },
+        max: {},
+        title: {}
+      },
+      data() {
+        if (this.max) {
+          this.max = parseInt(this.max)
+          if (this.max > 1) {
+            this.multiple = true
+          }
+        }
+        this.title ??= `Select ${ this.max ? "up to " + this.max : "" } ${ this.multiple ? "files" : "a file" }`
+        return {
+          files: Array.isArray(this.value) ? this.value : this.value ? [this.value] : [],
+          message: `select ${ this.max ? "up to " + this.max : "" } ${ this.multiple ? "files" : "a file" }`
+        }
+      },
+      methods: {
+        async changeFiles() {
+          Blockbench.import({
+            title: this.title,
+            extensions: this.extensions,
+            type: this.type,
+            multiple: this.multiple,
+            readtype: "buffer"
+          }, async files => {
+            if (files.length === 1) this.message = "change file"
+            else this.message = `${files.length} files selected`
+            this.files = []
+            for (const file of files) {
+              const buf = Buffer.from(file.content)
+              const b64Image = buf.toString("base64")
+              const img = await loadImage(buf)
+              this.files.push({
+                content: buf,
+                image: img,
+                src: `data:image/png;base64,${b64Image}`,
+                info: `${file.name}\n${img.width.toLocaleString()}x${img.height.toLocaleString()} - ${formatBytes(file.content.byteLength)}`
+              })
+            }
+            this.$emit("input", Array.isArray(this.value) ? this.files : this.files[0])
+          })
+        }
+      },
+      styles: `
+        background-color: var(--color-back);
+        border: 1px solid var(--color-border);
+
+        > div {
+          padding: 16px;
+          user-select: none;
+          position: relative;
+          text-shadow: none;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          align-items: flex-start;
+
+          &:not(:has(.file-input-images:hover)):hover button {
+            background-color: var(--color-accent);
+            color: var(--color-accent_text);
+          }
+
+          &:not(:has(.file-input-images:focus)):focus button {
+            text-decoration: underline;
+          }
+        }
+
+        * {
+          cursor: pointer;
+        }
+
+        .file-input-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          max-width: 100%;
+        }
+
+        .file-input-text {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .file-input-images {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          position: relative;
+          z-index: 1;
+          margin: 0 -16px -16px;
+          padding: 0 16px 6px;
+          width: calc(100% + 32px);
+          cursor: default;
+          justify-content: safe center;
+
+          * {
+            cursor: default;
+          }
+
+          > div {
+            display: flex;
+            flex-direction: column;
+            font-size: 14px;
+            color: var(--color-subtle_text);
+            align-items: center;
+            gap: 4px;
+            white-space: pre;
+            text-align: center;
+            font-weight: 600;
+          }
+
+          & img {
+            height: 128px;
+          }
+        }
+      `,
+      template: `
+        <div @click="changeFiles" tabindex="0">
+          <div class="file-input-row">
+            <button>
+              <i class="material-icons icon">upload</i>
+              <span>Choose file{{ multiple ? 's' : '' }}</span>
+            </button>
+            <span class="file-input-text">{{ this.message }}</span>
+          </div>
+          <div v-if="files.length" class="file-input-images" tabindex="0" @click.stop>
+            <div v-for="file in files">
+              <img class="checkerboard" :src="file.src">
+              <div>{{ file.info }}</div>
+            </div>
+          </div>
+        </div>
+      `
+    },
+    canvasOutput: {
+      props: {
+        value: {},
+        name: {
+          default: "image",
+        },
+        type: {
+          default: tl("data.image")
+        }
+      },
+      mounted() {
+        this.appendCanvas()
+      },
+      watch: {
+        value(val) {
+          this.appendCanvas()
+        }
+      },
+      methods: {
+        appendCanvas() {
+          if (this.value) {
+            this.$refs.canvasContainer.textContent = ""
+            this.value.classList.add("checkerboard")
+            this.$refs.canvasContainer.append(this.value)
+            this.$refs.canvasInfo.textContent = `${this.name}.png\n${this.value.width}x${this.value.height} - 12 KB`
+          } else {
+            this.$refs.canvasContainer.textContent = "No output yet…"
+            this.$refs.canvasInfo.textContent = ""
+          }
+        },
+        async copy() {
+          const r = await fetch(this.value.toDataURL())
+          navigator.clipboard.write([new ClipboardItem({ "image/png": await r.blob() })])
+          Blockbench.showQuickMessage("Copied to clipboard…")
+        },
+        save() {
+          Blockbench.export({
+            extensions: ["png"],
+            type: this.type,
+            name: this.name,
+            savetype: "image",
+            content: this.value.toDataURL()
+          }, () => Blockbench.showQuickMessage("Saved…"))
+        }
+      },
+      styles: `
+        .canvas-container {
+          background-color: var(--color-back);
+          border: 1px solid var(--color-border);
+          padding: 16px;
+          font-size: 14px;
+          color: var(--color-subtle_text);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          white-space: pre;
+          text-align: center;
+          gap: 4px;
+          font-weight: 600;
+
+          > :first-child {
+            overflow-x: auto;
+            max-width: 100%;
+          }
+
+          > :empty {
+            display: none;
+          }
+        }
+
+        canvas {
+          height: 256px;
+          display: block;
+        }
+
+        .button-row {
+          display: flex;
+          gap: 8px;
+          margin-top: -8px;
+
+          button {
+            flex: 1 1 0px;
+          }
+        }
+      `,
+      template: `
+        <div class="canvas-container" :style="{ paddingBottom: value ? '6px' : '16px' }">
+          <div ref="canvasContainer"></div>
+          <div ref="canvasInfo"></div>
+        </div>
+        <div class="button-row" @click="save">
+          <button :disabled="!value">
+            <i class="material-icons icon">save</i>
+            <span>Save</span>
+          </button>
+          <button :disabled="!value" @click="copy">
+            <i class="material-icons icon">content_copy</i>
+            <span>Copy</span>
+          </button>
+        </div>
+      `
+    },
+    tabSelect: {
+      props: ["value", "options"],
+      watch: {
+        value(val) {
+          this.$emit("input", val)
+        }
+      },
+      template: `
+        <ul class="form_inline_select">
+          <li v-for="(name, id) in options" :class="{ selected: id === value }" @click="value = id">{{ name }}</li>
+        </ul>
+      `
+    },
   }
 
   const utilities = {
@@ -2351,8 +2664,8 @@
                   } else if (fileBuffer.readUint32BE(16) === assetBuffer.readUint32BE(16) && fileBuffer.readUint32BE(20) === assetBuffer.readUint32BE(20)) {
                     const fileImg = await loadImage(fileBuffer)
                     const assetImg = await loadImage(assetBuffer)
-                    const fileCanvas = new CanvasFrame(fileImg.width, fileImg.height)
-                    const assetCanvas = new CanvasFrame(assetImg.width, assetImg.height)
+                    const fileCanvas = new Canvas(fileImg.width, fileImg.height)
+                    const assetCanvas = new Canvas(assetImg.width, assetImg.height)
                     fileCanvas.ctx.drawImage(fileImg, 0, 0)
                     assetCanvas.ctx.drawImage(assetImg, 0, 0)
                     fileImgData = fileCanvas.ctx.getImageData(0, 0, fileImg.width, fileImg.height).data
@@ -2941,6 +3254,65 @@
             <button v-if="status.processing" @click="cancelled = true">Cancel</button>
             <button v-else @click="status.finished = false">Done</button>
           </div>
+        `
+      }
+    },
+    mojangConverter: {
+      name: "Mojang Converter",
+      icon: "swap_horiz",
+      tagline: "Convert images to and between the 1.15 and 1.16 Mojang logo formats.",
+      description: "Mojang Converter is a tool that will convert images to be in the the Mojang Studios logo format. This can also convert existing textures between the 1.15 and 1.16 texture formats.",
+      component: {
+        data: {
+          file: null,
+          outputNew: null,
+          outputOld: null,
+          mode: "new",
+          modes: {
+            new: "1.16 and above",
+            old: "1.15 and below"
+          }
+        },
+        methods: {
+          async execute() {
+            const img = imageToCanvas(this.file.image)
+            if (img.width === img.height) {
+              const oldCanvas = new Canvas(img.width * 2, Math.floor(img.width / 2))
+              oldCanvas.ctx.drawImage(img, 0, 0, img.width, Math.floor(img.width / 2), 0, 0, img.width, Math.floor(img.width / 2))
+              oldCanvas.ctx.drawImage(img, 0, Math.floor(img.width / 2), img.width, Math.floor(img.width / 2), img.width, 0, img.width, Math.floor(img.width / 2))
+              oldCanvas.trim()
+              this.outputOld = new Canvas(oldCanvas.width, oldCanvas.width)
+              this.outputOld.ctx.drawImage(oldCanvas, 0, Math.floor((oldCanvas.width - oldCanvas.height) / 2))
+            } else {
+              img.trim()
+              const size = Math.max(img.width, img.height)
+              this.outputOld = new Canvas(size, size)
+              this.outputOld.ctx.drawImage(img, (this.outputOld.width - img.width) / 2, (this.outputOld.height - img.height) / 2)
+            }
+            img.trim()
+            let newCanvas
+            if (img.width < img.height * 4) {
+              newCanvas = new Canvas(img.height * 4 + 8, img.height + 2)
+              newCanvas.ctx.drawImage(img, Math.floor((img.height * 4 - img.width) / 2) + 4, 1)
+            } else if (img.width > img.height * 4) {
+              newCanvas = new Canvas(img.width + 8, Math.floor(img.width / 4) + 2)
+              newCanvas.ctx.drawImage(img, 4, Math.floor((newCanvas.height - img.height) / 2))
+            } else {
+              newCanvas = new Canvas(img.width + 8, img.height + 4)
+              newCanvas.ctx.drawImage(img, 4, 1)
+            }
+            this.outputNew = new Canvas(Math.floor(newCanvas.width / 2), Math.floor(newCanvas.width / 2))
+            this.outputNew.ctx.drawImage(newCanvas, 0, 0)
+            this.outputNew.ctx.drawImage(newCanvas, Math.floor(-newCanvas.width / 2), Math.floor(newCanvas.width / 4))
+          }
+        },
+        template: `
+          <h3>Input texture:</h3>
+          <file-input v-model="file" title="Select your Mojang Studios texture" @input="execute" />
+          <h3>Mojang Studios texture:</h3>
+          <tab-select v-model="mode" :options="modes" />
+          <canvas-output v-if="mode === 'new'" v-model="outputNew" name="mojangstudios" />
+          <canvas-output v-if="mode === 'old'" v-model="outputOld" name="mojang" />
         `
       }
     }
