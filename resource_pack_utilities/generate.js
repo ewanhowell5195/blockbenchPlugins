@@ -14,14 +14,14 @@ require("./resource_pack_utilities.js")
 
 const utilities = Object.values(resourcePackUtilities).sort((a, b) => a.name.localeCompare(b.name))
 
-const description = `<img src="https://ewanhowell.com/assets/images/plugins/resource-pack-utilities/logo.webp" />
-  <p>This plugin contains a collection of utilities to assist with resource pack creation.</p>
+const description = `<p>This plugin contains a collection of utilities to assist with resource pack creation.</p>
   <h2>How to use</h2>
   <p>To use this plugin, go <strong>Tools > Resource Pack Utilities</strong>, then select the utility you would like to use.</p>
   <h2>Utilities</h2>`
 
 fs.writeFileSync("about.md", `
 <div id="about-content">
+  <img src="https://ewanhowell.com/assets/images/plugins/resource-pack-utilities/logo.webp" />
   ${description}
   <ul>
     ${utilities.map(e => `<li>
