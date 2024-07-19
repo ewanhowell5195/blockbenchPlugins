@@ -622,15 +622,19 @@
   }
 
   async function loadImage(imagePath) {
-    let imageData
-    if (typeof imagePath === "object") {
-      imageData = imagePath
-    } else {
-      imageData = await fs.promises.readFile(imagePath)
-    }
-    const base64Data = imageData.toString("base64")
     const img = new Image()
-    img.src = `data:image/png;base64,${base64Data}`
+    if (imagePath.startsWith?.("data:image/png;base64,")) {
+      img.src = imagePath
+    } else {
+      let imageData
+      if (typeof imagePath === "object") {
+        imageData = imagePath
+      } else {
+        imageData = await fs.promises.readFile(imagePath)
+      }
+      const base64Data = imageData.toString("base64")
+      img.src = `data:image/png;base64,${base64Data}`
+    }
     await img.decode()
     return img
   }
@@ -1746,13 +1750,18 @@
         },
         type: {
           default: tl("data.image")
-        }
+        },
+        error: {},
+        height: {}
       },
       mounted() {
         this.appendCanvas()
       },
       watch: {
-        value(val) {
+        value() {
+          this.appendCanvas()
+        },
+        error() {
           this.appendCanvas()
         }
       },
@@ -1761,10 +1770,17 @@
           if (this.value) {
             this.$refs.canvasContainer.textContent = ""
             this.value.classList.add("checkerboard")
+            if (this.height) {
+              this.value.style.height = this.height + "px"
+            }
             this.$refs.canvasContainer.append(this.value)
             this.$refs.canvasInfo.textContent = `${this.name}.png\n${this.value.width}x${this.value.height} - 12 KB`
           } else {
-            this.$refs.canvasContainer.textContent = "No output yet…"
+            if (this.error) {
+              this.$refs.canvasContainer.innerHTML = `<span class="canvas-output-error">${this.error}</span>`
+            } else {
+              this.$refs.canvasContainer.textContent = "No output yet…"
+            }
             this.$refs.canvasInfo.textContent = ""
           }
         },
@@ -1822,6 +1838,10 @@
             flex: 1 1 0px;
           }
         }
+
+        .canvas-output-error {
+          color: var(--color-error);
+        }
       `,
       template: `
         <div class="canvas-container" :style="{ paddingBottom: value ? '6px' : '16px' }">
@@ -1847,12 +1867,42 @@
           this.$emit("input", val)
         }
       },
+      styles: `
+        li {
+          flex: 1 1 0px;
+        }
+      `,
       template: `
         <ul class="form_inline_select">
           <li v-for="(name, id) in options" :class="{ selected: id === value }" @click="value = id">{{ name }}</li>
         </ul>
       `
     },
+    numSlider: {
+      props: {
+        value: {},
+        min: {
+          default: 0
+        },
+        max: {
+          default: 100
+        },
+        step: {
+          default: 1
+        }
+      },
+      watch: {
+        value(val) {
+          this.$emit("input", val)
+        }
+      },
+      template: `
+        <div class="bar slider_input_combo">
+          <input type="range" class="tool disp_range" v-model.number="value" :min="min" :max="max" :step="step" />
+          <numeric-input class="tool disp_text" v-model.number="value" :min="min" :max="max" :step="step" />
+        </div>
+      `
+    }
   }
 
   const utilities = {
@@ -3267,16 +3317,22 @@
           file: null,
           outputNew: null,
           outputOld: null,
-          mode: "new",
-          modes: {
-            new: "1.16 and above",
-            old: "1.15 and below"
+          inputMode: "image",
+          inputModes: {
+            image: "Arbitrary image or 1.15 format",
+            old: "1.16 and above format"
+          },
+          outputMode: "new",
+          outputModes: {
+            new: "Convert for 1.16 and above",
+            old: "Convert for 1.15 and below"
           }
         },
         methods: {
           async execute() {
+            if (!this.file) return
             const img = imageToCanvas(this.file.image)
-            if (img.width === img.height) {
+            if (this.inputMode === "old") {
               const oldCanvas = new Canvas(img.width * 2, Math.floor(img.width / 2))
               oldCanvas.ctx.drawImage(img, 0, 0, img.width, Math.floor(img.width / 2), 0, 0, img.width, Math.floor(img.width / 2))
               oldCanvas.ctx.drawImage(img, 0, Math.floor(img.width / 2), img.width, Math.floor(img.width / 2), img.width, 0, img.width, Math.floor(img.width / 2))
@@ -3308,11 +3364,291 @@
         },
         template: `
           <h3>Input texture:</h3>
+          <tab-select v-model="inputMode" :options="inputModes" @input="execute" />
           <file-input v-model="file" title="Select your Mojang Studios texture" @input="execute" />
           <h3>Mojang Studios texture:</h3>
+          <tab-select v-if="inputMode === 'image'" v-model="outputMode" :options="outputModes" />
+          <canvas-output v-if="inputMode !== 'old' && outputMode === 'new'" v-model="outputNew" name="mojangstudios" />
+          <canvas-output v-if="inputMode === 'old' || outputMode === 'old'" v-model="outputOld" name="mojang" />
+        `
+      }
+    },
+    minecraftTitleConverter: {
+      name: "Minecraft Title Converter",
+      icon: "text_fields",
+      tagline: "Convert images to and between the 1.19 and 1.20 Minecraft title formats.",
+      description: "Minecraft Title Converter is a tool that will convert images to be in the the Minecraft title format. This can also convert existing textures between the 1.19 and 1.20 texture formats.",
+      component: {
+        data: {
+          file: null,
+          outputNew: null,
+          outputOld: null,
+          outputBetween: null,
+          inputMode: "image",
+          inputModes: {
+            image: "Arbitrary image or 1.20 format",
+            old: "1.19 and below format"
+          },
+          outputMode: "new",
+          outputModes: {
+            new: "Convert for 1.20 and above",
+            old: "Convert for 1.19 and below"
+          },
+          outputBetweenError: null
+        },
+        methods: {
+          async execute() {
+            const img = imageToCanvas(this.file.image)
+            const aspect = img.width / img.height
+            let w, h
+            if (img.width > 1024 || img.height > 1024) {
+              if (aspect > 1) {
+                w = 1024
+                h = Math.floor(1024 / aspect)
+              } else {
+                h = 1024
+                w = Math.floor(1024 * aspect)
+              }
+            } else {
+              w = img.width
+              h = img.height
+            }
+            const canvas = new Canvas(w, h)
+            if (img.width < 64 || img.height < 64) {
+              canvas.ctx.imageSmoothingEnabled = false
+            }
+            canvas.ctx.drawImage(img, 0, 0, w, h)
+            const base = await loadImage("data:image/png;base64,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")
+            let oldPreCanvas
+            if (canvas.width / canvas.height < 137 / 22) {
+              oldPreCanvas = new Canvas(Math.floor((canvas.height / 22) * 137), canvas.height)
+              oldPreCanvas.ctx.drawImage(canvas, Math.floor((oldPreCanvas.width - canvas.width) / 2), 0)
+            } else if (canvas.width / canvas.height > 137 / 22) {
+              oldPreCanvas = new Canvas(canvas.width, Math.floor((canvas.width / 137) * 22))
+              oldPreCanvas.ctx.drawImage(canvas, 0, Math.floor((oldPreCanvas.height - canvas.height) / 2))
+            } else oldPreCanvas = canvas
+            this.outputOld = new Canvas(Math.floor((oldPreCanvas.width / 137) * 128), Math.floor((oldPreCanvas.width / 137) * 128))
+            this.outputOld.ctx.imageSmoothingEnabled = false
+            this.outputOld.ctx.drawImage(base, 0, 0, this.outputOld.width, this.outputOld.height)
+            const width = Math.floor((oldPreCanvas.width / 274) * 155)
+            this.outputOld.ctx.drawImage(oldPreCanvas, 0, 0, width, oldPreCanvas.height, 0, 0, width, oldPreCanvas.height)
+            this.outputOld.ctx.drawImage(oldPreCanvas, width, 0, oldPreCanvas.width - width, oldPreCanvas.height, 0, Math.floor(oldPreCanvas.height / 44 * 45), oldPreCanvas.width - width, oldPreCanvas.height)
+            function newConvert(img) {
+              const input = new Canvas(img.width, img.height)
+              input.ctx.drawImage(img, 0, 0)
+              input.trim()
+              const canvas = new Canvas(1024, 256)
+              const ctx = canvas.getContext("2d")
+              const scaleFactor = Math.min(1024 / input.width, 176 / input.height)
+              const newWidth = input.width * scaleFactor
+              const newHeight = input.height * scaleFactor
+              const x = (1024 - newWidth) / 2
+              const y = (176 - newHeight) / 2
+              if (newWidth > input.width) ctx.imageSmoothingEnabled = false
+              ctx.drawImage(input, x, y, newWidth, newHeight)
+              return canvas
+            }
+            this.outputNew = newConvert(canvas)
+            if (img.width === img.height) {
+              const m = img.width / 256
+              const w = Math.floor(m * 155)
+              const w2 = Math.floor(m * 119)
+              const h = Math.floor(m * 44)
+              const h2 = Math.floor(m * 45)
+              const convertCanvas = new Canvas(w + w2, h)
+              convertCanvas.ctx.drawImage(img, 0, 0, w, h, 0, 0, w, h)
+              convertCanvas.ctx.drawImage(img, 0, h2, w2, h, w, 0, w2, h)
+              this.outputBetween = newConvert(convertCanvas)
+              this.outputBetweenError = null
+            } else {
+              this.outputBetween = null
+              this.outputBetweenError = "The input image must be square for this type of conversion"
+            }
+          }
+        },
+        template: `
+          <h3>Input texture:</h3>
+          <tab-select v-model="inputMode" :options="inputModes" />
+          <file-input v-model="file" title="Select your Minecraft Title texture" @input="execute" />
+          <template v-if="inputMode === 'image'">
+            <h3>Minecraft Title texture:</h3>
+            <tab-select v-model="outputMode" :options="outputModes" />
+            <canvas-output v-if="outputMode === 'new'" v-model="outputNew" name="minecraft" height="178" />
+            <canvas-output v-if="outputMode === 'old'" v-model="outputOld" name="minecraft" />
+          </template>
+          <template v-else>
+            <h3>Minecraft Title texture for 1.20 and above:</h3>
+            <canvas-output v-model="outputBetween" name="minecraft" :error="outputBetweenError"  height="178" />
+          </div>
+        `
+      }
+    },
+    skinConverter: {
+      name: "Skin Converter",
+      icon: "group",
+      tagline: "Convert Minecraft skins between the classic and modern skin formats.",
+      description: "Skin Converter is a tool that will convert Minecraft skins between the classic 64x32 format and the modern 64x64 format.",
+      component: {
+        data: {
+          file: null,
+          canvas: null,
+          error: null,
+          mode: "wide",
+          modes: {
+            wide: "Wide",
+            slim: "Slim"
+          },
+          direction: "down"
+        },
+        methods: {
+          async execute() {
+            if (!(this.file.image.width === this.file.image.height || this.file.image.width === this.file.image.height * 2)) {
+              this.error = "Invalid skin: Skins must be square, or in the aspect ratio 2:1"
+              return
+            }
+            if (!(Math.clz32(this.file.image.width) < Math.clz32(this.file.image.width - 1))) {
+              this.error = "Invalid skin: Skins must have dimensions that are powers of 2, such as 64, 128, 256, etc…"
+              return
+            }
+            if (this.file.image.width < 64) {
+              this.error = "Invalid skin: The minimum size for a skin is 64x32"
+              return
+            }
+            this.error = null
+            const img = imageToCanvas(this.file.image)
+            if (img.width === img.height) {
+              this.direction = "down"
+              this.canvas = new Canvas(img.width, Math.floor(img.width / 2))
+              this.canvas.ctx.drawImage(img, 0, 0)
+            } else {
+              this.direction = "up"
+              this.canvas = new Canvas(img.width, img.width)
+              const m = img.width / 64
+              this.canvas.ctx.drawImage(img, 0, 0)
+              this.canvas.ctx.save()
+              this.canvas.ctx.translate(img.width, 0)
+              this.canvas.ctx.scale(-1, 1)
+              this.canvas.ctx.drawImage(img, 0, 20 * m, 12 * m, 12 * m, 36 * m, 52 * m, 12 * m, 12 * m)
+              this.canvas.ctx.drawImage(img, 12 * m, 20 * m, 4 * m, 12 * m, 32 * m, 52 * m, 4 * m, 12 * m)
+              this.canvas.ctx.drawImage(img, 4 * m, 16 * m, 4 * m, 4 * m, 40 * m, 48 * m, 4 * m, 4 * m)
+              this.canvas.ctx.drawImage(img, 8 * m, 16 * m, 4 * m, 4 * m, 36 * m, 48 * m, 4 * m, 4 * m)
+              if (this.mode === "slim") {
+                this.canvas.ctx.drawImage(img, 40 * m, 20 * m, 11 * m, 12 * m, 21 * m, 52 * m, 11 * m, 12 * m)
+                this.canvas.ctx.drawImage(img, 51 * m, 20 * m, 3 * m, 12 * m, 18 * m, 52 * m, 3 * m, 12 * m)
+                this.canvas.ctx.drawImage(img, 44 * m, 16 * m, 3 * m, 4 * m, 25 * m, 48 * m, 3 * m, 4 * m)
+                this.canvas.ctx.drawImage(img, 47 * m, 16 * m, 3 * m, 4 * m, 22 * m, 48 * m, 3 * m, 4 * m)
+              } else {
+                this.canvas.ctx.drawImage(img, 40 * m, 20 * m, 12 * m, 12 * m, 20 * m, 52 * m, 12 * m, 12 * m)
+                this.canvas.ctx.drawImage(img, 52 * m, 20 * m, 4 * m, 12 * m, 16 * m, 52 * m, 4 * m, 12 * m)
+                this.canvas.ctx.drawImage(img, 44 * m, 16 * m, 4 * m, 4 * m, 24 * m, 48 * m, 4 * m, 4 * m)
+                this.canvas.ctx.drawImage(img, 48 * m, 16 * m, 4 * m, 4 * m, 20 * m, 48 * m, 4 * m, 4 * m)
+              }
+            }
+          }
+        },
+        template: `
+          <h3>Input skin:</h3>
+          <file-input v-model="file" title="Select your skin file" @input="execute" />
+          <h3>Output skin:</h3>
+          <tab-select v-if="direction === 'up'" v-model="mode" :options="modes" @input="execute" />
+          <canvas-output v-model="canvas" name="skin" :error="error" />
+        `
+      }
+    },
+    wideSlimConverter: {
+      name: "Wide ⇄ Slim Converter",
+      icon: "supervisor_account",
+      tagline: "Convert Minecraft skins between the wide and slim skin formats.",
+      description: "Wide ⇄ Slim Converter is a tool that will convert Minecraft skins between the wide 4px arm format and the slim 3px arm format.",
+      component: {
+        data: {
+          file: null,
+          slim: null,
+          wide: null,
+          error: null,
+          mode: "wide",
+          modes: {
+            wide: "Wide",
+            slim: "Slim"
+          },
+          slimCol: 1,
+          wideCol: 1
+        },
+        methods: {
+          async execute() {
+            if (!this.file) return
+            if (this.file.image.width != 64 || ![32, 64].includes(this.file.image.height)) {
+              this.error = "Invalid skin: Skins must be 64x64 or 64x32"
+              return
+            }
+            this.error = null
+
+            const slimCol = this.slimCol - 1
+            const wideCol = this.wideCol - 1
+
+            this.slim = imageToCanvas(this.file.image)
+            this.wide = imageToCanvas(this.file.image)
+
+            this.slim.ctx.clearRect(44 + slimCol, 16, 12 - slimCol, 16)
+            this.slim.ctx.drawImage(this.file.image, 45 + slimCol, 16, 10 - slimCol * 2, 16, 44 + slimCol, 16, 10 - slimCol * 2, 16)
+            this.slim.ctx.drawImage(this.file.image, 56 - slimCol, 20, slimCol, 12, 54 - slimCol, 20, slimCol, 12)
+            this.slim.ctx.clearRect(47 + slimCol, 16, 4 - slimCol, 4)
+            this.slim.ctx.drawImage(this.file.image, 49 + slimCol, 16, 3 - slimCol, 4, 47 + slimCol, 16, 3 - slimCol, 4)
+
+            this.slim.ctx.clearRect(44 + slimCol, 32, 12 - slimCol, 16)
+            this.slim.ctx.drawImage(this.file.image, 45 + slimCol, 32, 10 - slimCol * 2, 16, 44 + slimCol, 32, 10 - slimCol * 2, 16)
+            this.slim.ctx.drawImage(this.file.image, 56 - slimCol, 36, slimCol, 12, 54 - slimCol, 36, slimCol, 12)
+            this.slim.ctx.clearRect(47 + slimCol, 32, 4 - slimCol, 4)
+            this.slim.ctx.drawImage(this.file.image, 49 + slimCol, 32, 3 - slimCol, 4, 47 + slimCol, 32, 3 - slimCol, 4)
+
+            this.slim.ctx.clearRect(39 - slimCol, 48, 9 + slimCol, 16)
+            this.slim.ctx.drawImage(this.file.image, 40 - slimCol, 48, 4 + slimCol * 2, 16, 39 - slimCol, 48, 4 + slimCol * 2, 16)
+            this.slim.ctx.drawImage(this.file.image, 45 + slimCol, 52, 3 - slimCol, 12, 43 + slimCol, 52, 3 - slimCol, 12)
+            this.slim.ctx.clearRect(42 - slimCol, 48, 1 + slimCol, 4)
+            this.slim.ctx.drawImage(this.file.image, 44 - slimCol, 48, slimCol, 4, 42 - slimCol, 48, slimCol, 4)
+
+            this.slim.ctx.clearRect(55 - slimCol, 48, 9 + slimCol, 16)
+            this.slim.ctx.drawImage(this.file.image, 56 - slimCol, 48, 4 + slimCol * 2, 16, 55 - slimCol, 48, 4 + slimCol * 2, 16)
+            this.slim.ctx.drawImage(this.file.image, 61 + slimCol, 52, 3 - slimCol, 12, 59 + slimCol, 52, 3 - slimCol, 12)
+            this.slim.ctx.clearRect(58 - slimCol, 48, 1 + slimCol, 4)
+            this.slim.ctx.drawImage(this.file.image, 60 - slimCol, 48, slimCol, 4, 58 - slimCol, 48, slimCol, 4)
+
+            this.wide.ctx.clearRect(45 + wideCol, 16, 12 - wideCol, 16)
+            this.wide.ctx.drawImage(this.file.image, 44 + wideCol, 16, 10 - wideCol * 2, 16, 45 + wideCol, 16, 10 - wideCol * 2, 16)
+            this.wide.ctx.drawImage(this.file.image, 53 - wideCol, 20, 1 + wideCol, 12, 55 - wideCol, 20, 1 + wideCol, 12)
+            this.wide.ctx.clearRect(49 + wideCol, 16, 4 - wideCol, 4)
+            this.wide.ctx.drawImage(this.file.image, 47 + wideCol, 16, 3 - wideCol, 4, 49 + wideCol, 16, 3 - wideCol, 4)
+            
+            this.wide.ctx.clearRect(45 + wideCol, 32, 12 - wideCol, 16)
+            this.wide.ctx.drawImage(this.file.image, 44 + wideCol, 32, 10 - wideCol * 2, 16, 45 + wideCol, 32, 10 - wideCol * 2, 16)
+            this.wide.ctx.drawImage(this.file.image, 53 - wideCol, 36, 1 + wideCol, 12, 55 - wideCol, 36, 1 + wideCol, 12)
+            this.wide.ctx.clearRect(49 + wideCol, 32, 4 - wideCol, 4)
+            this.wide.ctx.drawImage(this.file.image, 47 + wideCol, 32, 3 - wideCol, 4, 49 + wideCol, 32, 3 - wideCol, 4)
+
+            this.wide.ctx.clearRect(39 - wideCol, 48, 7 + wideCol, 16)
+            this.wide.ctx.drawImage(this.file.image, 38 - wideCol, 48, 6 + wideCol * 2, 16, 39 - wideCol, 48, 6 + wideCol * 2, 16)
+            this.wide.ctx.drawImage(this.file.image, 43 + wideCol, 52, 3 - wideCol, 12, 45 + wideCol, 52, 3 - wideCol, 12)
+            this.wide.ctx.clearRect(43 - wideCol, 48, wideCol, 4)
+            this.wide.ctx.drawImage(this.file.image, 41 - wideCol, 48, 1 + wideCol, 4, 43 - wideCol, 48, 1 + wideCol, 4)
+
+            this.wide.ctx.clearRect(55 - wideCol, 48, 7 + wideCol, 16)
+            this.wide.ctx.drawImage(this.file.image, 54 - wideCol, 48, 6 + wideCol * 2, 16, 55 - wideCol, 48, 6 + wideCol * 2, 16)
+            this.wide.ctx.drawImage(this.file.image, 59 + wideCol, 52, 3 - wideCol, 12, 61 + wideCol, 52, 3 - wideCol, 12)
+            this.wide.ctx.clearRect(59 - wideCol, 48, wideCol, 4)
+            this.wide.ctx.drawImage(this.file.image, 57 - wideCol, 48, 1 + wideCol, 4, 59 - wideCol, 48, 1 + wideCol, 4)
+          }
+        },
+        template: `
+          <h3>Input skin:</h3>
           <tab-select v-model="mode" :options="modes" />
-          <canvas-output v-if="mode === 'new'" v-model="outputNew" name="mojangstudios" />
-          <canvas-output v-if="mode === 'old'" v-model="outputOld" name="mojang" />
+          <file-input v-model="file" title="Select your skin file" @input="execute" />
+          <h3 v-if="mode === 'wide'">The column of pixels in the arms that gets removed:</h3>
+          <num-slider v-if="mode === 'wide'" v-model="slimCol" :min="1" :max="4" :step="1" @input="execute" />
+          <h3 v-if="mode === 'slim'">The column of pixels in the arms that gets duplicated:</h3>
+          <num-slider v-if="mode === 'slim'" v-model="wideCol" :min="1" :max="3" :step="1" @input="execute" />
+          <h3>Output {{ mode === 'wide' ? 'slim' : 'wide' }} skin:</h3>
+          <canvas-output v-if="mode === 'wide'" v-model="slim" name="slim" :error="error" />
+          <canvas-output v-if="mode === 'slim'" v-model="wide" name="wide" :error="error" />
         `
       }
     }
