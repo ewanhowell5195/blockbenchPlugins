@@ -27,7 +27,6 @@
   }
   const E = s => $(document.createElement(s))
   function setCurrentPreviewScene(data) {
-    console.log(data)
     localStorage.setItem("preview_scene", data.scene.id)
     activePreviewScene = data.scene.id
   }
@@ -43,7 +42,7 @@
     author,
     description,
     tags: ["Preview Scenes", "Blockbench"],
-    version: "1.1.2",
+    version: "1.1.3",
     min_version: "4.8.3",
     variant: "both",
     creation_date: "2022-10-14",
@@ -838,7 +837,7 @@
           b: lightColour.b / 255
         },
         light_side: settings.lightSide,
-        require_minecraft_eula: args.eula
+        require_minecraft_eula: args?.eula
       })
       if (!args?.dontEnable) PreviewScene.scenes[id].select()
       const stored = JSON.parse(localStorage.getItem("preview_scenes") ?? "[]")
