@@ -1219,7 +1219,8 @@
     for (const m of check4) {
       if (m[1] === "render") {
         if (!renderVars.includes(m[2])) throw [`Invalid "<span style="font-weight:600">render</span>" variable: "<span style="font-weight:600">${m[2]}</span>" is not a render variable`]
-      } else if (!["this", "part", "var", "varb"].includes(m[1]) && !Group.all.find(e => e.name === m[1])) {
+      } else if (!["this", "part", "var", "varb", "root"].includes(m[1]) && !Group.all.find(e => e.name === m[1])) {
+        console.log(m[1])
         throw [`Unknown group "<span style="font-weight:600">${m[1]}</span>" in animation "<span style="font-weight:600">${anim.replace(/</g, "&lt;")}</span>"`]
       }
     }
@@ -1962,7 +1963,7 @@
           specialMap = new Map()
           preprocessCEMA(val, group.name)
           if (!["var", "varb"].includes(split[0])) {
-            const part = ["this", "part"].includes(split[0]) ? group : Group.all.find(e => e.name === split[0])
+            const part = ["this", "part", "root"].includes(split[0]) ? group : Group.all.find(e => e.name === split[0])
             if (!part) animationErrorToggle(`Unknown group "<span style="font-weight:600">${split[0]}</span>"`, null, true)
           }
         }
