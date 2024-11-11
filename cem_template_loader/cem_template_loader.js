@@ -2,7 +2,6 @@
   let plugin
   const connection = {
     roots: [
-      `http://localhost:8080/assets`,
       `https://wynem.com/assets`,
       `https://raw.githubusercontent.com/ewanhowell5195/wynem/main/src/assets`,
       `https://cdn.jsdelivr.net/gh/ewanhowell5195/wynem/src/assets`
