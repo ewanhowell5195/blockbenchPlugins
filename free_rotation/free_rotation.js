@@ -2,12 +2,39 @@
   const path = require("node:path")
   const os = require("node:os")
 
-  let codec, format, action, properties
+  let codec, format, action, properties, styles
 
   const id = "free_rotation"
   const name = "Free Rotation"
   const icon = "3d_rotation"
   const description = "Create Java Item models without any rotation limitations."
+
+  const links = {
+    websiteGodlander: {
+      text: "By Godlander",
+      link: "https://github.com/Godlander",
+      icon: "fab.fa-github",
+      colour: "#6E40C9"
+    },
+    discordGodlander: {
+      text: "Godlander's Discord",
+      link: "https://discord.gg/2s6th9SvZd",
+      icon: "fab.fa-discord",
+      colour: "#727FFF"
+    },
+    websiteEwan: {
+      text: "By Ewan Howell",
+      link: "https://ewanhowell.com/",
+      icon: "language",
+      colour: "#33E38E"
+    },
+    discordEwan: {
+      text: "Ewan's Discord",
+      link: "https://discord.ewanhowell.com/",
+      icon: "fab.fa-discord",
+      colour: "#727FFF"
+    }
+  }
 
   let directory
   if (os.platform() === "win32") {
@@ -20,9 +47,9 @@
 
   Plugin.register(id, {
     title: name,
-    icon: icon,
+    icon: "icon.png",
     author: "Godlander & Ewan Howell",
-    description: description,
+    description,
     about: "placeholder",
     tags: ["Minecraft: Java Edition", "Rotation"],
     version: "1.0.0",
@@ -30,6 +57,54 @@
     variant: "desktop",
     await_loading: true,
     onload() {
+      styles = Blockbench.addCSS(`
+        #format_page_free_rotation {
+          padding-bottom: 0;
+        }
+        .format_entry[format="limitless_item"] i {
+          overflow: visible;
+        }
+        .limitless-item-links {
+          display: flex;
+          justify-content: space-around;
+          margin: 20px 35px 0;
+        }
+        .limitless-item-links * {
+          cursor: pointer;
+        }
+        .limitless-item-links > a {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+          padding: 5px;
+          text-decoration: none;
+          flex-grow: 1;
+          flex-basis: 0;
+          color: var(--color-subtle_text);
+          text-align: center;
+        }
+        .limitless-item-links > a:hover {
+          background-color: var(--color-accent);
+          color: var(--color-light);
+        }
+        .limitless-item-links > a > i {
+          font-size: 32px;
+          width: 100%;
+          max-width: initial;
+          height: 32px;
+          text-align: center;
+        }
+        .limitless-item-links > a:hover > i {
+          color: var(--color-light) !important;
+        }
+        .limitless-item-links > a > p {
+          flex: 1;
+          display: flex;
+          align-items: center;
+        }
+      `)
+
       codec = new Codec("temp", {
         name: "Temp",
         remember: true,
@@ -150,6 +225,9 @@
           }).show()
         },
         async compile(form) {
+          const mode = Modes.selected
+          Modes.options.edit.select()
+
           let maxcoord = 24
           for (const cube of Cube.all) {
             for (const position of cube.getGlobalVertexPositions()) {
@@ -255,6 +333,8 @@
 
             models.push(autoStringify(model))
           }
+
+          mode.select()
           return models
         }
       })
@@ -265,8 +345,43 @@
         extension: "json",
         icon: "3d_rotation",
         category: "minecraft",
-        target: "Minecraft: Java Edition",
-        format_page: {},
+        format_page: {
+          component: {
+            methods: {
+              create: () => format.new()
+            },
+            template: `
+              <div class="ewan-format-page" style="display:flex;flex-direction:column;height:100%">
+                <p class="format_description">${description}</p>
+                <p class="format_target"><b>Target</b> : <span>Minecraft: Java Edition</span></p>
+                <content>
+                  <h3 class="markdown">Good to know:</h3>
+                  <p class="markdown">
+                    <ul>
+                      <li>This format is designed to create Minecraft: Java Edition item models without the rotation limitations imposed by the game</li>
+                      <li>These models cannot be re-imported, so make sure to save your project as a <strong>bbmodel</strong>.</li>
+                      <li>After making your model and configuring its display settings, use <strong>File > Export > Free Rotation Item</strong> to export it into your resource pack.</li>
+                      <li>This format requires Minecraft 1.21.4 or later</li>
+                    </ul>
+                  </p>
+                </content>
+                <div class="spacer"></div>
+                <div class="limitless-item-links">${Object.values(links).map(e => `
+                  <a href="${e.link}">
+                    ${Blockbench.getIconNode(e.icon, e.colour).outerHTML}
+                    <p>${e.text}</p>
+                  </a>
+                `).join("")}</div>
+                <div class="button_bar">
+                  <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="create">
+                    <i class="material-icons icon">${icon}</i>
+                    Create New Free Rotation Item
+                  </button>
+                </div>
+              </div>
+            `
+          }
+        },
         render_sides: "front",
         model_identifier: false,
         parent_model_id: true,
@@ -333,6 +448,7 @@
       codec.delete()
       format.delete()
       action.delete()
+      styles.delete()
       properties.forEach(e => e.delete())
     }
   })
