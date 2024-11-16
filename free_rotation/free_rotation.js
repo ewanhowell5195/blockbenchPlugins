@@ -2,7 +2,7 @@
   const path = require("node:path")
   const os = require("node:os")
 
-  let codec, format, action, itemProperty, nameProperty, pathProperty, displayProperty
+  let codec, format, action, properties
 
   const id = "free_rotation"
   const name = "Free Rotation"
@@ -250,14 +250,15 @@
               }
             }
 
-            models.push(JSON.stringify(model))
+            models.push(autoStringify(model))
           }
           return models
         }
-      }),
+      })
+
       format = new ModelFormat({
         id: "free_rotation",
-        name: "Free Rotation Model",
+        name: "Free Rotation Item",
         extension: "json",
         icon: "3d_rotation",
         category: "minecraft",
@@ -282,54 +283,54 @@
         codec
       })
       codec.format = format
+
       action = new Action("free_rotation_export", {
-        name: "Export Free Rotation Model",
+        name: "Export Free Rotation Item",
         icon: "3d_rotation",
-        condition: {formats: [format.id]},
+        condition: { formats: [format.id] },
         click: () => codec.export()
       })
       MenuBar.addAction(action, "file.export.0")
 
-      itemProperty = new Property(ModelProject, "string", "free_rotation_item", {
-        label: "Item ID",
-        description: "ID of the item model",
-        condition: {formats: [format.id]}
-      })
-      nameProperty = new Property(ModelProject, "string", "free_rotation_name", {
-        label: "Model Name",
-        description: "Model file to output",
-        condition: {formats: [format.id]}
-      })
-      pathProperty = new Property(ModelProject, "string", "free_rotation_path", {
-        label: "Export Path",
-        default: directory,
-        condition: {formats: [format.id]},
-        exposed: false
-      })
-      displayProperty = new Property(ModelProject, "object", "free_rotation_display", {
-        default: {
-          thirdperson_lefthand: true,
-          thirdperson_righthand: true,
-          firstperson_lefthand: true,
-          firstperson_righthand: true,
-          head: true,
-          ground: true,
-          fixed: true,
-          gui: true
-        },
-        label: "Display Settings",
-        condition: {formats: [format.id]},
-        exposed: false
-      })
+      properties = [
+        new Property(ModelProject, "string", "free_rotation_item", {
+          label: "Item ID",
+          description: "ID of the item model",
+          condition: { formats: [format.id] }
+        }),
+        new Property(ModelProject, "string", "free_rotation_name", {
+          label: "Model Name",
+          description: "Model file to output",
+          condition: { formats: [format.id] }
+        }),
+        new Property(ModelProject, "string", "free_rotation_path", {
+          label: "Export Path",
+          default: directory,
+          condition: { formats: [format.id] },
+          exposed: false
+        }),
+        new Property(ModelProject, "object", "free_rotation_display", {
+          default: {
+            thirdperson_lefthand: true,
+            thirdperson_righthand: true,
+            firstperson_lefthand: true,
+            firstperson_righthand: true,
+            head: true,
+            ground: true,
+            fixed: true,
+            gui: true
+          },
+          label: "Display Settings",
+          condition: {formats: [format.id]},
+          exposed: false
+        })
+      ]
     },
     onunload() {
       codec.delete()
       format.delete()
       action.delete()
-      itemProperty.delete()
-      nameProperty.delete()
-      pathProperty.delete()
-      displayProperty.delete()
+      properties.forEach(e => e.delete())
     }
   })
 })()
