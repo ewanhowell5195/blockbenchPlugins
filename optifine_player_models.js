@@ -740,8 +740,6 @@
       config.delete()
       styles.delete()
       property.delete()
-      MenuBar.removeAction("file.export.export_optifine_player_model")
-      MenuBar.removeAction("file.export.create_optifine_player_model_config")
     }
   })
   function addStyles() {
