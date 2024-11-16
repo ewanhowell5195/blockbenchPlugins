@@ -41,16 +41,16 @@
             id: "free_rotation_export_prompt",
             title: "Free Rotation Export",
             form: {
-              item: {label: "Item ID", type: "input", placeholder: "diamond_sword", value: Project.free_rotation_item},
-              name: {label: "Model Name", type: "input", placeholder: "diamond_katana", value: Project.free_rotation_name},
-              thirdperson_righthand: {label: "Third Person Right", type: "checkbox", value: Project.free_rotation_display.thirdperson_righthand},
-              thirdperson_lefthand: {label: "Third Person Left", type: "checkbox", value: Project.free_rotation_display.thirdperson_lefthand},
-              firstperson_righthand: {label: "First Person Right", type: "checkbox", value: Project.free_rotation_display.firstperson_righthand},
-              firstperson_lefthand: {label: "First Person Left", type: "checkbox", value: Project.free_rotation_display.firstperson_lefthand},
-              head: {label: "Head", type: "checkbox", value: Project.free_rotation_display.head},
-              ground: {label: "Ground", type: "checkbox", value: Project.free_rotation_display.ground},
-              fixed: {label: "Item Frame", type: "checkbox", value: Project.free_rotation_display.fixed},
-              gui: {label: "GUI", type: "checkbox", value: Project.free_rotation_display.gui},
+              item: { label: "Item ID", type: "input", placeholder: "diamond_sword", value: Project.free_rotation_item },
+              name: { label: "Model Name", type: "input", placeholder: "diamond_katana", value: Project.free_rotation_name },
+              thirdperson_righthand: { label: "Third Person Right", type: "checkbox", value: Project.free_rotation_display.thirdperson_righthand },
+              thirdperson_lefthand: { label: "Third Person Left", type: "checkbox", value: Project.free_rotation_display.thirdperson_lefthand },
+              firstperson_righthand: { label: "First Person Right", type: "checkbox", value: Project.free_rotation_display.firstperson_righthand },
+              firstperson_lefthand: { label: "First Person Left", type: "checkbox", value: Project.free_rotation_display.firstperson_lefthand },
+              head: { label: "Head", type: "checkbox", value: Project.free_rotation_display.head },
+              ground: { label: "Ground", type: "checkbox", value: Project.free_rotation_display.ground },
+              fixed: { label: "Item Frame", type: "checkbox", value: Project.free_rotation_display.fixed },
+              gui: { label: "GUI", type: "checkbox", value: Project.free_rotation_display.gui }
             },
             async onConfirm(form) {
               if (!form.item.length || !form.name.length) {
@@ -59,10 +59,12 @@
               if (!form.item.match(/^[a-z0-9_-]+$/) || !form.name.match(/^[a-z0-9_-]+$/)) {
                 return Blockbench.showQuickMessage("Only characters a-z, 0-9, _, and - are allowed", 2000)
               }
+
               const dir = Blockbench.pickDirectory({
                 title: "Select resource pack to export to",
                 startpath: Project.free_rotation_path
               })
+              if (!dir) return
 
               Project.free_rotation_item = form.item
               Project.free_rotation_name = form.name
@@ -70,8 +72,6 @@
               for (const m in Project.free_rotation_display) {
                 Project.free_rotation_display[m] = form[m]
               }
-
-              if (!dir) return
 
               const dialog = new Dialog("exporting", {
                 title: "Exporting...",
@@ -197,16 +197,19 @@
               if (data.rotation) renderedFace.rotation = data.rotation
               if (data.texture) {
                 const texture = Project.textures.find(e => e.uuid == data.texture)
-                if (!texture) throw new Error('Texture not found')
-                renderedFace.texture = '#' + texture.id
-                const path = texture.source.replaceAll(/\\/g, '/')
-                const parts = path.split('/')
-                const assetsIndex = parts.indexOf('assets')
-                if (assetsIndex === -1) model.textures[texture.id] = 'unknown'
-                else {
-                  const namespace = parts[assetsIndex + 1]
-                  const resourcePath = parts.slice(assetsIndex + 3, -1).join('/')
-                  model.textures[texture.id] = namespace + ':' + resourcePath + '/' + texture.name.slice(0, -4)
+                if (!texture) {
+                  console.error("Texture not found... skipping")
+                } else {
+                  renderedFace.texture = "#" + texture.id
+                  const path = texture.source.replaceAll(/\\/g, "/")
+                  const parts = path.split("/")
+                  const assetsIndex = parts.indexOf("assets")
+                  if (assetsIndex === -1) model.textures[texture.id] = "unknown"
+                  else {
+                    const namespace = parts[assetsIndex + 1]
+                    const resourcePath = parts.slice(assetsIndex + 3, -1).join("/")
+                    model.textures[texture.id] = namespace + ":" + resourcePath + "/" + texture.name.slice(0, -4)
+                  }
                 }
               }
               if (data.cullface) renderedFace.cullface = data.cullface
@@ -221,19 +224,19 @@
             for (const slot of DisplayMode.slots) {
               if (Project.free_rotation_display[slot] === true) {
                 const scale = new THREE.Vector3(downscale, downscale, downscale)
-                const translation = cube.getWorldCenter();
-                translation.y -= 8;
+                const translation = cube.getWorldCenter()
+                translation.y -= 8
 
                 const display = Project.display_settings[slot]
                 if (display) {
-                  const dscale = (new THREE.Vector3()).fromArray(display.scale)
-                  const dtranslation = (new THREE.Vector3()).fromArray(display.translation)
-                  const drotation = (new THREE.Quaternion()).setFromEuler(
-                    (new THREE.Euler()).fromArray([
-                    THREE.MathUtils.degToRad(display.rotation[0]),
-                    THREE.MathUtils.degToRad(display.rotation[1]),
-                    THREE.MathUtils.degToRad(display.rotation[2]),
-                    ], 'XYZ')
+                  const dscale = new THREE.Vector3().fromArray(display.scale)
+                  const dtranslation = new THREE.Vector3().fromArray(display.translation)
+                  const drotation = new THREE.Quaternion().setFromEuler(
+                    new THREE.Euler().fromArray([
+                      Math.degToRad(display.rotation[0]),
+                      Math.degToRad(display.rotation[1]),
+                      Math.degToRad(display.rotation[2]),
+                    ], "XYZ")
                   )
                   scale.multiply(dscale)
                   rotation.multiplyQuaternions(drotation, quat)
@@ -243,9 +246,9 @@
                 }
 
                 model.display[slot] = {
-                  "rotation": (new THREE.Euler()).setFromQuaternion(rotation, 'XYZ').toArray().slice(0,3).map(e=>THREE.MathUtils.radToDeg(e)),
-                  "translation": translation.toArray(),
-                  "scale": scale.toArray()
+                  rotation: (new THREE.Euler()).setFromQuaternion(rotation, "XYZ").toArray().slice(0,3).map(e => Math.radToDeg(e)),
+                  translation: translation.toArray(),
+                  scale: scale.toArray()
                 }
               }
             }
@@ -321,7 +324,7 @@
             gui: true
           },
           label: "Display Settings",
-          condition: {formats: [format.id]},
+          condition: { formats: [format.id] },
           exposed: false
         })
       ]
