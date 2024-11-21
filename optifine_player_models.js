@@ -282,6 +282,16 @@
 
                 if (submodel.boxes && submodel.boxes.length) {
                   submodel.boxes.forEach(box => {
+                    if (!box.textureOffset && (
+                        box.uvNorth
+                        || box.uvEast
+                        || box.uvSouth
+                        || box.uvWest
+                        || box.uvUp
+                        || box.uvDown
+                    )) {
+                      Project.box_uv = false
+                    }
 
                     const base_cube = new Cube({
                       name: box.name || p_group.name,
@@ -317,7 +327,6 @@
                        || box.uvUp
                        || box.uvDown
                     )) {
-                      Project.box_uv = false
                       base_cube.extend({faces: {
                         north: box.uvNorth ? {uv: box.uvNorth} : empty_face,
                         east:  box.uvEast  ? {uv: box.uvEast}  : empty_face,
