@@ -506,9 +506,9 @@
               [face.uv[0] / 16, 1 - (face.uv[3] / 16)],
               [face.uv[2] / 16, 1 - (face.uv[3] / 16)]
             ]
-            const rot = (face.rotation + 0)
+            let rot = (face.rotation + 0)
             while (rot > 0) {
-              let a = arr[0]
+              const a = arr[0]
               arr[0] = arr[2]
               arr[2] = arr[3]
               arr[3] = arr[1]
