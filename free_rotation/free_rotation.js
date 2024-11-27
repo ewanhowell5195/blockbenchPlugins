@@ -64,15 +64,15 @@
         .format_entry[format="limitless_item"] i {
           overflow: visible;
         }
-        .limitless-item-links {
+        .free-rotation-links {
           display: flex;
           justify-content: space-around;
           margin: 20px 35px 0;
         }
-        .limitless-item-links * {
+        .free-rotation-links * {
           cursor: pointer;
         }
-        .limitless-item-links > a {
+        .free-rotation-links > a {
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -84,21 +84,21 @@
           color: var(--color-subtle_text);
           text-align: center;
         }
-        .limitless-item-links > a:hover {
+        .free-rotation-links > a:hover {
           background-color: var(--color-accent);
           color: var(--color-light);
         }
-        .limitless-item-links > a > i {
+        .free-rotation-links > a > i {
           font-size: 32px;
           width: 100%;
           max-width: initial;
           height: 32px;
           text-align: center;
         }
-        .limitless-item-links > a:hover > i {
+        .free-rotation-links > a:hover > i {
           color: var(--color-light) !important;
         }
-        .limitless-item-links > a > p {
+        .free-rotation-links > a > p {
           flex: 1;
           display: flex;
           align-items: center;
@@ -355,7 +355,7 @@
                 <p class="format_description">${description}</p>
                 <p class="format_target"><b>Target</b> : <span>Minecraft: Java Edition</span></p>
                 <content>
-                  <h3 class="markdown">Good to know:</h3>
+                  <h3 class="markdown">About:</h3>
                   <p class="markdown">
                     <ul>
                       <li>This format is designed to create Minecraft: Java Edition item models without the rotation limitations imposed by the game</li>
@@ -366,7 +366,7 @@
                   </p>
                 </content>
                 <div class="spacer"></div>
-                <div class="limitless-item-links">${Object.values(links).map(e => `
+                <div class="free-rotation-links">${Object.values(links).map(e => `
                   <a href="${e.link}">
                     ${Blockbench.getIconNode(e.icon, e.colour).outerHTML}
                     <p>${e.text}</p>
