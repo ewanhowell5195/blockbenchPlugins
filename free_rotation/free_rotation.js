@@ -109,122 +109,215 @@
         name: "Temp",
         remember: true,
         export() {
+          const project = Project
           for (const texture of Texture.all) {
             if (!texture.saved) texture.save()
           }
-          new Dialog({
+          const dialog = new Dialog({
             id: "free_rotation_export_prompt",
             title: "Free Rotation Export",
-            form: {
-              item: { label: "Item ID", type: "input", placeholder: "diamond_sword", value: Project.free_rotation_item },
-              name: { label: "Model Name", type: "input", placeholder: "diamond_katana", value: Project.free_rotation_name },
-              thirdperson_righthand: { label: "Third Person Right", type: "checkbox", value: Project.free_rotation_display.thirdperson_righthand },
-              thirdperson_lefthand: { label: "Third Person Left", type: "checkbox", value: Project.free_rotation_display.thirdperson_lefthand },
-              firstperson_righthand: { label: "First Person Right", type: "checkbox", value: Project.free_rotation_display.firstperson_righthand },
-              firstperson_lefthand: { label: "First Person Left", type: "checkbox", value: Project.free_rotation_display.firstperson_lefthand },
-              head: { label: "Head", type: "checkbox", value: Project.free_rotation_display.head },
-              ground: { label: "Ground", type: "checkbox", value: Project.free_rotation_display.ground },
-              fixed: { label: "Item Frame", type: "checkbox", value: Project.free_rotation_display.fixed },
-              gui: { label: "GUI", type: "checkbox", value: Project.free_rotation_display.gui }
-            },
-            async onConfirm(form) {
-              if (!form.item.length || !form.name.length) {
-                return Blockbench.showQuickMessage("Both fields are required for export")
+            buttons: [],
+            lines: [`<style>
+              #free_rotation_export_prompt h2 {
+                margin-bottom: 8px;
               }
-              if (!form.item.match(/^[a-z0-9_-]+$/) || !form.name.match(/^[a-z0-9_-]+$/)) {
-                return Blockbench.showQuickMessage("Only characters a-z, 0-9, _, and - are allowed", 2000)
+              #free_rotation_export_prompt .button-row {
+                display: flex;
+                justify-content: flex-end;
+                width: 100%;
+                margin-top: 16px;
               }
-
-              const dir = Blockbench.pickDirectory({
-                title: "Select resource pack to export to",
-                startpath: Project.free_rotation_path
-              })
-              if (!dir) return
-
-              Project.free_rotation_item = form.item
-              Project.free_rotation_name = form.name
-              Project.free_rotation_path = form.path
-              for (const m in Project.free_rotation_display) {
-                Project.free_rotation_display[m] = form[m]
+              #free_rotation_export_prompt button:disabled {
+                cursor: not-allowed;
+                opacity: 0.5;
+                background-color: var(--color-button);
+                color: var(--color-text) !important;
               }
-
-              const dialog = new Dialog("exporting", {
-                title: "Exporting...",
-                lines: [
-                  `<style>
-                    #exporting .dialog_close_button {
-                      display: none;
-                    }
-                    #exporting h1 {
-                      margin: 0;
-                    }
-                  </style>`,
-                  "<h1>Exporting...</h1>"
-                ],
-                buttons: [],
-                cancel_on_click_outside: false,
-                onConfirm: () => false
-              }).show()
-              const close = dialog.close
-              dialog.close = () => {}
-
-              const definitionDir = path.join(dir, "assets", "freerot", "items")
-              const definitionFile = path.join(definitionDir, form.item + ".json")
-              const modelDir = path.join(dir, "assets", "freerot", "models", form.name)
-
-              if (fs.existsSync(definitionFile)) {
-                const check = await new Promise(fulfil => {
-                  Blockbench.showMessageBox({
-                    title: "Item definition already exists",
-                    message: `The item definition <code>assets/freerot/${form.item}.json</code> already exists. Are you sure you want to continue and overwrite it?`,
-                    buttons: ["dialog.confirm", "dialog.cancel"]
-                  }, button => {
-                    if (button === 0) fulfil(true)
-                    else fulfil()
-                  })
-                })
-                if (!check) return
+              #free_rotation_export_prompt .dialog_content {
+                margin: 0;
+                padding: 16px;
               }
-
-              if (fs.existsSync(modelDir)) {
-                const check = await new Promise(fulfil => {
-                  Blockbench.showMessageBox({
-                    title: "Model already exists",
-                    message: `The the model folder <code>assets/freerot/models/${form.name}</code> already exists. Are you sure you want to continue and possibly overwrite files inside it?`,
-                    buttons: ["dialog.confirm", "dialog.cancel"]
-                  }, button => {
-                    if (button === 0) fulfil(true)
-                    else fulfil()
-                  })
-                })
-                if (!check) return
+              .free-rotation-export-error {
+                color: var(--color-error);
+                font-weight: 600;
               }
-
-              fs.mkdirSync(definitionDir, { recursive: true })
-              fs.mkdirSync(modelDir, { recursive: true })
-
-              const models = await codec.compile(form)
-
-              const definition = {
-                model: {
-                  type: "composite",
-                  models: new Array(models.length).fill().map((e, i) => ({
-                    type: "model",
-                    model: `freerot:${form.name}/${i}`
-                  }))
+              .free-rotation-export-error code {
+                background-color: var(--color-back);
+                border: 1px solid var(--color-border);
+                padding: 0 2px;
+              }
+              #free_rotation_display_exports {
+                display: flex;
+                gap: 8px;
+              }
+              #free_rotation_display_exports > * {
+                cursor: pointer;
+              }
+            </style>`],
+            component: {
+              data: {
+                project,
+                exportAllowed: false,
+                idError: "",
+                nameError: "",
+                displayIcons: {
+                  thirdperson_lefthand: { icon: "accessibility" },
+                  thirdperson_righthand: { icon: "accessibility" },
+                  firstperson_lefthand: { icon: "person" },
+                  firstperson_righthand: { icon: "person" },
+                  head: { icon: "sentiment_satisfied" },
+                  ground: { icon: "icon-ground", iconType: "custom" },
+                  fixed: { icon: "filter_frames" },
+                  gui: { name: "GUI", icon: "border_style" }
                 }
-              }
+              },
+              methods: {
+                check() {
+                  if (!project.free_rotation_item) {
+                    this.idError = "The Item ID is required"
+                  } else if (project.free_rotation_item.match(/[^a-z0-9_-]/)) {
+                    this.idError = "The Item ID can only include the following characters:<br><code>a-z</code>, <code>0-9</code>, <code>_</code>, <code>-</code>"
+                  } else {
+                    this.idError = ""
+                  }
+                  if (!project.free_rotation_name) {
+                    this.nameError = "The Model Name is required"
+                  } else if (project.free_rotation_name.match(/[^a-z0-9_-]/)) {
+                    this.nameError = "The Model Name can only include the following characters:<br><code>a-z</code>, <code>0-9</code>, <code>_</code>, <code>-</code>"
+                  } else {
+                    this.nameError = ""
+                  }
+                  if (this.idError || this.nameError) {
+                    this.exportAllowed = false
+                    return
+                  }
+                  this.exportAllowed = true
+                },
+                async exportModel() {
+                  dialog.close()
 
-              fs.writeFileSync(definitionFile, autoStringify(definition))
-              for (const [i, model] of models.entries()) {
-                fs.writeFileSync(path.join(modelDir, `${i}.json`), model)
+                  const dir = Blockbench.pickDirectory({
+                    title: "Select resource pack to export to",
+                    startpath: project.free_rotation_path
+                  })
+                  if (!dir) return
+
+                  const definitionDir = path.join(dir, "assets", "freerot", "items")
+                  const definitionFile = path.join(definitionDir, project.free_rotation_item + ".json")
+                  const modelDir = path.join(dir, "assets", "freerot", "models", project.free_rotation_name)
+
+                  if (fs.existsSync(definitionFile)) {
+                    const check = await new Promise(fulfil => {
+                      Blockbench.showMessageBox({
+                        title: "Item definition already exists",
+                        message: `The item definition <code>assets/freerot/${project.free_rotation_item}.json</code> already exists. Are you sure you want to continue and overwrite it?`,
+                        buttons: ["dialog.confirm", "dialog.cancel"]
+                      }, button => {
+                        if (button === 0) fulfil(true)
+                        else fulfil()
+                      })
+                    })
+                    if (!check) return
+                  }
+
+                  if (fs.existsSync(modelDir)) {
+                    const check = await new Promise(fulfil => {
+                      Blockbench.showMessageBox({
+                        title: "Model already exists",
+                        message: `The the model folder <code>assets/freerot/models/${project.free_rotation_name}</code> already exists. Are you sure you want to continue and possibly overwrite files inside it?`,
+                        buttons: ["dialog.confirm", "dialog.cancel"]
+                      }, button => {
+                        if (button === 0) fulfil(true)
+                        else fulfil()
+                      })
+                    })
+                    if (!check) return
+                  }
+
+                  const processing = new Dialog("exporting", {
+                    title: "Exporting...",
+                    lines: [
+                      `<style>
+                        #exporting .dialog_close_button {
+                          display: none;
+                        }
+                        #exporting h1 {
+                          margin: 0;
+                        }
+                      </style>`,
+                      "<h1>Exporting...</h1>"
+                    ],
+                    buttons: [],
+                    cancel_on_click_outside: false,
+                    onConfirm: () => false
+                  }).show()
+                  const close = processing.close
+                  processing.close = () => {}
+
+                  fs.mkdirSync(definitionDir, { recursive: true })
+                  fs.mkdirSync(modelDir, { recursive: true })
+
+                  const models = await codec.compile(project)
+
+                  const definition = {
+                    model: {
+                      type: "composite",
+                      models: new Array(models.length).fill().map((e, i) => ({
+                        type: "model",
+                        model: `freerot:${project.free_rotation_name}/${i}`
+                      }))
+                    }
+                  }
+
+                  fs.writeFileSync(definitionFile, autoStringify(definition))
+                  for (const [i, model] of models.entries()) {
+                    fs.writeFileSync(path.join(modelDir, `${i}.json`), model)
+                  }
+                  close.bind(processing)()
+                }
+              },
+              template: `
+                <div>
+                  <h2>Model Details</h2>
+                  <div class="dialog_bar bar form_bar form_bar_item" :title="ModelProject.properties.free_rotation_item.description">
+                    <label class="name_space_left" for="item">Item ID:</label>
+                    <input type="text" class="dark_bordered half focusable_input" id="item" placeholder="diamond_sword" v-model="project.free_rotation_item" @input="check">
+                    <i class="fa fa-question dialog_form_description" @click="Blockbench.showQuickMessage(ModelProject.properties.free_rotation_item.description)"></i>
+                  </div>
+                  <div v-if="idError" class="free-rotation-export-error" v-html="idError"></div>
+                  <div class="dialog_bar bar form_bar form_bar_name" :title="ModelProject.properties.free_rotation_name.description">
+                    <label class="name_space_left" for="name">Model Name:</label>
+                    <input type="text" class="dark_bordered half focusable_input" id="name" placeholder="diamond_katana" v-model="project.free_rotation_name" @input="check">
+                    <i class="fa fa-question dialog_form_description" @click="Blockbench.showQuickMessage(ModelProject.properties.free_rotation_name.description)"></i>
+                  </div>
+                  <div v-if="nameError" class="free-rotation-export-error" v-html="nameError"></div>
+                  <h2 style="margin-top: 32px;">Display Settings to Export</h2>
+                  <p style="margin: -8px 0 16px;">Free Rotation models can be quite large in file size. Select only the display settings you need in order to reduce this file size.</p>
+                  <div id="free_rotation_display_exports">
+                    <div v-for="(value, key) in project.free_rotation_display" class="tool" :class="{ enabled: value }" @click="project.free_rotation_display[key] = !value">
+                      <div class="tooltip">{{ displayIcons[key]?.name || key.replace(/_/g, " ").split(" ").map(e => e.slice(0, 1).toUpperCase() + e.slice(1)).join(" ") }}</div>
+                      <i v-if="displayIcons[key]?.iconType === 'custom'" :class="displayIcons[key].icon"></i>
+                      <i v-else class="material-icons icon">{{ displayIcons[key]?.icon || 'desktop_windows' }}</i>
+                    </div>
+                  </div>
+                  <div class="button-row">
+                    <button @click="exportModel" :disabled="!exportAllowed">Export</button>
+                  </div>
+                </div>
+              `
+            },
+            onOpen() {
+              if (project.free_rotation_item || project.free_rotation_name) {
+                this.content_vue.check()
               }
-              console.log(`wrote ${models.length} models`)
-              close.bind(dialog)()
             }
           }).show()
         },
-        async compile(form) {
+        async compile(project) {
+          project ??= Project
+
+          project.select()
+
           const mode = Modes.selected
           Modes.options.edit.select()
 
@@ -237,15 +330,14 @@
             }
           }
           const downscale = Math.min(4, maxcoord / 24)
-          console.log('scale:', downscale)
 
           const models = []
           for (const cube of Cube.all) {
             const element = {}
             const model = {
-              "textures": {},
-              "elements": [element],
-              "display": {}
+              textures: {},
+              elements: [element],
+              display: {}
             }
             let size = [
               (cube.to[0] - cube.from[0]) / downscale,
@@ -253,14 +345,14 @@
               (cube.to[2] - cube.from[2]) / downscale
             ]
             element.from = [
-              8-(size[0]/2),
-              8-(size[1]/2),
-              8-(size[2]/2),
+              8 - (size[0] / 2),
+              8 - (size[1] / 2),
+              8 - (size[2] / 2)
             ]
             element.to = [
-              8+(size[0]/2),
-              8+(size[1]/2),
-              8+(size[2]/2),
+              8 + (size[0] / 2),
+              8 + (size[1] / 2),
+              8 + (size[2] / 2)
             ]
 
             element.faces = {}
@@ -274,7 +366,7 @@
               }
               if (data.rotation) renderedFace.rotation = data.rotation
               if (data.texture) {
-                const texture = Project.textures.find(e => e.uuid == data.texture)
+                const texture = project.textures.find(e => e.uuid == data.texture)
                 if (!texture) {
                   console.error("Texture not found... skipping")
                 } else {
@@ -300,12 +392,12 @@
             const rotation = new THREE.Quaternion()
 
             for (const slot of DisplayMode.slots) {
-              if (Project.free_rotation_display[slot] === true) {
+              if (project.free_rotation_display[slot]) {
                 const scale = new THREE.Vector3(downscale, downscale, downscale)
                 const translation = cube.getWorldCenter()
                 translation.y -= 8
 
-                const display = Project.display_settings[slot]
+                const display = project.display_settings[slot]
                 if (display) {
                   const dscale = new THREE.Vector3().fromArray(display.scale)
                   const dtranslation = new THREE.Vector3().fromArray(display.translation)
@@ -313,7 +405,7 @@
                     new THREE.Euler().fromArray([
                       Math.degToRad(display.rotation[0]),
                       Math.degToRad(display.rotation[1]),
-                      Math.degToRad(display.rotation[2]),
+                      Math.degToRad(display.rotation[2])
                     ], "XYZ")
                   )
                   scale.multiply(dscale)
@@ -413,12 +505,12 @@
       properties = [
         new Property(ModelProject, "string", "free_rotation_item", {
           label: "Item ID",
-          description: "ID of the item model",
+          description: "The item ID of the item that the model should apply to",
           condition: { formats: [format.id] }
         }),
         new Property(ModelProject, "string", "free_rotation_name", {
           label: "Model Name",
-          description: "Model file to output",
+          description: "The name of the model file that is output",
           condition: { formats: [format.id] }
         }),
         new Property(ModelProject, "string", "free_rotation_path", {
