@@ -61,7 +61,7 @@
         #format_page_free_rotation {
           padding-bottom: 0;
         }
-        .format_entry[format="limitless_item"] i {
+        .format_entry[format="free_rotation"] i {
           overflow: visible;
         }
         .free-rotation-links {
@@ -322,7 +322,10 @@
           Modes.options.edit.select()
 
           let maxcoord = 24
-          for (const cube of Cube.all) {
+
+          const cubes = Cube.all.filter(e => e.export)
+
+          for (const cube of cubes) {
             for (const position of cube.getGlobalVertexPositions()) {
               for (const coord of position) {
                 maxcoord = Math.max(maxcoord, Math.abs(coord - 8))
@@ -332,7 +335,7 @@
           const downscale = Math.min(4, maxcoord / 24)
 
           const models = []
-          for (const cube of Cube.all) {
+          for (const cube of cubes) {
             const element = {}
             const model = {
               textures: {},
@@ -354,7 +357,7 @@
               8 + (size[1] / 2),
               8 + (size[2] / 2)
             ]
-
+            element.light_emission = cube.light_emission
             element.faces = {}
             for (const [face, data] of Object.entries(cube.faces)) {
               if (!data || !data.texture) continue
