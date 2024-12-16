@@ -368,6 +368,7 @@
                   .map((v, i) => (v * 16) / UVEditor.getResolution(i % 2))
               }
               if (data.rotation) renderedFace.rotation = data.rotation
+              if (data.tint >= 0) renderedFace.tintindex = data.tint
               if (data.texture) {
                 const texture = project.textures.find(e => e.uuid == data.texture)
                 if (!texture) {
