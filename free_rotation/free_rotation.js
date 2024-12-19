@@ -61,6 +61,13 @@
         #format_page_free_rotation {
           padding-bottom: 0;
         }
+        #format_page_free_rotation .format_target {
+          margin-bottom: 6px;
+        }
+        #format_page_free_rotation div:nth-child(3),
+        #format_page_free_rotation content {
+          overflow-y: auto;
+        }
         .format_entry[format="free_rotation"] i {
           overflow: visible;
         }
@@ -105,8 +112,8 @@
         }
       `)
 
-      codec = new Codec("temp", {
-        name: "Temp",
+      codec = new Codec("free_rotation_codec", {
+        name: "Free Rotation Codec",
         remember: true,
         export() {
           const project = Project
@@ -453,10 +460,18 @@
                   <h3 class="markdown">About:</h3>
                   <p class="markdown">
                     <ul>
-                      <li>This format is designed to create Minecraft: Java Edition item models without the rotation limitations imposed by the game</li>
+                      <li>This format is designed to create <strong>Minecraft: Java Edition</strong> item models without the rotation limitations imposed by the game.</li>
                       <li>These models cannot be re-imported, so make sure to save your project as a <strong>bbmodel</strong>.</li>
-                      <li>After making your model and configuring its display settings, use <strong>File > Export > Free Rotation Item</strong> to export it into your resource pack.</li>
-                      <li>This format requires Minecraft 1.21.4 or later</li>
+                      <li>This format requires <strong>Minecraft 1.21.4</strong> or later.</li>
+                    </ul>
+                  </p>
+                  <h3 class="markdown">Usage:</h3>
+                  <p class="markdown">
+                    <ul>
+                      <li>Create a new model, or convert an existing cube based project into this format.</li>
+                      <li>Configure the display settings. These will be respected as long as the size limits are not reached.</li>
+                      <li>Use <strong>File > Export > Free Rotation Item</strong> to export your model into your resource pack.</li>
+                      <li>When exporting, select which display slots you would like to export. The more you export, the larger the file size, so only export what you need.</li>
                     </ul>
                   </p>
                 </content>
