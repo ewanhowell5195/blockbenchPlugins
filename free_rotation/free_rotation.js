@@ -50,12 +50,15 @@
     icon: "icon.png",
     author: "Godlander & Ewan Howell",
     description,
-    about: "placeholder",
     tags: ["Minecraft: Java Edition", "Rotation"],
     version: "1.0.0",
     min_version: "4.11.2",
     variant: "desktop",
     await_loading: true,
+    website: "https://ewanhowell.com/plugins/free-rotation/",
+    repository: "https://github.com/ewanhowell5195/blockbenchPlugins/tree/main/free_rotation",
+    bug_tracker: "https://github.com/ewanhowell5195/blockbenchPlugins/issues/new?title=[Free Rotation]",
+    creation_date: "2024-12-20",
     onload() {
       styles = Blockbench.addCSS(`
         #format_page_free_rotation {
