@@ -563,7 +563,7 @@
         format_page: {
           component: {
             methods: {
-              load: () => loadInterface(entityData.categories[0].name, data),
+              load: () => Formats.optifine_player_model.new(),
               info: () => showAbout()
             },
             template: `
@@ -595,7 +595,7 @@
                   </a>
                 `).join("")}</div>
                 <div class="button_bar">
-                  <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="openLoader()">
+                  <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="load">
                     <i class="${icon} icon"></i>
                     Create New OptiFine Player Model
                   </button>
