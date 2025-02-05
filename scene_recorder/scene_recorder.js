@@ -117,8 +117,6 @@
         }
       }
 
-      console.log(Object.entries(formats))
-
       for (const [id, format] of Object.entries(formats)) {
         if (ScreencamGIFFormats[id]) {
           originalFormats[id] = ScreencamGIFFormats[id]
