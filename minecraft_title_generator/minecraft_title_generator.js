@@ -96,7 +96,7 @@
     author: "Ewan Howell",
     description,
     tags: ["Minecraft", "Title", "Logo"],
-    version: "1.7.0",
+    version: "1.8.0",
     min_version: "4.8.0",
     variant: "both",
     creation_date: "2023-06-10",
@@ -1593,7 +1593,8 @@
             tileableRandomRotations: false,
             tileableRandomMirroring: false,
             tileableTextureResolution: 1000,
-            edgeBrightness: 35
+            edgeBrightness: 35,
+            disableFontOverlay: false
           },
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
@@ -1675,6 +1676,7 @@
                 this.tileableRandomRotations = false
                 this.tileableRandomMirroring = false
                 this.tileableTextureResolution = 1000
+                this.disableFontOverlay = false
                 this.hue = 0
                 this.saturation = 100
                 this.brightness = 100
@@ -2217,17 +2219,18 @@
                       if (args.overlayOpacity !== undefined) settings.overlayOpacity = args.overlayOpacity
                       if (args.colourOpacity !== undefined) settings.colourOpacity = args.colourOpacity
                       if (args.tileableScale !== undefined) settings.tileableScale = args.tileableScale
-                      if (args.tileableRandomRotations) settings.tileableRandomRotations = true
-                      if (args.tileableRandomMirroring) settings.tileableRandomMirroring = true
+                      if (args.tileableRandomRotations !== undefined) settings.tileableRandomRotations = args.tileableRandomRotations
+                      if (args.tileableRandomMirroring !== undefined) settings.tileableRandomMirroring = settings.tileableRandomMirroring
+                      if (args.disableFontOverlay !== undefined) settings.disableFontOverlay = settings.disableFontOverlay
                       if (args.tileableTextureResolution) settings.tileableTextureResolution = args.tileableTextureResolution
                       if (args.hue) settings.hue = args.hue
                       if (args.saturation !== undefined) settings.saturation = args.saturation
                       if (args.brightness !== undefined) settings.brightness = args.brightness
                       if (args.contrast !== undefined) settings.contrast = args.contrast
                       if (args.blend) settings.blend = args.blend
-                      if (args.customBorder) settings.customBorder = true
-                      if (args.fadeToBorder) settings.fadeToBorder = true
-                      if (args.customEdge) settings.customEdge = true
+                      if (args.customBorder !== undefined) settings.customBorder = args.customBorder
+                      if (args.fadeToBorder !== undefined) settings.fadeToBorder = args.fadeToBorder
+                      if (args.customEdge !== undefined) settings.customEdge = args.customEdge
                       if (args.edgeBrightness !== undefined) settings.edgeBrightness = args.edgeBrightness
                       if (args.colour) {
                         settings.colour = args.colour
@@ -2393,7 +2396,8 @@
                 }
               }).show()
             },
-            textInfo(font, parent) {
+            async textInfo(font, parent) {
+              await getFontCharacters(font)
               new Blockbench.Dialog({
                 id: "minecraft_title_info",
                 title: `${parent && parent !== font ? `${fonts[parent].name} ` : ""}${fonts[font].name} Info`,
@@ -2785,6 +2789,11 @@
                     <input type="range" class="tool disp_range" v-model.number="tileableYOffset" min="0" :max="tileableHeight" step="1" @input="updatePreview" />
                     <numeric-input class="tool disp_text" v-model.number="tileableYOffset" :min="0" :max="tileableHeight" :step="1" @input="updatePreview" />
                   </div>
+                  <div class="bar slider_input_combo">
+                    <div class="slider-label">Texture Resolution:</div>
+                    <input type="range" class="tool disp_range" v-model.number="tileableTextureResolution" min="1000" :max="4000" step="1000" @input="updatePreview" />
+                    <numeric-input class="tool disp_text" v-model.number="tileableTextureResolution" :min="1000" :max="4000" :step="1000" @input="updatePreview" />
+                  </div>
                   <label class="checkbox-row">
                     <input type="checkbox" :checked="tileableRandomRotations" v-model="tileableRandomRotations" @input="updatePreview">
                     <div>Random Rotations</div>
@@ -2793,11 +2802,19 @@
                     <input type="checkbox" :checked="tileableRandomMirroring" v-model="tileableRandomMirroring" @input="updatePreview">
                     <div>Random Mirroring</div>
                   </label>
-                  <div class="bar slider_input_combo">
-                    <div class="slider-label">Texture Resolution:</div>
-                    <input type="range" class="tool disp_range" v-model.number="tileableTextureResolution" min="1000" :max="4000" step="1000" @input="updatePreview" />
-                    <numeric-input class="tool disp_text" v-model.number="tileableTextureResolution" :min="1000" :max="4000" :step="1000" @input="updatePreview" />
-                  </div>
+                  <label v-if="fonts[font].overlay" class="checkbox-row">
+                    <input type="checkbox" :checked="disableFontOverlay" v-model="disableFontOverlay" @input="updatePreview">
+                    <div>Disable included font overlay</div>
+                  </label>
+                  <br>
+                </div>
+                <div v-if="textureSource === 'gradient' && fonts[font].overlay">
+                  <h2>Configuration</h2>
+                  <p>Configure the gradient texture</p>
+                  <label class="checkbox-row">
+                    <input type="checkbox" :checked="disableFontOverlay" v-model="disableFontOverlay" @input="updatePreview">
+                    <div>Disable included font overlay</div>
+                  </label>
                   <br>
                 </div>
                 <h2>Filters</h2>
@@ -3306,7 +3323,7 @@
     }
     Canvas.updateView({
       elements: Cube.selected,
-      groups: [Group.selected]
+      groups: Group.multi_selected
     })
     Undo.finishEdit("Add Minecraft title text")
     updateSelection()
@@ -3394,8 +3411,9 @@
         ctx.fillRect(0, end[0] * m, canvas.width, end[1] * m - end[0] * m)
         ctx.fillRect(0, end[2] * m, canvas.width, end[3] * m - end[2] * m)
       }
-      if (fonts[args.font].overlay) {
+      if (fonts[args.font].overlay && !args.disableFontOverlay) {
         await loadOverlay(args.font)
+        ctx.globalCompositeOperation = "source-over"
         ctx.drawImage(fonts[args.font].overlay, 0, 0, canvas.width, canvas.height)
       }
     } else if (args.tileable || args.customTexture && args.customTextureType === "tileable") {
@@ -3514,12 +3532,10 @@
           ctx.fillRect(bottomUV[0], bottomUV[1], area.width, area.height)
         }
       }
-      if (fonts[args.font].overlay) {
-        ctx.globalCompositeOperation = "destination-out"
+      if (fonts[args.font].overlay && !args.disableFontOverlay) {
+        ctx.globalCompositeOperation = "source-over"
         await loadOverlay(args.font)
         ctx.drawImage(fonts[args.font].overlay, 0, 0, canvas.width, canvas.height)
-        ctx.globalCompositeOperation = "destination-over"
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
       }
     }
     ctx.globalCompositeOperation = "copy"
@@ -3899,6 +3915,7 @@
     tileableRandomMirroring: vue.tileableRandomMirroring,
     tileableTextureResolution: vue.tileableTextureResolution,
     edgeBrightness: vue.edgeBrightness,
+    disableFontOverlay: vue.disableFontOverlay,
     three
   })
 
