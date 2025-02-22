@@ -120,7 +120,7 @@
     description,
     tags: ["Minecraft", "Title", "Logo"],
     version: "1.8.0",
-    min_version: "4.8.0",
+    min_version: "4.12.0",
     variant: "both",
     creation_date: "2023-06-10",
     await_loading: true,
