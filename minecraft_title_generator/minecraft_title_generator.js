@@ -31,7 +31,30 @@
       ],
       height: 44,
       border: 266,
-      terminatorSpace: true
+      terminatorSpace: true,
+      shifts: {
+        "//": 16,
+        "\\\\": 16,
+        "tj": 8,
+        "lt": 8,
+        "ly": 8,
+        "yj": 6,
+        "lv": 4,
+        "qt": 4,
+        "qv": 4,
+        "{{": 4,
+        "}}": 4,
+        "}]": 4,
+        "[{": 4,
+        "l?": 4,
+        "q?": 4,
+        "t.": 4,
+        "t,": 4,
+        "t_": 4,
+        "t-": 4,
+        "-t": 4,
+        "l-": 8
+      }
     }
   }
   const fontData = []
@@ -1594,7 +1617,8 @@
             tileableRandomMirroring: false,
             tileableTextureResolution: 1000,
             edgeBrightness: 35,
-            disableFontOverlay: false
+            disableFontOverlay: false,
+            disableCharacterShifting: false
           },
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
@@ -1655,6 +1679,7 @@
                 this.scaleX = 1
                 this.scaleY = 1
                 this.scaleZ = 1
+                this.disableCharacterShifting = false
               }
               this.resetTexture(force)
               if (!ignoreUpdate) this.buildPreview()
@@ -1754,10 +1779,14 @@
                 let width = 0
                 const cubes = []
                 const group = new THREE.Group()
+                let lastCharacter
                 for (const [i, char] of Array.from(str).entries()) {
-                  if (char === " ") {
-                    width += 8
+                  if (char === " " && !fonts[args.font].characters[" "]) {
+                    width += fonts[args.font].spaceWidth ?? 8
                     continue
+                  }
+                  if (lastCharacter && fonts[this.font].shifts?.[lastCharacter + char]) {
+                    width -= fonts[this.font].shifts[lastCharacter + char]
                   }
                   let min = Infinity
                   let max = -Infinity
@@ -1830,6 +1859,7 @@
                   }
                   group.add(character)
                   width += max - min
+                  lastCharacter = char
                 }
 
                 for (const cube of cubes) {
@@ -2220,8 +2250,7 @@
                       if (args.colourOpacity !== undefined) settings.colourOpacity = args.colourOpacity
                       if (args.tileableScale !== undefined) settings.tileableScale = args.tileableScale
                       if (args.tileableRandomRotations !== undefined) settings.tileableRandomRotations = args.tileableRandomRotations
-                      if (args.tileableRandomMirroring !== undefined) settings.tileableRandomMirroring = settings.tileableRandomMirroring
-                      if (args.disableFontOverlay !== undefined) settings.disableFontOverlay = settings.disableFontOverlay
+                      if (args.tileableRandomMirroring !== undefined) settings.tileableRandomMirroring = args.tileableRandomMirroring
                       if (args.tileableTextureResolution) settings.tileableTextureResolution = args.tileableTextureResolution
                       if (args.hue) settings.hue = args.hue
                       if (args.saturation !== undefined) settings.saturation = args.saturation
@@ -2232,6 +2261,8 @@
                       if (args.fadeToBorder !== undefined) settings.fadeToBorder = args.fadeToBorder
                       if (args.customEdge !== undefined) settings.customEdge = args.customEdge
                       if (args.edgeBrightness !== undefined) settings.edgeBrightness = args.edgeBrightness
+                      if (args.disableFontOverlay !== undefined) settings.disableFontOverlay = args.disableFontOverlay
+                      if (args.disableCharacterShifting !== undefined) settings.disableCharacterShifting = args.disableCharacterShifting
                       if (args.colour) {
                         settings.colour = args.colour
                         $(settings.$refs.colour).spectrum("set", args.colour)
@@ -2913,6 +2944,15 @@
                   <input type="range" class="tool disp_range" v-model.number="scaleZ" min="0.05" max="4" step="0.05" style="--color-thumb:var(--color-axis-z)" />
                   <numeric-input class="tool disp_text" v-model.number="scaleZ" :min="0.05" :max="4" :step="0.05" />
                 </div>
+                <template v-if="fonts[font].shifts">
+                  <br>
+                  <h2>Character shifting</h2>
+                  <p>Certain character get shifted when next to certain character to fix the spacing between them</p>
+                  <label class="checkbox-row">
+                    <input type="checkbox" :checked="disableCharacterShifting" v-model="disableCharacterShifting" @input="updatePreview">
+                    <div>Disable character shifting</div>
+                  </label>
+                </template>
               </div>
               <div id="minecraft-title-buttons">
                 <button v-if="tab > 0" @click="tabChange(tab - 1)">Back</button>
@@ -2971,6 +3011,13 @@
               delete variant.overlays
               fonts[variant.id] = variant
               font.variants[j] = variant
+              if (variant.shifts) {
+                if (v.shifts === "inherit") {
+                  variant.shifts = font.shifts
+                } else if (!v.shifts) {
+                  delete variant.shifts
+                }
+              }
               variant.parsed = true
             }
           }
@@ -3285,13 +3332,15 @@
         spacerWidth: args.spacerWidth,
         rowSpacing: args.rowSpacing,
         scale: args.scale,
+        disableCharacterShifting: args.disableCharacterShifting,
         name: args.name,
         elements
       })
     } else {
       group = new Group(args.name ?? makeName(text)).init()
+      let lastCharacter
       for (const part of words) {
-        const [word, newOffset] = makeWord(part, offset, group, {
+        const [word, newOffset, newLastCharacter] = makeWord(part, offset, group, {
           font: args.font,
           texture: texture.uuid,
           row: args.row,
@@ -3300,9 +3349,12 @@
           spacerWidth: args.spacerWidth,
           rowSpacing: args.rowSpacing,
           scale: args.scale,
-          elements
+          disableCharacterShifting: args.disableCharacterShifting,
+          elements,
+          lastCharacter
         })
-        offset = newOffset + (8 + args.characterSpacing) * args.scale[0]
+        offset = newOffset + ((fonts[args.font].spaceWidth ?? 8) + args.characterSpacing) * args.scale[0]
+        lastCharacter = newLastCharacter
       }
     }
     group.addTo().select()
@@ -3617,8 +3669,8 @@
     word.addTo(parent).init()
     for (const char of text) {
       if (fonts[args.font].characters[char]) {
-        const [character, width] = makeCharacter(char, offset, word, args)
-        offset += width
+        const [character, newOffset] = makeCharacter(char, offset, word, args)
+        offset = newOffset
       }
     }
     if (fonts[args.font].autoBorder) {
@@ -3651,7 +3703,7 @@
       border.addTo(word).init()
       args.elements.push(border)
     }
-    return [word, offset]
+    return [word, offset, args.lastCharacter]
   }
 
   const charMap = {
@@ -3662,6 +3714,9 @@
   }
 
   function makeCharacter(char, offset, parent, args) {
+    if (!args.disableCharacterShifting && args.lastCharacter && fonts[args.font].shifts?.[args.lastCharacter + char]) {
+      offset -= fonts[args.font].shifts[args.lastCharacter + char]
+    }
     let minX = Infinity
     let maxX = -Infinity
     let minZ = Infinity
@@ -3755,7 +3810,8 @@
       cube.addTo(character).init()
       args.elements.push(cube)
     }
-    return [character, maxX - minX + args.characterSpacing * args.scale[0]]
+    args.lastCharacter = char
+    return [character, offset + (maxX - minX + args.characterSpacing * args.scale[0])]
   }
 
   const makeName = str => str.replace(/\s/g, "_").replace(/😳/g, "a").replace(/😩/g, "'").replace(/┫|┣|\u200b/g, "")
@@ -3916,6 +3972,7 @@
     tileableTextureResolution: vue.tileableTextureResolution,
     edgeBrightness: vue.edgeBrightness,
     disableFontOverlay: vue.disableFontOverlay,
+    disableCharacterShifting: vue.disableCharacterShifting,
     three
   })
 
