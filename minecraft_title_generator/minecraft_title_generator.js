@@ -2947,7 +2947,7 @@
                 <template v-if="fonts[font].shifts">
                   <br>
                   <h2>Character shifting</h2>
-                  <p>Certain character get shifted when next to certain character to fix the spacing between them</p>
+                  <p>Certain characters get shifted when placed next to specific characters to adjust spacing for better readability</p>
                   <label class="checkbox-row">
                     <input type="checkbox" :checked="disableCharacterShifting" v-model="disableCharacterShifting" @input="updatePreview">
                     <div>Disable character shifting</div>
