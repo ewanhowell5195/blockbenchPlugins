@@ -113,6 +113,56 @@
     [0.2, 0.4, 0.6, 0.8]
   ]
   const stats = []
+  const variables = {
+    font: Object.keys(fonts)[0],
+    type: "top",
+    row: 0,
+    texture: Object.keys(fonts["minecraft-ten"].textures)[0],
+    variant: null,
+    tileable: Object.keys(tileables)[0],
+    tileableVariant: null,
+    characterSpacing: 0,
+    rowSpacing: 0,
+    scaleX: 1,
+    scaleY: 1,
+    scaleZ: 1,
+    colour: "#fff",
+    blend: "multiply",
+    hue: 0,
+    saturation: 100,
+    brightness: 100,
+    contrast: 100,
+    customBorder: false,
+    customBorderColour: "#000",
+    fadeToBorder: false,
+    terminators: false,
+    customEdge: false,
+    customEdgeColour: "#000",
+    customTexture: null,
+    customOverlay: null,
+    customTextureType: "texture",
+    gradientColour0: "#FFCF76",
+    gradientColour1: "#FFA3A3",
+    gradientColour2: "#F4C1A4",
+    gradientColour3: "#E19A3E",
+    gradientColour4: "#DA371E",
+    overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
+    overlayBlend: "overlay",
+    overlayColourBlend: "multiply",
+    overlayColour: "#fff",
+    smoothGradient: true,
+    colourOpacity: 100,
+    overlayOpacity: 100,
+    tileableScale: 2,
+    tileableXOffset: 0,
+    tileableYOffset: 0,
+    tileableRandomRotations: false,
+    tileableRandomMirroring: false,
+    tileableTextureResolution: 1000,
+    edgeBrightness: 35,
+    disableFontOverlay: false,
+    disableCharacterShifting: false
+  }
   Plugin.register(id, {
     title: name,
     icon: "icon.png",
@@ -1528,47 +1578,26 @@
           }
         </style>`],
         component: {
-          data: {
-            connection,
-            tab: 0,
-            text: "",
-            font: Object.keys(fonts)[0],
-            baseFont: Object.keys(fonts)[0],
-            fontTab: "fonts",
-            fontVariant: null,
-            fonts,
-            fontList: [],
-            textType: "top",
-            textTypes: {
-              "top": 'Top',
-              "bottom": "Bottom",
-              "small": "Small"
-            },
-            row: 0,
-            texture: Object.keys(fonts["minecraft-ten"].textures)[1] ?? Object.keys(fonts["minecraft-ten"].textures)[0],
-            textures: [],
-            tileable: Object.keys(tileables)[0],
-            tileables,
-            tileablesList: [],
-            overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
-            overlays: [],
-            variant: null,
-            tileableVariant: null,
-            hue: 0,
-            saturation: 100,
-            brightness: 100,
-            contrast: 100,
-            colour: "#fff",
-            customBorderColour: "#000",
-            customEdgeColour: "#000",
-            gradientColour0: "#FFCF76",
-            gradientColour1: "#FFA3A3",
-            gradientColour2: "#F4C1A4",
-            gradientColour3: "#E19A3E",
-            gradientColour4: "#DA371E",
-            overlayColour: "#fff",
-            blend: "multiply",
-            blends: {
+          data() {
+            const args = structuredClone(variables)
+            args.connection = connection
+            args.tab = 0
+            args.text = ""
+            args.baseFont = Object.keys(fonts)[0]
+            args.fontTab = "fonts"
+            args.fontVariant = null
+            args.fonts = fonts
+            args.fontList = []
+            args.types = {
+              top: "Top",
+              bottom: "Bottom",
+              small: "Small"
+            }
+            args.textures = []
+            args.tileables = tileables
+            args.tileablesList = []
+            args.overlays = []
+            args.blends = {
               multiply: "Multiply",
               color: "Colour",
               lighter: "Lighter",
@@ -1579,46 +1608,22 @@
               saturation: "Saturation",
               difference: "Difference",
               "source-over": "Source Over"
-            },
-            customBorder: false,
-            fadeToBorder: false,
-            characterSpacing: 0,
-            rowSpacing: 0,
-            scaleX: 1,
-            scaleY: 1,
-            scaleZ: 1,
-            building: false,
-            build: false,
-            updating: false,
-            update: false,
-            terminators: false,
-            customEdge: false,
-            textureSource: "premade",
-            overlaySource: "premade",
-            gradientColour1Enabled: false,
-            gradientColour2Enabled: false,
-            gradientColour3Enabled: false,
-            overlayBlend: "overlay",
-            overlayColourBlend: "multiply",
-            customTexture: null,
-            customTextureType: "texture",
-            customOverlay: null,
-            smoothGradient: true,
-            lastTextureSource: null,
-            textureSearch: "",
-            colourOpacity: 100,
-            overlayOpacity: 100,
-            tileableScale: 2,
-            tileableXOffset: 0,
-            tileableYOffset: 0,
-            tileableWidth: 0,
-            tileableHeight: 0,
-            tileableRandomRotations: false,
-            tileableRandomMirroring: false,
-            tileableTextureResolution: 1000,
-            edgeBrightness: 35,
-            disableFontOverlay: false,
-            disableCharacterShifting: false
+            }
+            args.building = false
+            args.build = false
+            args.updating = false
+            args.update = false
+            args.textureSource = "premade"
+            args.overlaySource = "premade"
+            args.gradientColour1Enabled = false
+            args.gradientColour2Enabled = false
+            args.gradientColour3Enabled = false
+            args.lastTextureSource = null
+            args.textureSearch = ""
+            args.tileableWidth = 0
+            args.tileableHeight = 0
+            console.log(args)
+            return args
           },
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
@@ -1641,7 +1646,7 @@
                   this.fontVariant = null
                   await this.updateFont(ignoreUpdate)
                 }
-                this.textType = "top"
+                this.type = "top"
                 this.row = 0
               }
               if (force || this.tab === 1) {
@@ -2196,7 +2201,7 @@
                       }
                       if (fonts[args?.baseFont]) settings.baseFont = args.baseFont
                       if (fonts[args?.fontVariant]) settings.fontVariant = args.fontVariant
-                      if (args.type) settings.textType = args.type
+                      if (args.type) settings.type = args.type
                       if (args.row) settings.row = args.row
                       if (args.textureSource) settings.textureSource = args.textureSource
                       if (args.tileable && tileables[args.tileable]) {
@@ -2239,11 +2244,9 @@
                       if (args.terminators) settings.terminators = args.terminators
                       if (args.characterSpacing) settings.characterSpacing = args.characterSpacing
                       if (args.rowSpacing) settings.rowSpacing = args.rowSpacing
-                      if (args.scale) {
-                        settings.scaleX = args.scale[0]
-                        settings.scaleY = args.scale[1]
-                        settings.scaleZ = args.scale[2]
-                      }
+                      if (args.scaleX !== undefined) settings.scaleX = args.scaleX
+                      if (args.scaleY !== undefined) settings.scaleY = args.scaleY
+                      if (args.scaleZ !== undefined) settings.scaleZ = args.scaleZ
                       if (args.overlayBlend) settings.overlayBlend = args.overlayBlend
                       if (args.overlayColourBlend) settings.overlayColourBlend = args.overlayColourBlend
                       if (args.overlayOpacity !== undefined) settings.overlayOpacity = args.overlayOpacity
@@ -2594,7 +2597,7 @@
                 <h2>Text Type / Angle</h2>
                 <p>The type of text to add</p>
                 <a href="javascript:void(0)" id="text-type-input" @click="event.stopPropagation()">
-                  <select-input v-model="textType" :options="textTypes" />
+                  <select-input v-model="type" :options="types" />
                 </a>
                 <br>
                 <h2>Text Row</h2>
@@ -3331,7 +3334,7 @@
         characterSpacing: args.characterSpacing,
         spacerWidth: args.spacerWidth,
         rowSpacing: args.rowSpacing,
-        scale: args.scale,
+        scale: [args.scaleX, args.scaleY, args.scaleZ],
         disableCharacterShifting: args.disableCharacterShifting,
         name: args.name,
         elements
@@ -3348,12 +3351,12 @@
           characterSpacing: args.characterSpacing,
           spacerWidth: args.spacerWidth,
           rowSpacing: args.rowSpacing,
-          scale: args.scale,
+          scale: [args.scaleX, args.scaleY, args.scaleZ],
           disableCharacterShifting: args.disableCharacterShifting,
           elements,
           lastCharacter
         })
-        offset = newOffset + ((fonts[args.font].spaceWidth ?? 8) + args.characterSpacing) * args.scale[0]
+        offset = newOffset + ((fonts[args.font].spaceWidth ?? 8) + args.characterSpacing) * args.scaleX
         lastCharacter = newLastCharacter
       }
     }
@@ -3365,7 +3368,7 @@
       max = Math.max(max, cube.from[0], cube.to[0])
     }
     let width = (max - min) / 2
-    if (fonts[args.font].autoBorder) width -= 2 * (args.scale[0] + args.scale[1]) / 2 * (args.type === "bottom" ? 0.75 : args.type === "small" ? 0.35 : 1)
+    if (fonts[args.font].autoBorder) width -= 2 * (args.scaleX + args.scaleY) / 2 * (args.type === "bottom" ? 0.75 : args.type === "small" ? 0.35 : 1)
     for (const cube of Cube.selected) {
       cube.from[0] += width
       cube.to[0] += width
@@ -3926,55 +3929,22 @@
     }
   }
 
-  const getArgs = (vue, three) => ({
-    font: vue.font,
-    type: vue.textType,
-    row: vue.row,
-    texture: vue.textureSource === "gradient" || vue.textureSource === "tileable" || (vue.textureSource === "file" && vue.customTexture) || (!vue.customTexture && vue.textureSource === "file" && ["gradient", "tileable"].includes(vue.lastTextureSource)) ? "flat" : vue.texture,
-    variant: vue.textureSource === "premade" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "premade") ? vue.variant : null,
-    tileable: vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileable : null,
-    tileableVariant: vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileableVariant : null,
-    characterSpacing: vue.characterSpacing,
-    rowSpacing: vue.rowSpacing,
-    scale: [vue.scaleX, vue.scaleY, vue.scaleZ],
-    colour: vue.colour,
-    blend: vue.blend,
-    hue: vue.hue,
-    saturation: vue.saturation,
-    brightness: vue.brightness,
-    contrast: vue.contrast,
-    customBorder: vue.customBorder,
-    customBorderColour: vue.customBorderColour,
-    fadeToBorder: vue.fadeToBorder,
-    terminators: vue.terminators,
-    customEdge: vue.customEdge,
-    customEdgeColour: vue.customEdgeColour,
-    customTexture: vue.textureSource === "file" ? vue.customTexture : null,
-    customTextureType: vue.customTextureType,
-    customOverlay: vue.overlaySource === "file" ? vue.customOverlay : null,
-    gradientColour0: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour0 : null,
-    gradientColour1: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour1Enabled ? vue.gradientColour1 : null,
-    gradientColour2: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour2Enabled ? vue.gradientColour2 : null,
-    gradientColour3: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour3Enabled ? vue.gradientColour3 : null,
-    gradientColour4: (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour4 : null,
-    overlay: vue.overlay,
-    overlayBlend: vue.overlayBlend,
-    overlayColourBlend: vue.overlayColourBlend,
-    overlayColour: vue.overlayColour,
-    smoothGradient: vue.smoothGradient,
-    colourOpacity: vue.colourOpacity,
-    overlayOpacity: vue.overlayOpacity,
-    tileableScale: vue.tileableScale,
-    tileableXOffset: vue.tileableXOffset,
-    tileableYOffset: vue.tileableYOffset,
-    tileableRandomRotations: vue.tileableRandomRotations,
-    tileableRandomMirroring: vue.tileableRandomMirroring,
-    tileableTextureResolution: vue.tileableTextureResolution,
-    edgeBrightness: vue.edgeBrightness,
-    disableFontOverlay: vue.disableFontOverlay,
-    disableCharacterShifting: vue.disableCharacterShifting,
-    three
-  })
+  const getArgs = (vue, three) => {
+    const args = Object.fromEntries(Object.keys(variables).map(arg => [arg, vue[arg]]))
+    args.texture = vue.textureSource === "gradient" || vue.textureSource === "tileable" || (vue.textureSource === "file" && vue.customTexture) || (!vue.customTexture && vue.textureSource === "file" && ["gradient", "tileable"].includes(vue.lastTextureSource)) ? "flat" : vue.texture
+    args.variant = vue.textureSource === "premade" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "premade") ? vue.variant : null
+    args.tileable = vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileable : null
+    args.tileableVariant = vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileableVariant : null
+    args.customTexture = vue.textureSource === "file" ? vue.customTexture : null
+    args.customOverlay = vue.overlaySource === "file" ? vue.customOverlay : null
+    args.gradientColour0 = (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour0 : null
+    args.gradientColour1 = (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour1Enabled ? vue.gradientColour1 : null
+    args.gradientColour2 = (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour2Enabled ? vue.gradientColour2 : null
+    args.gradientColour3 = (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour3Enabled ? vue.gradientColour3 : null
+    args.gradientColour4 = (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour4 : null
+    args.three = three
+    return args
+  }
 
   function areObjectsEqual(obj1, obj2) {
     const keys1 = Object.keys(obj1)
