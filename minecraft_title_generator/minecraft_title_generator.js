@@ -71,6 +71,7 @@
     rootIndex: 0
   }
   let root = connection.roots[0]
+  const api = "https://api.wynem.com"
   let format, action, dialog, mode, styles, preview, debug, controls
   const id = "minecraft_title_generator"
   const name = "Minecraft Title Generator"
@@ -2877,7 +2878,7 @@
         },
         async onBuild() {
           await getFontTextures("minecraft-ten", true)
-          stats.push(...await fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", { headers: { source: "blockbench" } }).then(e => e.json()).catch(() => []))
+          stats.push(...await fetch(`${api}/blockbench/minecrafttitlegenerator/stats`, { headers: { source: "blockbench" } }).then(e => e.json()).catch(() => []))
           const ten = stats.find(e => e.id === "minecraft-ten")
           if (ten) ten.count = Infinity
           else stats.push({
@@ -3152,7 +3153,7 @@
       else chosenTexture = args.texture
     }
     const chosenOverlay = args.customOverlay || args.overlay === "none" ? undefined : args.overlay
-    if (font || chosenTexture || chosenTileable || chosenOverlay) fetch("https://api.wynem.com/blockbench/minecrafttitlegenerator/stats", {
+    if (font || chosenTexture || chosenTileable || chosenOverlay) fetch(`${api}/blockbench/minecrafttitlegenerator/stats`, {
       method: "POST",
       headers: {
         source: "blockbench",
