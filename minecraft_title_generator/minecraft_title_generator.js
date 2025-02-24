@@ -3884,6 +3884,10 @@
       for (let x = 0; x < 5; x++) {
         args["gradientColour" + x] = vue["gradientColour" + x]
       }
+    } else {
+      for (let x = 0; x < 5; x++) {
+        args["gradientColour" + x] = null
+      }
     }
     args.three = three
     return args
