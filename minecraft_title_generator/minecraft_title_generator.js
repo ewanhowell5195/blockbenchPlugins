@@ -114,54 +114,81 @@
   ]
   const stats = []
   const variables = {
-    font: Object.keys(fonts)[0],
-    type: "top",
-    row: 0,
-    texture: Object.keys(fonts["minecraft-ten"].textures)[0],
-    variant: null,
-    tileable: Object.keys(tileables)[0],
-    tileableVariant: null,
-    characterSpacing: 0,
-    rowSpacing: 0,
-    scaleX: 1,
-    scaleY: 1,
-    scaleZ: 1,
-    colour: "#fff",
-    blend: "multiply",
-    hue: 0,
-    saturation: 100,
-    brightness: 100,
-    contrast: 100,
-    customBorder: false,
-    customBorderColour: "#000",
-    fadeToBorder: false,
-    terminators: false,
-    customEdge: false,
-    customEdgeColour: "#000",
-    customTexture: null,
-    customOverlay: null,
-    customTextureType: "texture",
-    gradientColour0: "#FFCF76",
-    gradientColour1: "#FFA3A3",
-    gradientColour2: "#F4C1A4",
-    gradientColour3: "#E19A3E",
-    gradientColour4: "#DA371E",
-    overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
-    overlayBlend: "overlay",
-    overlayColourBlend: "multiply",
-    overlayColour: "#fff",
-    smoothGradient: true,
-    colourOpacity: 100,
-    overlayOpacity: 100,
-    tileableScale: 2,
-    tileableXOffset: 0,
-    tileableYOffset: 0,
-    tileableRandomRotations: false,
-    tileableRandomMirroring: false,
-    tileableTextureResolution: 1000,
-    edgeBrightness: 35,
-    disableFontOverlay: false,
-    disableCharacterShifting: false
+    main: [
+      {
+        font: Object.keys(fonts)[0],
+        baseFont: Object.keys(fonts)[0],
+        fontVariant: null,
+        fontTab: "fonts",
+        type: "top",
+        row: 0
+      },
+      {
+        texture: Object.keys(fonts["minecraft-ten"].textures)[0],
+        variant: null,
+        tileable: Object.keys(tileables)[0],
+        tileableVariant: null,
+        smoothGradient: true,
+        gradientColour0: "#FFCF76",
+        gradientColour1: "#FFA3A3",
+        gradientColour2: "#F4C1A4",
+        gradientColour3: "#E19A3E",
+        gradientColour4: "#DA371E",
+        gradientColour1Enabled: false,
+        gradientColour2Enabled: false,
+        gradientColour3Enabled: false,
+        customTextureType: "texture",
+        textureSource: "premade",
+        customTexture: null
+      },
+      {},
+      {
+        terminators: false
+      },
+      {
+        characterSpacing: 0,
+        rowSpacing: 0,
+        scaleX: 1,
+        scaleY: 1,
+        scaleZ: 1,
+        disableCharacterShifting: false
+      }
+    ],
+    texture: [
+      {},
+      {},
+      {
+        overlay: Object.keys(fonts["minecraft-ten"].overlays)[0],
+        overlayBlend: "overlay",
+        overlayColourBlend: "multiply",
+        overlayColour: "#fff",
+        overlayOpacity: 100,
+        overlaySource: "premade",
+        customOverlay: null
+      },
+      {
+        tileableScale: 2,
+        tileableXOffset: 0,
+        tileableYOffset: 0,
+        tileableRandomRotations: false,
+        tileableRandomMirroring: false,
+        tileableTextureResolution: 1000,
+        disableFontOverlay: false,
+        hue: 0,
+        saturation: 100,
+        brightness: 100,
+        contrast: 100,
+        blend: "multiply",
+        customBorder: false,
+        customEdge: false,
+        colourOpacity: 100,
+        colour: "#fff",
+        customBorderColour: "#000",
+        customEdgeColour: "#000",
+        edgeBrightness: 35,
+        fadeToBorder: false
+      }
+    ]
   }
   Plugin.register(id, {
     title: name,
@@ -169,7 +196,7 @@
     author: "Ewan Howell",
     description,
     tags: ["Minecraft", "Title", "Logo"],
-    version: "1.8.0",
+    version: "1.9.0",
     min_version: "4.12.0",
     variant: "both",
     creation_date: "2023-06-10",
@@ -1578,53 +1605,7 @@
           }
         </style>`],
         component: {
-          data() {
-            const args = structuredClone(variables)
-            args.connection = connection
-            args.tab = 0
-            args.text = ""
-            args.baseFont = Object.keys(fonts)[0]
-            args.fontTab = "fonts"
-            args.fontVariant = null
-            args.fonts = fonts
-            args.fontList = []
-            args.types = {
-              top: "Top",
-              bottom: "Bottom",
-              small: "Small"
-            }
-            args.textures = []
-            args.tileables = tileables
-            args.tileablesList = []
-            args.overlays = []
-            args.blends = {
-              multiply: "Multiply",
-              color: "Colour",
-              lighter: "Lighter",
-              screen: "Screen",
-              overlay: "Overlay",
-              "soft-light": "Soft Light",
-              hue: "Hue",
-              saturation: "Saturation",
-              difference: "Difference",
-              "source-over": "Source Over"
-            }
-            args.building = false
-            args.build = false
-            args.updating = false
-            args.update = false
-            args.textureSource = "premade"
-            args.overlaySource = "premade"
-            args.gradientColour1Enabled = false
-            args.gradientColour2Enabled = false
-            args.gradientColour3Enabled = false
-            args.lastTextureSource = null
-            args.textureSearch = ""
-            args.tileableWidth = 0
-            args.tileableHeight = 0
-            console.log(args)
-            return args
-          },
+          data: getDefaultDialogArgs(),
           mounted() {
             $(this.$refs.colour).spectrum(colourInput(dialog, "colour")),
             $(this.$refs.customBorderColour).spectrum(colourInput(dialog, "customBorderColour")),
@@ -1637,88 +1618,49 @@
             $(this.$refs.overlayColour).spectrum(colourInput(dialog, "overlayColour"))
           },
           methods: {
+            resetVariables(type, page) {
+              if (!variables[type][page]) return
+              for (const [k, v] of Object.entries(variables[type][page])) {
+                this[k] = v
+              }
+            },
             async reset(force, ignoreUpdate) {
-              if (force || this.tab === 0) {
-                if (this.font !== Object.keys(fonts)[0]) {
-                  this.font = Object.keys(fonts)[0]
-                  this.baseFont = this.font
-                  this.fontTab = "fonts"
-                  this.fontVariant = null
-                  await this.updateFont(ignoreUpdate)
+              const beforeFont = this.font
+              if (force) {
+                for (let i = 0; i < variables.main.length; i++) {
+                  this.resetVariables("main", i)
                 }
-                this.type = "top"
-                this.row = 0
+              } else {
+                this.resetVariables("main", this.tab)
+              }
+              if ((force || this.tab === 0) && beforeFont !== this.font) {
+                await this.updateFont(true)
               }
               if (force || this.tab === 1) {
                 this.texture = Object.keys(fonts[this.font].textures)[1] ?? Object.keys(fonts[this.font].textures)[0]
-                this.variant = null
-                this.tileable = Object.keys(tileables)[0]
-                this.tileableVariant = null
-                this.textureSource = "premade"
-                this.gradientColour1Enabled = false
-                this.gradientColour2Enabled = false
-                this.gradientColour3Enabled = false
-                this.smoothGradient = true
-                this.gradientColour0 = "#FFCF76"
-                this.gradientColour1 = "#FFA3A3"
-                this.gradientColour2 = "#F4C1A4"
-                this.gradientColour3 = "#E19A3E"
-                this.gradientColour4 = "#DA371E"
                 this.deleteCustomTexture()
-                this.customTextureType = "texture"
                 $(this.$refs.gradientColour0).spectrum("set", "#FFCF76")
                 $(this.$refs.gradientColour1).spectrum("set", "#FFA3A3")
                 $(this.$refs.gradientColour2).spectrum("set", "#F4C1A4")
                 $(this.$refs.gradientColour3).spectrum("set", "#E19A3E")
                 $(this.$refs.gradientColour4).spectrum("set", "#DA371E")
               }
-              if (force || this.tab === 2) {
-                this.overlaySource = "premade"
-              }
-              if (force || this.tab === 3) {
-                this.terminators = false
-              }
-              if (force || this.tab === 4) {
-                this.characterSpacing = 0
-                this.rowSpacing = 0
-                this.scaleX = 1
-                this.scaleY = 1
-                this.scaleZ = 1
-                this.disableCharacterShifting = false
-              }
               this.resetTexture(force)
               if (!ignoreUpdate) this.buildPreview()
             },
             resetTexture(force) {
+              if (force) {
+                for (let i = 0; i < variables.main.length; i++) {
+                  this.resetVariables("texture", i)
+                }
+              } else {
+                this.resetVariables("texture", this.tab)
+              }
               if (force || this.tab === 2) {
-                this.overlay = Object.keys(fonts["minecraft-ten"].overlays)[0]
-                this.overlayBlend = "overlay"
-                this.overlayColourBlend = "multiply"
-                this.overlayOpacity = 100
-                this.overlayColour = "#fff"
                 this.deleteCustomOverlay()
                 $(this.$refs.overlayColour).spectrum("set", "#fff")
               }
               if (force || this.tab === 3) {
-                this.tileableScale = 2
-                this.tileableXOffset = 0
-                this.tileableYOffset = 0
-                this.tileableRandomRotations = false
-                this.tileableRandomMirroring = false
-                this.tileableTextureResolution = 1000
-                this.disableFontOverlay = false
-                this.hue = 0
-                this.saturation = 100
-                this.brightness = 100
-                this.contrast = 100
-                this.blend = "multiply"
-                this.customBorder = false
-                this.fadeToBorder = false
-                this.customEdge = false
-                this.colourOpacity = 100
-                this.colour = "#fff"
-                this.customBorderColour = "#000"
-                this.customEdgeColour = "#000"
                 $(this.$refs.colour).spectrum("set", "#fff")
                 $(this.$refs.customBorderColour).spectrum("set", "#000")
                 $(this.$refs.customEdgeColour).spectrum("set", "#000")
@@ -1786,8 +1728,8 @@
                 const group = new THREE.Group()
                 let lastCharacter
                 for (const [i, char] of Array.from(str).entries()) {
-                  if (char === " " && !fonts[args.font].characters[" "]) {
-                    width += fonts[args.font].spaceWidth ?? 8
+                  if (char === " " && !fonts[this.font].characters[" "]) {
+                    width += fonts[this.font].spaceWidth ?? 8
                     continue
                   }
                   if (lastCharacter && fonts[this.font].shifts?.[lastCharacter + char]) {
@@ -2134,14 +2076,13 @@
                   methods: {
                     add() {
                       const args = getArgs(settings)
-                      args.textureSource = settings.textureSource
-                      args.overlaySource = settings.overlaySource
+                      delete args.font
+                      delete args.fontTab
                       if (args.textureSource === "file" || args.overlaySource === "file") {
                         return Blockbench.showQuickMessage("Custom textures are not supported for presets", 3000)
                       }
-                      const filtered = Object.fromEntries(Object.entries(args).filter(e => e[1] !== null && e[1] !== false))
                       for (const [key, obj] of Object.entries(this.presets)) {
-                        if (areObjectsEqual(filtered, obj.settings)) {
+                        if (areObjectsEqual(args, obj.settings)) {
                           return Blockbench.showQuickMessage(`Current settings are already saved under the preset "${key}"`, 3000)
                         }
                       }
@@ -2161,7 +2102,7 @@
                           if (this.presets[name]) return Blockbench.showQuickMessage(`The name "${name}" is already in use`, 3000)
                           this.presets[name] = {
                             date: Date.now(),
-                            settings: filtered
+                            settings: args
                           }
                           localStorage.setItem("minecraft_title_presets", JSON.stringify(this.presets))
                           this.$forceUpdate()
@@ -2186,24 +2127,41 @@
                       if (event.target.classList.contains("material-icons")) return
                       settings.reset(true, true)
                       const args = this.presets[name].settings
-                      if (fonts[args.font]) {
-                        settings.font = args.font
-                        await settings.updateFont(true)
-                        if (fonts[args.font].textures[args.texture]) {
-                          settings.texture = args.texture
-                          if (args.variant && fonts[args.font].textures[args.texture].variants?.[args.variant]) {
-                            settings.variant = args.variant
-                          }
-                        }
-                        if (fonts[args.font].overlays[args.overlay]) {
-                          settings.overlay = args.overlay
+                      const skip = [
+                        "font",
+                        "baseFont",
+                        "fontVariant",
+                        "fontTab",
+                        "texture",
+                        "variant",
+                        "tileable",
+                        "tileableVariant"
+                      ]
+                      const defaults = Object.fromEntries(Object.values(variables).flat().map(Object.entries).flat())
+                      for (const [k, v] of Object.entries(args)) {
+                        if (k in defaults && !(k in skip)) {
+                          settings[k] = v
                         }
                       }
-                      if (fonts[args?.baseFont]) settings.baseFont = args.baseFont
-                      if (fonts[args?.fontVariant]) settings.fontVariant = args.fontVariant
-                      if (args.type) settings.type = args.type
-                      if (args.row) settings.row = args.row
-                      if (args.textureSource) settings.textureSource = args.textureSource
+                      if (fonts[args.baseFont]) {
+                        settings.font = args.baseFont
+                        settings.baseFont = args.baseFont
+                        if (args.fontVariant && fonts[args.fontVariant] && fonts[args.baseFont].variants?.some(e => e.id === args.fontVariant)) {
+                          settings.font = args.fontVariant
+                          settings.fontVariant = args.fontVariant
+                          settings.fontTab = "variants"
+                        }
+                        await settings.updateFont(true)
+                      }
+                      if (fonts[settings.font].textures[args.texture]) {
+                        settings.texture = args.texture
+                        if (args.variant && fonts[settings.font].textures[args.texture].variants?.[args.variant]) {
+                          settings.variant = args.variant
+                        }
+                      }
+                      if (fonts[settings.font].overlays[args.overlay]) {
+                        settings.overlay = args.overlay
+                      }
                       if (args.tileable && tileables[args.tileable]) {
                         settings.tileable = args.tileable
                         if (args.tileableVariant && tileable[args.tileable].variants?.[args.tileableVariant]) {
@@ -2215,75 +2173,10 @@
                           if (args.tileableYOffset) settings.tileableYOffset = Math.min(img.height - 1, args.tileableYOffset)
                         }
                       }
-                      if (args.tileableVariant) settings.tileableVariant = args.tileableVariant
-                      if (args.overlaySource) settings.overlaySource = args.overlaySource
-                      if (args.gradientColour1Enabled) settings.gradientColour1Enabled = args.gradientColour1Enabled
-                      if (args.gradientColour2Enabled) settings.gradientColour2Enabled = args.gradientColour2Enabled
-                      if (args.gradientColour3Enabled) settings.gradientColour3Enabled = args.gradientColour3Enabled
-                      if (args.smoothGradient) settings.smoothGradient = true
-                      if (args.gradientColour0) {
-                        settings.gradientColour0 = args.gradientColour0
-                        $(settings.$refs.gradientColour0).spectrum("set", args.gradientColour0)
-                      }
-                      if (args.gradientColour1) {
-                        settings.gradientColour1 = args.gradientColour1
-                        $(settings.$refs.gradientColour1).spectrum("set", args.gradientColour1)
-                      }
-                      if (args.gradientColour2) {
-                        settings.gradientColour2 = args.gradientColour2
-                        $(settings.$refs.gradientColour2).spectrum("set", args.gradientColour2)
-                      }
-                      if (args.gradientColour3) {
-                        settings.gradientColour3 = args.gradientColour3
-                        $(settings.$refs.gradientColour3).spectrum("set", args.gradientColour3)
-                      }
-                      if (args.gradientColour4) {
-                        settings.gradientColour4 = args.gradientColour4
-                        $(settings.$refs.gradientColour4).spectrum("set", args.gradientColour4)
-                      }
-                      if (args.terminators) settings.terminators = args.terminators
-                      if (args.characterSpacing) settings.characterSpacing = args.characterSpacing
-                      if (args.rowSpacing) settings.rowSpacing = args.rowSpacing
-                      if (args.scaleX !== undefined) settings.scaleX = args.scaleX
-                      if (args.scaleY !== undefined) settings.scaleY = args.scaleY
-                      if (args.scaleZ !== undefined) settings.scaleZ = args.scaleZ
-                      if (args.overlayBlend) settings.overlayBlend = args.overlayBlend
-                      if (args.overlayColourBlend) settings.overlayColourBlend = args.overlayColourBlend
-                      if (args.overlayOpacity !== undefined) settings.overlayOpacity = args.overlayOpacity
-                      if (args.colourOpacity !== undefined) settings.colourOpacity = args.colourOpacity
-                      if (args.tileableScale !== undefined) settings.tileableScale = args.tileableScale
-                      if (args.tileableRandomRotations !== undefined) settings.tileableRandomRotations = args.tileableRandomRotations
-                      if (args.tileableRandomMirroring !== undefined) settings.tileableRandomMirroring = args.tileableRandomMirroring
-                      if (args.tileableTextureResolution) settings.tileableTextureResolution = args.tileableTextureResolution
-                      if (args.hue) settings.hue = args.hue
-                      if (args.saturation !== undefined) settings.saturation = args.saturation
-                      if (args.brightness !== undefined) settings.brightness = args.brightness
-                      if (args.contrast !== undefined) settings.contrast = args.contrast
-                      if (args.blend) settings.blend = args.blend
-                      if (args.customBorder !== undefined) settings.customBorder = args.customBorder
-                      if (args.fadeToBorder !== undefined) settings.fadeToBorder = args.fadeToBorder
-                      if (args.customEdge !== undefined) settings.customEdge = args.customEdge
-                      if (args.edgeBrightness !== undefined) settings.edgeBrightness = args.edgeBrightness
-                      if (args.disableFontOverlay !== undefined) settings.disableFontOverlay = args.disableFontOverlay
-                      if (args.disableCharacterShifting !== undefined) settings.disableCharacterShifting = args.disableCharacterShifting
-                      if (args.colour) {
-                        settings.colour = args.colour
-                        $(settings.$refs.colour).spectrum("set", args.colour)
-                      }
-                      if (args.customBorderColour) {
-                        settings.customBorderColour = args.customBorderColour
-                        $(settings.$refs.customBorderColour).spectrum("set", args.customBorderColour)
-                      }
-                      if (args.customEdgeColour) {
-                        settings.customEdgeColour = args.customEdgeColour
-                        $(settings.$refs.customEdgeColour).spectrum("set", args.customEdgeColour)
-                      }
-                      if (args.overlayColour) {
-                        settings.overlayColour = args.overlayColour
-                        $(settings.$refs.overlayColour).spectrum("set", args.overlayColour)
+                      for (let col of ["colour", "customBorderColour", "customEdgeColour", "overlayColour", "gradientColour0", "gradientColour1", "gradientColour2", "gradientColour3", "gradientColour4"]) {
+                        $(settings.$refs[col]).spectrum("set", settings[col])
                       }
                       settings.buildPreview().then(settings.updatePreview)
-                      globalThis.testtest = settings
                       presetDialog.close()
                       Blockbench.showQuickMessage(`Preset "${name}" loaded`, 3000)
                     },
@@ -2375,7 +2268,6 @@
                           data: {
                             preset: {
                               type: "minecraft_title_generator_preset",
-                              version: 1,
                               preset: this.presets[name].settings
                             }
                           },
@@ -2597,7 +2489,7 @@
                 <h2>Text Type / Angle</h2>
                 <p>The type of text to add</p>
                 <a href="javascript:void(0)" id="text-type-input" @click="event.stopPropagation()">
-                  <select-input v-model="type" :options="types" />
+                  <select-input v-model="type" :options="types" @input="fadeToBorder = type === 'bottom' ? true : false; updatePreview()" />
                 </a>
                 <br>
                 <h2>Text Row</h2>
@@ -3097,7 +2989,7 @@
             async selectFont(id) {
               await getFontTextures(id)
               this.font = id
-              this.texture = Object.keys(fonts[id].textures)[1] ?? Object.keys(fonts[id].textures)[0]
+              this.texture = Object.keys(fonts[id].textures)[0]
               this.variant = null
             }
           },
@@ -3143,7 +3035,6 @@
         async onConfirm() {
           await getFontCharacters(this.content_vue.font)
           const str = Object.keys(fonts[this.content_vue.font].characters).sort().join("").replace(/😩|😳/g, "").replace("a", "😳a").replace("'", "😩'")
-          const scale = [1, 1, 1]
           if (this.content_vue.texture === "all") {
             const textures = []
             for (const [id, data] of Object.entries(fonts[this.content_vue.font].textures)) {
@@ -3157,11 +3048,13 @@
                 texture: texture[0],
                 variant: texture[1],
                 row: textures.length - i - 1,
-                characterSpacing: 8,
+                characterSpacing: fonts[this.content_vue.font].spaceWidth ?? 8,
                 rowSpacing: 8,
                 blend: "multiply",
                 colour: "#fff",
-                scale,
+                scaleX: 1,
+                scaleY: 1,
+                scaleZ: 1,
                 customBorder: false,
                 spacerWidth: 31,
                 name: texture[1] ?? texture[0],
@@ -3194,7 +3087,9 @@
                 rowSpacing: 8,
                 blend: "multiply",
                 colour: "#fff",
-                scale,
+                scaleX: 1,
+                scaleY: 1,
+                scaleZ: 1,
                 customBorder: false,
                 spacerWidth: 31,
                 name: this.content_vue.variant ?? this.content_vue.texture,
@@ -3641,6 +3536,14 @@
       ctx.fillRect(0, fonts[args.font].border * m, canvas.width, canvas.height - fonts[args.font].border * m)
     }
     if (args.fadeToBorder) {
+      if (canvas.width < 4000) {
+        const newCanvas = new CanvasFrame(4000, 1280)
+        newCanvas.ctx.imageSmoothingEnabled = false
+        newCanvas.ctx.drawImage(canvas, 0, 0, 4000, 1280)
+        canvas = newCanvas.canvas
+        ctx = newCanvas.ctx
+        m = canvas.width / 1000
+      }
       ctx.globalCompositeOperation = "source-atop"
       const height = fonts[args.font].ends[fonts[args.font].ends.length - 1][3]
       const border = ctx.getImageData(0, fonts[args.font].border * m, 1, 1).data
@@ -3929,8 +3832,47 @@
     }
   }
 
+  function getDefaultDialogArgs() {
+    const args = Object.fromEntries(Object.values(variables).flat().map(Object.entries).flat())
+    args.connection = connection
+    args.tab = 0
+    args.text = ""
+    args.fonts = fonts
+    args.fontList = []
+    args.types = {
+      top: "Top",
+      bottom: "Bottom",
+      small: "Small"
+    }
+    args.textures = []
+    args.tileables = tileables
+    args.tileablesList = []
+    args.overlays = []
+    args.blends = {
+      multiply: "Multiply",
+      color: "Colour",
+      lighter: "Lighter",
+      screen: "Screen",
+      overlay: "Overlay",
+      "soft-light": "Soft Light",
+      hue: "Hue",
+      saturation: "Saturation",
+      difference: "Difference",
+      "source-over": "Source Over"
+    }
+    args.building = false
+    args.build = false
+    args.updating = false
+    args.update = false
+    args.lastTextureSource = null
+    args.textureSearch = ""
+    args.tileableWidth = 0
+    args.tileableHeight = 0
+    return args
+  }
+
   const getArgs = (vue, three) => {
-    const args = Object.fromEntries(Object.keys(variables).map(arg => [arg, vue[arg]]))
+    const args = Object.fromEntries(Object.values(variables).flat().flatMap(Object.entries).map(([key]) => [key, vue[key]]))
     args.texture = vue.textureSource === "gradient" || vue.textureSource === "tileable" || (vue.textureSource === "file" && vue.customTexture) || (!vue.customTexture && vue.textureSource === "file" && ["gradient", "tileable"].includes(vue.lastTextureSource)) ? "flat" : vue.texture
     args.variant = vue.textureSource === "premade" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "premade") ? vue.variant : null
     args.tileable = vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileable : null

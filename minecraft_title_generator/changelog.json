@@ -410,7 +410,7 @@
   },
   "1.8.0": {
     "title": "1.8.0",
-    "date": "2024-08-31",
+    "date": "2025-02-24",
     "author": "Ewan Howell",
     "categories": [
       {
@@ -426,6 +426,39 @@
         "list": [
           "Fixed built-in font overlay textures using the wrong blend method",
           "Fixed some settings possibly not loading properly when loading a preset"
+        ]
+      }
+    ]
+  },
+  "1.8.1": {
+    "title": "1.8.1",
+    "date": "2025-02-24",
+    "author": "Ewan Howell",
+    "categories": [
+      {
+        "title": "Bug Fixes",
+        "list": [
+          "Fixed enabling line terminators causing a crash"
+        ]
+      }
+    ]
+  },
+  "1.9.0": {
+    "title": "1.9.0",
+    "date": "2025-02-24",
+    "author": "Ewan Howell",
+    "categories": [
+      {
+        "title": "Changes",
+        "list": [
+          "Textures are now upscaled to the maximum size when enabling the fade edges to the border colour feature, in order to make a smoother gradient",
+          "Fade edges to the border colour is now automatically selected when selecting the bottom text type"
+        ]
+      },
+      {
+        "title": "Bug Fixes",
+        "list": [
+          "Fixed loading presets with font variants"
         ]
       }
     ]
