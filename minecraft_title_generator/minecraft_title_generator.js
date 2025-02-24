@@ -3291,9 +3291,9 @@
       if (args.smoothGradient) {
         const colours = [
           [args.gradientColour0, 0],
-          args.gradientColour1 ? [args.gradientColour1, 0.25] : null,
-          args.gradientColour2 ? [args.gradientColour2, 0.50] : null,
-          args.gradientColour3 ? [args.gradientColour3, 0.75] : null,
+          args.gradientColour1Enabled ? [args.gradientColour1, 0.25] : null,
+          args.gradientColour2Enabled ? [args.gradientColour2, 0.50] : null,
+          args.gradientColour3Enabled ? [args.gradientColour3, 0.75] : null,
           [args.gradientColour4, 1]
         ].filter(e => e)
         const height = fonts[args.font].ends[fonts[args.font].ends.length - 1][3]
@@ -3333,9 +3333,9 @@
       } else {
         const charHeight = fonts[args.font].faces[0][3] ? fonts[args.font].faces[0][2] - fonts[args.font].faces[0][1] : fonts[args.font].faces[0][1] - fonts[args.font].faces[0][0]
         const states = [
-          !!args.gradientColour1,
-          !!args.gradientColour2,
-          !!args.gradientColour3
+          args.gradientColour1Enabled,
+          args.gradientColour2Enabled,
+          args.gradientColour3Enabled
         ]
         const stops = stopConfigs[states[0] << 2 | states[1] << 1 | states[2]]
         for (let i = 0; i < fonts[args.font].faces.length; i++) {
@@ -3879,11 +3879,11 @@
     args.tileableVariant = vue.textureSource === "tileable" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "tileable") ? vue.tileableVariant : null
     args.customTexture = vue.textureSource === "file" ? vue.customTexture : null
     args.customOverlay = vue.overlaySource === "file" ? vue.customOverlay : null
-    args.gradientColour0 = (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour0 : null
-    args.gradientColour1 = (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour1Enabled ? vue.gradientColour1 : null
-    args.gradientColour2 = (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour2Enabled ? vue.gradientColour2 : null
-    args.gradientColour3 = (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) && vue.gradientColour3Enabled ? vue.gradientColour3 : null
-    args.gradientColour4 = (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) ? vue.gradientColour4 : null
+    if (vue.textureSource === "gradient" || (!vue.customTexture && vue.textureSource === "file" && vue.lastTextureSource === "gradient")) {
+      for (let x = 0; x < 5; x++) {
+        args["gradientColour" + x] = vue["gradientColour" + x]
+      }
+    }
     args.three = three
     return args
   }
