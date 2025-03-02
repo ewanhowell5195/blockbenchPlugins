@@ -451,7 +451,8 @@
       {
         "title": "New Features",
         "list": [
-          "Added \"Shapes\". Shapes are a new type of element that can be added, as an alternative to text/fonts."
+          "Added \"Shapes\". Shapes are a new type of element that can be added, as an alternative to text/fonts",
+          "\"Minecraft Title\" is now available as an angle from the \"Angles\" context menu"
         ]
       },
       {

@@ -146,6 +146,13 @@
     [0.2, 0.4, 0.7],
     [0.2, 0.4, 0.6, 0.8]
   ]
+  const titleCameraAngle = {
+    name: "Minecraft Title",
+    id: "minecraft-title",
+    position: [0, -170, -320],
+    target: [0, 0, 0],
+    default: true
+  }
   const stats = []
   const variables = {
     main: [
@@ -3320,6 +3327,7 @@
       })
       MenuBar.addAction(debug, "help.developer.1")
       Blockbench.on("update_selection", selectHandler)
+      DefaultCameraPresets.push(titleCameraAngle)
     },
     onunload() {
       Blockbench.removeListener("update_selection", selectHandler)
@@ -3333,6 +3341,7 @@
       dialog.close()
       debugDialog.close()
       controls.remove()
+      DefaultCameraPresets.splice(DefaultCameraPresets.indexOf(titleCameraAngle), 1)
     }
   })
 
@@ -4138,10 +4147,7 @@
   }
 
   function loadRenderAngle() {
-    Preview.selected.loadAnglePreset({
-      position: [0, -170, -320],
-      target: [0, 0, 0]
-    })
+    Preview.selected.loadAnglePreset(titleCameraAngle)
   }
 
   const gcd = (a, b) => b === 0 ? a : gcd(b, a % b)
