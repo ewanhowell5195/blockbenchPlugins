@@ -2637,7 +2637,7 @@
                     <li @click="fonts[font].variants ? fontTab = 'variants' : null" :class="{ selected: fontTab === 'variants', disabled: !fonts[font].variants }">Variants</li>
                   </ul>
                   <div v-if="fontTab === 'fonts'" class="minecraft-title-list small">
-                    <div class="minecraft-title-item" v-for="[id, data] of fontList" @click="font = id; baseFont = id; fontVariant = null; updateFont()" :class="{ selected: baseFont === id }">
+                    <div class="minecraft-title-item" v-for="[id, data] of fontList" v-if="data.type === 'font'" @click="font = id; baseFont = id; fontVariant = null; updateFont()" :class="{ selected: baseFont === id }">
                       <img :src="data.thumbnail ?? connection.roots[connection.rootIndex] + '/' + fonts[id].type + 's/' + id + '/thumbnails/flat.png'" loading="lazy" />
                       <div :style="{ maxWidth: data.variants ? '78%' : null }">{{ data.name }}</div>
                       <div class="minecraft-title-item-buttons">
