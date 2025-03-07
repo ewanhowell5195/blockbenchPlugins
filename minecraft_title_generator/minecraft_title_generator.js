@@ -3793,7 +3793,7 @@
       return texture
     }
     return new Texture({
-      name: `${args.name ?? makeName(args.text)}.png`,
+      name: `${args.name ?? fonts[args.font].type === "shape" ? args.font : makeName(args.text)}.png`,
       render_sides: "front",
       uv_width: fonts[args.font].textureWidth,
       uv_height: fonts[args.font].textureHeight
