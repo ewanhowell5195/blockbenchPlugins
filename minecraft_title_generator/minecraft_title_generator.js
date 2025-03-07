@@ -3086,9 +3086,12 @@
           addText(text, getArgs(this.content_vue))
         },
         async onBuild() {
-          await getFontTextures("minecraft-ten", true)
-          await getFontTextures("minecraft-ten-blank", true)
-          stats.push(...await fetch(`${api}/blockbench/minecrafttitlegenerator/stats`, { headers: { source: "blockbench" } }).then(e => e.json()).catch(() => []))
+          getFontTextures("minecraft-ten-blank", true)
+          const [fetchedStats] = await Promise.all([
+            fetch(`${api}/blockbench/minecrafttitlegenerator/stats`, { headers: { source: "blockbench" } }).then(e => e.json()).catch(() => []),
+            getFontTextures("minecraft-ten", true)
+          ])
+          stats.push(...fetchedStats)
           const ten = stats.find(e => e.id === "minecraft-ten")
           if (ten) ten.count = Infinity
           else stats.push({
