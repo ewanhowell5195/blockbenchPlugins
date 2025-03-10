@@ -107,7 +107,10 @@
       StartScreen.vue.$data.recentsView = "recents"
       StartScreen.vue.$data.backups = backups
 
-      StartScreen.vue.$options.methods.openBackup = backup => Blockbench.read([backup.path], {}, files => loadModelFile(files[0]))
+      StartScreen.vue.$options.methods.openBackup = backup => Blockbench.read([backup.path], {}, files => {
+        console.log(files)
+        loadModelFile(files[0])
+      })
       StartScreen.vue.$options.methods.getBackups = getBackups
 
       oldTemplate = StartScreen.vue.$options.template
