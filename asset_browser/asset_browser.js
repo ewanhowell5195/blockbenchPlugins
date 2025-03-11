@@ -466,7 +466,7 @@
             versionSearch: "",
             recentVersions: storage.recents,
             downloadedVersions: [],
-            objects: false,
+            objects: storage.objects,
             jar: null,
             loadingMessage: null,
             path: [],
@@ -820,6 +820,11 @@
             navigationForward() {
               this.navigationHistory.push(this.navigationFuture.pop())
               this.changeFolder(this.navigationHistory[this.navigationHistory.length - 1])
+            },
+            toggleObjects() {
+              this.objects = !this.objects
+              storage.objects = this.objects
+              save()
             }
           },
           template: `
@@ -872,7 +877,7 @@
                 </div>
                 <hr>
                 <label class="checkbox-row">
-                  <input type="checkbox" :checked="objects" @input="objects = !objects">
+                  <input type="checkbox" :checked="objects" @input="toggleObjects">
                   <div>Include objects (sounds, languages, panorama, etc…)</div>
                 </label>
               </div>
