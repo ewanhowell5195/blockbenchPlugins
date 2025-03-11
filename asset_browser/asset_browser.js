@@ -678,7 +678,7 @@
             },
             async openExternally(file) {
               const extension = PathModule.extname(file)
-              const tempPath = PathModule.join(os.tmpdir(), `${PathModule.basename(name, extension)}_${new Date().toISOString().replace(/[:.]/g, "-")}${extension}`)
+              const tempPath = PathModule.join(os.tmpdir(), `${PathModule.basename(file, extension)}_${new Date().toISOString().replace(/[:.]/g, "-")}${extension}`)
               fs.writeFileSync(tempPath, await this.getFileContent(file))
               exec(`"${tempPath}"`)
             },
@@ -917,7 +917,7 @@
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
                     <div v-else @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
-                      <i v-if="file.endsWith('.json')" class="material-icons">data_object</i>
+                      <i v-if="file.endsWith('.json') || file === 'pack.mcmeta'" class="material-icons">data_object</i>
                       <i v-else-if="file.endsWith('.fsh') || file.endsWith('.vsh') || file.endsWith('.glsl')" class="material-icons">ev_shadow</i>
                       <i v-else-if="file.endsWith('.mcmeta')" class="material-icons">theaters</i>
                       <i v-else-if="file.endsWith('.tga')" class="material-icons">image</i>
