@@ -1051,10 +1051,7 @@
           const packPath = file === "pack.mcmeta" ? file : PathModule.join(root, file).replaceAll("\\", "/")
           const vanillaObjectPath = PathModule.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
           if (await exists(vanillaObjectPath)) {
-            version.objects[packPath] = {
-              type: "object",
-              path: vanillaObjectPath
-            }
+            version.objects[packPath] = { path: vanillaObjectPath }
           } else {
             const cacheObjectPath = PathModule.join(settings.cache_directory.value, "objects", objectPath)
             if (!(await exists(cacheObjectPath))) {
@@ -1062,10 +1059,7 @@
               await fs.promises.mkdir(PathModule.dirname(cacheObjectPath), { recursive: true })
               await fs.promises.writeFile(cacheObjectPath, object)
             }
-            version.objects[packPath] = {
-              type: "object",
-              path: cacheObjectPath
-            }
+            version.objects[packPath] = { path: cacheObjectPath }
           }
           this.done++
           fulfil()
