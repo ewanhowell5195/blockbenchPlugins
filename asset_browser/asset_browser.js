@@ -20,6 +20,8 @@
     versions: []
   }
 
+  const javaBlock = new Set(["parent", "textures", "elements", "ambientocclusion", "gui_light", "display", "groups", "texture_size", "overrides"])
+
   const titleCase = str => str.replace(/_|-/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
   const save = () => localStorage.setItem(id, JSON.stringify(storage))
   const getVersion = id => manifest.versions.find(e => e.id === id)
@@ -41,6 +43,22 @@
     onload() {
       storage = JSON.parse(localStorage.getItem(id) ?? "{}")
       storage.recents ??= []
+      storage.savedFolders ??= [
+        ["assets", "minecraft", "textures"],
+        ["assets", "minecraft", "models"],
+        ["assets", "minecraft", "textures", "block"],
+        ["assets", "minecraft", "textures", "item"],
+        ["assets", "minecraft", "textures", "blocks"],
+        ["assets", "minecraft", "textures", "items"],
+        ["assets", "minecraft", "textures", "entity"],
+        ["assets", "minecraft", "models", "block"],
+        ["assets", "minecraft", "models", "item"],
+        ["resource_pack", "textures"],
+        ["resource_pack", "textures", "blocks"],
+        ["resource_pack", "textures", "items"],
+        ["resource_pack", "textures", "entity"],
+        ["resource_pack", "models", "entity"]
+      ]
       let directory
       if (os.platform() === "win32") {
         directory = PathModule.join(os.homedir(), "AppData", "Roaming", ".minecraft")
@@ -114,6 +132,7 @@
             flex-direction: column;
             gap: 16px;
             height: 100%;
+            flex: 1;
           }
 
           #index {
@@ -226,16 +245,95 @@
             font-size: 24px;
           }
 
+          #browser {
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0;
+            align-content: flex-start;
+          }
+
+          #browser-header {
+            background-color: var(--color-back);
+            width: 100%;
+            display: flex;
+
+            > div:not(:last-child) {
+              border-right: 2px solid var(--color-dark);
+            }
+          }
+
+          #browser-navigation {
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+
+            .tool {
+              margin: 0;
+            }
+
+            i {
+              display: block;
+              cursor: pointer;
+              min-width: 36px;
+              height: 32px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              position: relative;
+              margin: 0;
+
+              &:hover {
+                background-color: var(--color-selected);
+                color: var(--color-light);
+
+                &.line-through::before {
+                  background-color: var(--color-selected);
+                }
+
+                &.line-through::after {
+                  background-color: var(--color-light);
+                }
+              }
+
+              &.disabled {
+                opacity: 0.5;
+                pointer-events: none;
+              }
+
+              &.line-through::before {
+                content: "";
+                position: absolute;
+                width: 24px;
+                height: 7px;
+                background-color: var(--color-back);
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(45deg);
+              }
+
+              &.line-through::after {
+                content: "";
+                position: absolute;
+                width: 24px;
+                height: 2px;
+                background-color: var(--color-text);
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(45deg);
+              }
+            }
+          }
+
           #breadcrumbs {
             display: flex;
             padding: 8px;
             gap: 24px;
-            background-color: var(--color-back);
 
             > div {
               padding: 4px 8px;
               cursor: pointer;
               position: relative;
+              font-weight: 600;
 
               &:not(:last-child)::after {
                 content: "chevron_right";
@@ -247,11 +345,64 @@
                 transform: translate(50%, -50%);
                 font-size: 20px;
                 opacity: 0.5;
+                font-weight: 400;
               }
 
               &:hover {
                 background-color: var(--color-selected);
+                color: var(--color-light);
               }
+
+              > i {
+                display: block;
+              }
+            }
+          }
+
+          #browser-sidebar,
+          #files {
+            height: calc(100% - 48px);
+          }
+
+          #browser-sidebar {
+            width: 126px;
+            border-right: 2px solid var(--color-back);
+            overflow-y: auto;
+            padding: 8px 0;
+            transform: translateX(-126px);
+            transition: transform .15s;
+
+            ~ #files {
+              margin-left: -126px;
+              transition: margin-left .15s;
+            }
+
+            &.open {
+              transform: initial;
+
+              ~ #files {
+                margin-left: 0;
+              }
+            }
+          }
+
+          .saved-folder {
+            white-space: nowrap;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            height: 30px;
+            cursor: pointer;
+            gap: 4px;
+
+            &:hover {
+              color: var(--color-light);
+              background-color: var(--color-selected);
+            }
+
+            > span {
+              text-overflow: ellipsis;
+              overflow: hidden;
             }
           }
 
@@ -259,9 +410,10 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, 114px);
             gap: 10px;
-            max-height: 100%;
             overflow-y: auto;
-            padding: 0 16px 16px;
+            padding: 16px;
+            flex: 1;
+            align-content: start;
 
             > div {
               display: flex;
@@ -320,12 +472,16 @@
             path: [],
             tree: {},
             textureObserver: null,
-            loadedTextures: {},
             lastInteracted: null,
-            selected: []
+            selected: [],
+            savedFolders: storage.savedFolders,
+            sidebarVisible: true,
+            navigationHistory: [],
+            navigationFuture: []
           },
           components: {
-            "animated-texture": animatedTexureComponent()
+            "animated-texture": animatedTexureComponent(),
+            "infinite-scroller": infiniteScrollerComponent() 
           },
           computed: {
             currentFolderContents() {
@@ -340,9 +496,20 @@
                 return naturalSorter(ka, kb)
               })
               this.lastInteracted = entries[0][0]
-              this.$nextTick(() => this.observeImages())
               this.selected = []
               return entries
+            },
+            validSavedFolders() {
+              return this.savedFolders.filter(folder => {
+                let current = this.tree
+                for (const segment of folder) {
+                  if (!current || typeof current !== "object" || !(segment in current)) {
+                    return false
+                  }
+                  current = current[segment]
+                }
+                return true
+              })
             }
           },
           methods: {
@@ -354,7 +521,8 @@
             async loadVersion() {
               this.loadingMessage = `Loading ${this.version}…`
               this.path = []
-              this.loadedTextures = {}
+              this.navigationHistory = [[]]
+              this.navigationFuture = []
               this.jar = await getVersionJar(this.version)
               if (!Object.keys(this.jar.files).length) {
                 this.jar = null
@@ -368,7 +536,7 @@
               this.tree = {}
               for (const path of Object.keys(this.jar.files)) {
                 const parts = path.split("/")
-                if (this.type === "bedrock" || this.type === "bedrock-preview") {
+                if (parts[0].startsWith("bedrock-samples")) {
                   parts.splice(0, 1) 
                 }
                 let current = this.tree
@@ -385,7 +553,6 @@
                   flipbook_texture: "textures/flame_atlas"
                 })
               }
-              this.$nextTick(() => this.observeImages())
               if (storage.recents.includes(this.version)) {
                 storage.recents.splice(storage.recents.indexOf(this.version), 1)
               }
@@ -428,23 +595,12 @@
                 this.jar.files[file].animation = false
               }
             },
-            observeImages() {
-              if (!this.$refs.texture) return
-
-              this.textureObserver?.disconnect()
-              
-              this.textureObserver = new IntersectionObserver(async entries => {
-                for (const entry of entries) {
-                  if (entry.isIntersecting) {
-                    if (!this.loadedTextures[entry.target.dataset.path]) {
-                      this.getFileContent(entry.target.dataset.path).then(e => this.$set(this.loadedTextures, entry.target.dataset.path, "data:image/png;base64," + e.toString("base64")))
-                    }
-                    this.textureObserver.unobserve(entry.target)
-                  }
-                }
-              }, { threshold: 0.1 })
-
-              this.$refs.texture.forEach(el => this.textureObserver.observe(el))
+            textureReady(file) {
+              const data = this.jar.files[file]
+              if (data.texture) return true
+              this.getFileContent(file).then(e => {
+                this.$set(data, "texture", "data:image/png;base64," + e.toString("base64"))
+              })
             },
             select(file, event) {
               const keys = this.currentFolderContents.map(entry => entry[0])
@@ -486,7 +642,7 @@
                   content: "data:image/png;base64," + content.toString("base64")
                 }], name)
                 dialog.close()
-              } else if (Codec.getAllExtensions().includes(PathModule.extname(file).slice(1))) {
+              } else if (await this.blockbenchOpenable(file)) {
                 loadModelFile({
                   content: content.toString(),
                   path: name
@@ -495,6 +651,30 @@
               } else {
                 this.openExternally(file)
               }
+            },
+            async blockbenchOpenable(file) {
+              const data = this.jar.files[file]
+              if (data.blockbenchOpenable !== undefined) return data.blockbenchOpenable
+              if (file.endsWith(".png")) {
+                data.blockbenchOpenable = true
+                return true
+              }
+              if (!file.endsWith(".json")) {
+                data.blockbenchOpenable = false
+                return false
+              }
+              data.blockbenchOpenable = false
+              const content = await this.getFileContent(file)
+              try {
+                const fileData = JSON.parse(content)
+                const keys = Object.keys(fileData)
+                if (keys.every(e => javaBlock.has(e))) {
+                  data.blockbenchOpenable = true
+                } else if (keys.includes("format_version") && keys.some(e => e.includes("geometry"))) {
+                  data.blockbenchOpenable = true
+                }
+              } catch {}
+              return data.blockbenchOpenable
             },
             async openExternally(file) {
               const extension = PathModule.extname(file)
@@ -530,18 +710,20 @@
               }
               return element.outerHTML
             },
-            contextMenu(file, event) {
-              const menu = new Menu("asset_browser_file", [
+            async fileContextMenu(name, file, event) {
+              new Menu("asset_browser_file", [
                 {
                   id: "open",
                   name: "Open",
-                  icon: "file_open",
-                  click: () => this.openFile(file)
+                  icon: typeof file === "object" ? "folder_open" : "file_open",
+                  condition: typeof file === "object" ? true : await this.blockbenchOpenable(file),
+                  click: () => typeof file === "object" ? this.path.push(name) : this.openFile(file)
                 },
                 {
                   id: "open_externally",
                   name: "Open Externally",
-                  icon: "file_open",
+                  icon: "open_in_new",
+                  condition: typeof file === "string",
                   click: () => this.openExternally(file)
                 },
                 "_",
@@ -549,16 +731,95 @@
                   id: "add_to_project",
                   name: "Add to Project",
                   icon: "enable",
-                  condition: Project && file.endsWith(".png"),
+                  condition: Project && !!file.endsWith?.(".png"),
                   click: async () => {
                     new Texture({
                       name: PathModule.basename(file),
                     }).fromDataURL("data:image/png;base64," + (await this.getFileContent(file)).toString("base64")).add()
                     dialog.close()
                   }
+                },
+                {
+                  id: "pin_to_sidebar",
+                  name: "Pin to Sidebar",
+                  icon: "push_pin",
+                  condition: typeof file === "object",
+                  click: () => {
+                    storage.savedFolders.push(this.path.slice().concat(name))
+                    save()
+                  }
                 }
-              ])
-              menu.show(event)
+              ]).show(event)
+            },
+            async folderContextMenu(folder, event) {
+              new Menu("asset_browser_file", [
+                {
+                  id: "open",
+                  name: "Open",
+                  icon: "folder_open",
+                  click: () => this.path = folder.slice()
+                },
+                "_",
+                {
+                  id: "move_up",
+                  name: "Move Up",
+                  icon: "arrow_upward",
+                  condition: storage.savedFolders[0] !== folder,
+                  click: () => {
+                    const index = storage.savedFolders.indexOf(folder)
+                    storage.savedFolders.splice(index, 1)
+                    storage.savedFolders.splice(index - 1, 0, folder)
+                    save()
+                  }
+                },
+                {
+                  id: "move_down",
+                  name: "Move Down",
+                  icon: "arrow_downward",
+                  condition: storage.savedFolders[storage.savedFolders.length - 1] !== folder,
+                  click: () => {
+                    const index = storage.savedFolders.indexOf(folder)
+                    storage.savedFolders.splice(index, 1)
+                    storage.savedFolders.splice(index + 1, 0, folder)
+                    save()
+                  }
+                },
+                "_",
+                {
+                  id: "unpin_from_sidebar",
+                  name: "Unpin from Sidebar",
+                  icon: "push_pin",
+                  click: () => {
+                    storage.savedFolders.splice(storage.savedFolders.indexOf(folder), 1)
+                    save()
+                  }
+                }
+              ]).show(event)
+            },
+            getFolderIcon(path) {
+              if (path.includes("textures")) return "image"
+              if (path.includes("models")) return "deployed_code"
+              if (path.includes("sounds")) return "volume_up"
+              if (path.includes("shaders")) return "ev_shadow"
+              return "folder"
+            },
+            openFolder(path) {
+              if (JSON.stringify(path) !== JSON.stringify(this.path)) {
+                this.changeFolder(path)
+                this.navigationHistory.push(path.slice())
+                this.navigationFuture = []
+              }
+            },
+            changeFolder(path) {
+              this.path = path.slice()
+            },
+            navigationBack() {
+              this.navigationFuture.push(this.navigationHistory.pop())
+              this.changeFolder(this.navigationHistory[this.navigationHistory.length - 1])
+            },
+            navigationForward() {
+              this.navigationHistory.push(this.navigationFuture.pop())
+              this.changeFolder(this.navigationHistory[this.navigationHistory.length - 1])
             }
           },
           template: `
@@ -577,11 +838,6 @@
                   </div>
                 </div>
                 <button @click="updateVersion(); loadVersion()">Load Assets</button>
-                <hr>
-                <label class="checkbox-row">
-                  <input type="checkbox" :checked="objects" @input="objects = !objects">
-                  <div>Include objects (sounds, languages, panorama, etc…)</div>
-                </label>
                 <hr>
                 <div id="version-search">
                   <input type="text" placeholder="Filter…" class="dark_bordered" v-model="versionSearch" ref="entry" @input="versionSearch = versionSearch.toLowerCase()">
@@ -614,33 +870,53 @@
                     </div>
                   </div>
                 </div>
+                <hr>
+                <label class="checkbox-row">
+                  <input type="checkbox" :checked="objects" @input="objects = !objects">
+                  <div>Include objects (sounds, languages, panorama, etc…)</div>
+                </label>
               </div>
               <div v-else-if="loadingMessage" id="loading">
                 <div>{{ loadingMessage }}</div>
               </div>
-              <div v-else id="browser" @click.self="selected = []">
-                <div id="breadcrumbs">
-                  <div @click="jar = null">Versions</div>
-                  <div @click="path = []">{{ version }}</div>
-                  <div v-for="[i, part] of path.entries()" @click="path = path.slice(0, i + 1)">{{ part }}</div>
+              <div v-else id="browser">
+                <div id="browser-header">
+                  <div id="browser-navigation">
+                    <div v-if="validSavedFolders.length" class="tool" @click="sidebarVisible = !sidebarVisible">
+                      <div class="tooltip">{{ sidebarVisible ? "Collapse Sidebar" : "Open Sidebar" }}</div>
+                      <i class="material-icons">{{ sidebarVisible ? "left_panel_close" : "left_panel_open" }}</i>
+                    </div>
+                    <i class="material-icons" :class="{ disabled: navigationHistory.length === 1 }" @click="navigationBack">arrow_back</i>
+                    <i class="material-icons" :class="{ disabled: !navigationFuture.length }" @click="navigationForward">arrow_forward</i>
+                  </div>
+                  <div id="breadcrumbs">
+                    <div @click="jar = null"><i class="material-icons">home</i></div>
+                    <div @click="openFolder([])">{{ version }}</div>
+                    <div v-for="[i, part] of path.entries()" @click="openFolder(path.slice(0, i + 1))">{{ part }}</div>
+                  </div>
                 </div>
-                <div id="files" @click.self="selected = []">
-                  <template v-for="[file, value] of currentFolderContents">
-                    <div v-if="typeof value === 'object'" @click="select(file, $event)" @dblclick="path.push(file)" @contextmenu="contextMenu(value, $event)" :class="{ selected: selected.includes(file) }">
+                <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }">
+                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder)" @contextmenu="folderContextMenu(folder, $event)">
+                    <i class="material-icons">{{ getFolderIcon(folder) }}</i>
+                    <span>{{ folder[folder.length - 1] }}</span>
+                  </div>
+                </div>
+                <infinite-scroller id="files" :items="currentFolderContents">
+                  <template #default="{ file, value, index }">
+                    <div v-if="typeof value === 'object'" @click="select(file, $event)" @dblclick="openFolder(path.concat(file))" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
                       <i class="material-icons">folder</i>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
-                    <div v-else-if="value.endsWith('.png') && hasAnimation(value)" @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="contextMenu(value, $event)" :class="{ selected: selected.includes(file) }">
+                    <div v-else-if="value.endsWith('.png') && hasAnimation(value)" @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
                       <animated-texture :image="jar.files[value].image" :mcmeta="jar.files[value].animation" />
+                      <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
+                    </div>
+                    <div v-else-if="value.endsWith('.png')" @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }" :data-path="value">
+                      <img v-if="textureReady(value)" :src="jar.files[value].texture">
                       <i v-else class="material-icons">image</i>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
-                    <div v-else-if="value.endsWith('.png')" @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="contextMenu(value, $event)" :class="{ selected: selected.includes(file) }" ref="texture" :data-path="value">
-                      <img v-if="loadedTextures[value]" :src="loadedTextures[value]">
-                      <i v-else class="material-icons">image</i>
-                      <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
-                    </div>
-                    <div v-else @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="contextMenu(value, $event)" :class="{ selected: selected.includes(file) }">
+                    <div v-else @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
                       <i v-if="file.endsWith('.json')" class="material-icons">data_object</i>
                       <i v-else-if="file.endsWith('.fsh') || file.endsWith('.vsh') || file.endsWith('.glsl')" class="material-icons">ev_shadow</i>
                       <i v-else-if="file.endsWith('.mcmeta')" class="material-icons">theaters</i>
@@ -651,7 +927,7 @@
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
                   </template>
-                </div>
+                </infinite-scroller>
               </div>
             </div>
           `
@@ -767,6 +1043,7 @@
         this.$refs.canvas.height = 16
 
         this.image.decode().then(() => {
+          if (!this.$refs.canvas) return
           this.imageDecoded = true
           this.setMCMETA(this.mcmeta)
           if (!this.paused && "animation" in this.mcmeta) {
@@ -856,6 +1133,59 @@
       }
     }
   }
+
+  function infiniteScrollerComponent() {
+    return {
+      template: `
+        <div ref="viewport" @scroll="onScroll" class="infinite-scroller">
+          <template v-for="(item, index) in visibleItems">
+            <slot :file="item[0]" :value="item[1]" :index="index"></slot>
+          </template>
+        </div>
+      `,
+      props: {
+        items: Array
+      },
+      data() {
+        return {
+          visibleItems: [],
+          lastLoadedIndex: 0,
+          batchSize: 128
+        }
+      },
+      watch: {
+        items: {
+          handler() {
+            this.resetScroller()
+          },
+          deep: true
+        }
+      },
+      mounted() {
+        this.loadMore()
+      },
+      methods: {
+        onScroll() {
+          const viewport = this.$refs.viewport
+          if (viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 128) {
+            this.loadMore()
+          }
+        },
+        loadMore() {
+          if (this.lastLoadedIndex >= this.items.length) return
+
+          this.visibleItems.push(...this.items.slice(this.lastLoadedIndex, this.lastLoadedIndex + this.batchSize))
+          this.lastLoadedIndex += this.batchSize
+        },
+        resetScroller() {
+          this.visibleItems = []
+          this.lastLoadedIndex = 0
+          this.loadMore()
+        }
+      }
+    }
+  }
+
 
   async function cacheDirectory() {
     if (!await exists(settings.cache_directory.value)) {
