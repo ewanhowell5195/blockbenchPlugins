@@ -25,7 +25,8 @@
 
   const ignoredExtensions = ["class", "nbt", "mcassetsroot", "mf", "sf", "dsa", "rsa", "jfc", "xml", "md", "toml", "itransformationservice", "hex", "jar"]
   const ignoredExtensionsRoot = ["txt", "cfg"]
-  const ignoredExtensionsRegex = new RegExp(`\\.(${ignoredExtensions.join("|")})$|^[^\\/]+\\.(?:${ignoredExtensionsRoot.join("|")})$|(?:^|\/)[^\/\\.]+$|(?:^|\/)\\.`, "i")
+  const ignoredExtensionsRegex = new RegExp(`\\.(${ignoredExtensions.join("|")})$|(?:^|\/)[^\/\\.]+$|(?:^|\/)\\.`, "i")
+  const ignoredExtensionsRootRegex = new RegExp(`^[^\\/]+\\.(?:${ignoredExtensionsRoot.join("|")})$`, "i")
 
   const javaBlock = new Set(["parent", "textures", "elements", "ambientocclusion", "gui_light", "display", "groups", "texture_size", "overrides"])
 
@@ -576,8 +577,10 @@
                 current = current[part]
               }
               const entries = Object.entries(current).sort(([ka, va], [kb, vb]) => {
-                if (typeof va === "object" && typeof vb === "string") return -1
-                if (typeof vb === "object" && typeof va === "string") return 1
+                const isFolderA = typeof va === "object" || ka.endsWith(".zip")
+                const isFolderB = typeof vb === "object" || kb.endsWith(".zip")
+                if (isFolderA && !isFolderB) return -1
+                if (isFolderB && !isFolderA) return 1
                 return naturalSorter(ka, kb)
               })
               this.lastInteracted = entries[0][0]
@@ -958,7 +961,7 @@
             },
             async loadZip(file) {
               const content = await this.getFileContent(file)
-              const zip = parseZip(content.buffer)
+              const zip = parseZip(content.buffer, false)
 
               const parts = file.split("/")
               let current = this.tree
@@ -1441,7 +1444,7 @@
   }
 
   const td = new TextDecoder
-  function parseZip(zip) {
+  function parseZip(zip, ignoreRoot = true) {
     const ua = new Uint8Array(zip)
     const dv = new DataView(zip)
 
@@ -1466,7 +1469,7 @@
       const encodedPath = ua.subarray(o + 46, o + 46 + n)
       const filePath = td.decode(encodedPath)
 
-      if (!filePath.endsWith("/") && !ignoredExtensionsRegex.test(filePath)) {
+      if (!filePath.endsWith("/") && !ignoredExtensionsRegex.test(filePath) && (!ignoreRoot || !ignoredExtensionsRootRegex.test(filePath))) {
         const h = dv.getUint32(o + 42, true)
         const q = dv.getUint16(h + 8,  true)
         const t = dv.getUint16(h + 10, true)
