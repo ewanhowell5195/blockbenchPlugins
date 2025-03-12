@@ -542,7 +542,7 @@
           },
           components: {
             "animated-texture": animatedTexureComponent(),
-            "infinite-scroller": infiniteScrollerComponent() 
+            "lazy-scroller": lazyScrollerComponent() 
           },
           watch: {
             loadingMessage(val) {
@@ -1072,7 +1072,7 @@
                     <span>{{ folder[folder.length - 1] }}</span>
                   </div>
                 </div>
-                <infinite-scroller id="files" :items="currentFolderContents">
+                <lazy-scroller id="files" :items="currentFolderContents">
                   <template #default="{ file, value }">
                     <div v-if="typeof value === 'object'" @click="select(file, $event)" @dblclick="openFolder(path.concat(file))" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
                       <i v-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
@@ -1093,13 +1093,13 @@
                       <i v-else-if="file.endsWith('.fsh') || file.endsWith('.vsh') || file.endsWith('.glsl')" class="material-icons">ev_shadow</i>
                       <i v-else-if="file.endsWith('.mcmeta')" class="material-icons">theaters</i>
                       <i v-else-if="file.endsWith('.tga')" class="material-icons">image</i>
-                      <i v-else-if="file.endsWith('.ogg')" class="material-icons">volume_up</i>
+                      <i v-else-if="file.endsWith('.ogg') || file.endsWith('.fsb')" class="material-icons">volume_up</i>
                       <i v-else-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
                       <i v-else class="material-icons">draft</i>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
                   </template>
-                </infinite-scroller>
+                </lazy-scroller>
               </div>
             </div>
           `
@@ -1307,13 +1307,14 @@
     }
   }
 
-  function infiniteScrollerComponent() {
+  function lazyScrollerComponent() {
     return {
       template: `
-        <div ref="viewport" @scroll="onScroll" class="infinite-scroller">
+        <div ref="viewport" @scroll="onScroll">
           <template v-for="item of visibleItems">
             <slot :file="item[0]" :value="item[1]"></slot>
           </template>
+          <div v-if="padderHeight" :style="{ height: padderHeight + 'px', gridColumn: '1 / -1' }"></div>
         </div>
       `,
       props: {
@@ -1323,7 +1324,8 @@
         return {
           visibleItems: [],
           lastLoadedIndex: 0,
-          batchSize: 128
+          batchSize: 128,
+          padderHeight: 128
         }
       },
       watch: {
@@ -1336,13 +1338,35 @@
       },
       mounted() {
         this.loadMore()
+        const viewport = this.$refs.viewport
+        this.resizeObserver = new ResizeObserver(() => {
+          const firstItem = viewport.children[0]
+          const itemHeight = firstItem.offsetHeight
+          const gap = parseFloat(getComputedStyle(viewport).gap) || 0
+          const columns = Math.floor(viewport.clientWidth / firstItem.offsetWidth) || 1
+          this.padderHeight = (Math.ceil(this.items.length / columns) - Math.ceil(this.visibleItems.length / columns)) * (itemHeight + gap)
+        })
+        this.resizeObserver.observe(viewport)
+      },
+      beforeDestroy() {
+        if (this.resizeObserver) {
+          this.resizeObserver.disconnect()
+        }
       },
       methods: {
         onScroll() {
           const viewport = this.$refs.viewport
-          if (viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 128) {
+          const lastItem = viewport.children[viewport.children.length - 2]
+
+          const lastItemRect = lastItem.getBoundingClientRect()
+          const viewportRect = viewport.getBoundingClientRect()
+
+          if (lastItemRect.bottom <= viewportRect.bottom + 128) {
             this.loadMore()
           }
+
+          this.resizeObserver.disconnect()
+          this.resizeObserver.observe(viewport)
         },
         loadMore() {
           if (this.lastLoadedIndex >= this.items.length) return
