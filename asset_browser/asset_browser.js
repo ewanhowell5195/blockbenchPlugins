@@ -536,7 +536,8 @@
             navigationHistory: [],
             navigationFuture: [],
             breadcrumbsOverflowing: false,
-            breadcrumbsResizeObserver: null
+            breadcrumbsResizeObserver: null,
+            validSavedFolders: []
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -544,8 +545,11 @@
           },
           watch: {
             loadingMessage(val) {
+              if (!val && this.jar) {
+                this.getValidSavedFolders()
+              }
               this.$nextTick(() => {
-                if (!val && this.jar && this.$refs.breadcrumbs) {
+                if (!val && this.jar) {
                   this.setupBreadcrumbs()
                 }
               })
@@ -569,19 +573,6 @@
               this.lastInteracted = entries[0][0]
               this.selected = []
               return entries
-            },
-            validSavedFolders() {
-              this.jar.files
-              return this.savedFolders.filter(folder => {
-                let current = this.tree
-                for (const segment of folder) {
-                  if (!current || typeof current !== "object" || !(segment in current)) {
-                    return false
-                  }
-                  current = current[segment]
-                }
-                return true
-              })
             }
           },
           methods: {
@@ -715,34 +706,7 @@
                 }], name)
                 dialog.close()
               } else if (file.endsWith(".zip")) {
-                const content = await this.getFileContent(file)
-                const zip = parseZip(content.buffer)
-
-                const parts = file.split("/")
-                let current = this.tree
-
-                for (let i = 0; i < parts.length - 1; i++) {
-                  current = current[parts[i]]
-                }
-                const lastPart = parts[parts.length - 1]
-                this.$set(current, lastPart, {})
-                current = current[lastPart]
-
-                for (const [key, zipFile] of Object.entries(zip.files)) {
-                  const fullPath = `${file}/${key}`
-                  this.$set(this.jar.files, fullPath, zipFile)
-
-                  const subParts = key.split("/")
-                  let subCurrent = current
-
-                  for (const [index, subPart] of subParts.entries()) {
-                    if (!subCurrent[subPart]) {
-                      this.$set(subCurrent, subPart, index === subParts.length - 1 ? fullPath : {})
-                    }
-                    subCurrent = subCurrent[subPart]
-                  }
-                }
-
+                await this.loadZip(file)
                 this.openFolder(this.path.concat(PathModule.basename(file)))
               } else if (await this.blockbenchOpenable(file)) {
                 loadModelFile({
@@ -813,6 +777,7 @@
               return element.outerHTML
             },
             async fileContextMenu(name, file, event) {
+              const path = this.path.slice().concat(name).join("/")
               new Menu("asset_browser_file", [
                 {
                   id: "open",
@@ -845,10 +810,22 @@
                   id: "pin_to_sidebar",
                   name: "Pin to Sidebar",
                   icon: "push_pin",
-                  condition: typeof file === "object",
+                  condition: typeof file === "object" && !this.savedFolders.some(e => e.join("/") === path),
                   click: () => {
                     storage.savedFolders.push(this.path.slice().concat(name))
                     save()
+                    this.getValidSavedFolders()
+                  }
+                },
+                {
+                  id: "pin_to_sidebar",
+                  name: "Unpin from Sidebar",
+                  icon: "push_pin",
+                  condition: typeof file === "object" && this.savedFolders.some(e => e.join("/") === path),
+                  click: () => {
+                    storage.savedFolders.splice(this.savedFolders.findIndex(e => e.join("/") === path), 1)
+                    save()
+                    this.getValidSavedFolders()
                   }
                 }
               ]).show(event)
@@ -872,6 +849,7 @@
                     storage.savedFolders.splice(index, 1)
                     storage.savedFolders.splice(index - 1, 0, folder)
                     save()
+                    this.getValidSavedFolders()
                   }
                 },
                 {
@@ -884,6 +862,7 @@
                     storage.savedFolders.splice(index, 1)
                     storage.savedFolders.splice(index + 1, 0, folder)
                     save()
+                    this.getValidSavedFolders()
                   }
                 },
                 "_",
@@ -894,6 +873,7 @@
                   click: () => {
                     storage.savedFolders.splice(storage.savedFolders.indexOf(folder), 1)
                     save()
+                    this.getValidSavedFolders()
                   }
                 }
               ]).show(event)
@@ -956,6 +936,52 @@
               } else {
                 this.breadcrumbsOverflowing = false
               }
+            },
+            async loadZip(file) {
+              const content = await this.getFileContent(file)
+              const zip = parseZip(content.buffer)
+
+              const parts = file.split("/")
+              let current = this.tree
+
+              for (let i = 0; i < parts.length - 1; i++) {
+                current = current[parts[i]]
+              }
+              const lastPart = parts[parts.length - 1]
+              this.$set(current, lastPart, {})
+              current = current[lastPart]
+
+              for (const [key, zipFile] of Object.entries(zip.files)) {
+                const fullPath = `${file}/${key}`
+                this.$set(this.jar.files, fullPath, zipFile)
+
+                const subParts = key.split("/")
+                let subCurrent = current
+
+                for (const [index, subPart] of subParts.entries()) {
+                  if (!subCurrent[subPart]) {
+                    this.$set(subCurrent, subPart, index === subParts.length - 1 ? fullPath : {})
+                  }
+                  subCurrent = subCurrent[subPart]
+                }
+              }
+
+              return current 
+            },
+            async getValidSavedFolders() {
+              this.validSavedFolders = (await Promise.all(this.savedFolders.map(async (folder) => {
+                let current = this.tree
+                for (const segment of folder) {
+                  if (typeof current === "string" && current.endsWith(".zip")) {
+                    current = await this.loadZip(current)
+                  }
+                  if (!current || typeof current !== "object" || !(segment in current)) {
+                    return null
+                  }
+                  current = current[segment]
+                }
+                return folder
+              }))).filter(Boolean)
             }
           },
           template: `
@@ -1046,7 +1072,7 @@
                   </div>
                 </div>
                 <infinite-scroller id="files" :items="currentFolderContents">
-                  <template #default="{ file, value, index }">
+                  <template #default="{ file, value }">
                     <div v-if="typeof value === 'object'" @click="select(file, $event)" @dblclick="openFolder(path.concat(file))" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
                       <i v-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
                       <i v-else class="material-icons">folder</i>
@@ -1284,8 +1310,8 @@
     return {
       template: `
         <div ref="viewport" @scroll="onScroll" class="infinite-scroller">
-          <template v-for="(item, index) in visibleItems">
-            <slot :file="item[0]" :value="item[1]" :index="index"></slot>
+          <template v-for="item of visibleItems">
+            <slot :file="item[0]" :value="item[1]"></slot>
           </template>
         </div>
       `,
