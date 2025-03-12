@@ -324,19 +324,67 @@
             }
           }
 
-          #breadcrumbs {
+          #breadcrumbs-home.overflow::before {
+            content: "";
+            width: 64px;
+            background-image: linear-gradient(90deg, var(--color-back) 10%, transparent);
+            position: absolute;
+            top: 0;
+            right: -64px;
+            bottom: 0;
+            pointer-events: none;
+          }
+
+          #breadcrumbs,
+          #breadcrumbs-home {
             display: flex;
-            padding: 8px;
+            padding: 8px 8px 0;
             gap: 24px;
+            height: 48px;
+            overflow-x: auto;
+            align-items: flex-start;
+            scrollbar-width: initial;
+            scrollbar-color: initial;
+            position: relative;
+
+            &#breadcrumbs-home {
+              overflow-x: visible;
+              border-right: none;
+              padding-right: 16px;
+              z-index: 1;
+
+              > div::after {
+                content: "chevron_right";
+              }
+            }
+
+            &::-webkit-scrollbar {
+              height: 8px;
+            }
+
+            &::-webkit-scrollbar-thumb {
+              background: var(--color-button);
+              border-radius: 0;
+              border-top: 2px solid var(--color-back);
+              border-bottom: 2px solid var(--color-back);
+
+              &:hover {
+                background: var(--color-selected);
+              }
+            }
+
+            &::-webkit-scrollbar-track {
+              background: var(--color-back);
+            }
 
             > div {
               padding: 4px 8px;
               cursor: pointer;
               position: relative;
               font-weight: 600;
+              white-space: nowrap;
 
-              &:not(:last-child)::after {
-                content: "chevron_right";
+              &::after {
                 font-family: "Material Icons";
                 position: absolute;
                 pointer-events: none;
@@ -348,6 +396,10 @@
                 font-weight: 400;
               }
 
+              &:not(:last-child)::after {
+                content: "chevron_right";
+              }
+
               &:hover {
                 background-color: var(--color-selected);
                 color: var(--color-light);
@@ -355,7 +407,12 @@
 
               > i {
                 display: block;
+                margin: 0;
               }
+            }
+
+            .tooltip {
+              font-weight: 400;
             }
           }
 
@@ -477,11 +534,25 @@
             savedFolders: storage.savedFolders,
             sidebarVisible: true,
             navigationHistory: [],
-            navigationFuture: []
+            navigationFuture: [],
+            breadcrumbsOverflowing: false,
+            breadcrumbsResizeObserver: null
           },
           components: {
             "animated-texture": animatedTexureComponent(),
             "infinite-scroller": infiniteScrollerComponent() 
+          },
+          watch: {
+            loadingMessage(val) {
+              this.$nextTick(() => {
+                if (!val && this.jar && this.$refs.breadcrumbs) {
+                  this.setupBreadcrumbs()
+                }
+              })
+            }
+          },
+          beforeDestroy() {
+            this.breadcrumbsResizeObserver.disconnect()
           },
           computed: {
             currentFolderContents() {
@@ -500,6 +571,7 @@
               return entries
             },
             validSavedFolders() {
+              this.jar.files
               return this.savedFolders.filter(folder => {
                 let current = this.tree
                 for (const segment of folder) {
@@ -642,6 +714,36 @@
                   content: "data:image/png;base64," + content.toString("base64")
                 }], name)
                 dialog.close()
+              } else if (file.endsWith(".zip")) {
+                const content = await this.getFileContent(file)
+                const zip = parseZip(content.buffer)
+
+                const parts = file.split("/")
+                let current = this.tree
+
+                for (let i = 0; i < parts.length - 1; i++) {
+                  current = current[parts[i]]
+                }
+                const lastPart = parts[parts.length - 1]
+                this.$set(current, lastPart, {})
+                current = current[lastPart]
+
+                for (const [key, zipFile] of Object.entries(zip.files)) {
+                  const fullPath = `${file}/${key}`
+                  this.$set(this.jar.files, fullPath, zipFile)
+
+                  const subParts = key.split("/")
+                  let subCurrent = current
+
+                  for (const [index, subPart] of subParts.entries()) {
+                    if (!subCurrent[subPart]) {
+                      this.$set(subCurrent, subPart, index === subParts.length - 1 ? fullPath : {})
+                    }
+                    subCurrent = subCurrent[subPart]
+                  }
+                }
+
+                this.openFolder(this.path.concat(PathModule.basename(file)))
               } else if (await this.blockbenchOpenable(file)) {
                 loadModelFile({
                   content: content.toString(),
@@ -655,7 +757,7 @@
             async blockbenchOpenable(file) {
               const data = this.jar.files[file]
               if (data.blockbenchOpenable !== undefined) return data.blockbenchOpenable
-              if (file.endsWith(".png")) {
+              if (file.endsWith(".png") || file.endsWith(".zip")) {
                 data.blockbenchOpenable = true
                 return true
               }
@@ -812,6 +914,7 @@
             },
             changeFolder(path) {
               this.path = path.slice()
+              this.$nextTick(() => this.checkBreadcrumbsOverflow())
             },
             navigationBack() {
               this.navigationFuture.push(this.navigationHistory.pop())
@@ -825,6 +928,34 @@
               this.objects = !this.objects
               storage.objects = this.objects
               save()
+            },
+            setupBreadcrumbs() {
+              if (!this.breadcrumbsResizeObserver) {
+                this.breadcrumbsResizeObserver = new ResizeObserver(() => {
+                  this.checkBreadcrumbsOverflow()
+                })
+              }
+
+              this.breadcrumbsResizeObserver.observe(this.$refs.breadcrumbs)
+              this.checkBreadcrumbsOverflow()
+
+              if (!this.$refs.breadcrumbs.dataset.scrollListenerAdded) {
+                this.$refs.breadcrumbs.addEventListener("scroll", this.handleBreadcrumbsScroll)
+                this.$refs.breadcrumbs.dataset.scrollListenerAdded = true
+              }
+            },
+            checkBreadcrumbsOverflow() {
+              if (this.$refs.breadcrumbs) {
+                this.breadcrumbsOverflowing = this.$refs.breadcrumbs.scrollWidth > this.$refs.breadcrumbs.clientWidth
+                this.$refs.breadcrumbs.scrollLeft = this.$refs.breadcrumbs.scrollWidth
+              }
+            },
+            handleBreadcrumbsScroll() {
+              if (this.$refs.breadcrumbs.scrollLeft) {
+                this.breadcrumbsOverflowing = this.$refs.breadcrumbs.scrollWidth > this.$refs.breadcrumbs.clientWidth
+              } else {
+                this.breadcrumbsOverflowing = false
+              }
             }
           },
           template: `
@@ -894,8 +1025,16 @@
                     <i class="material-icons" :class="{ disabled: navigationHistory.length === 1 }" @click="navigationBack">arrow_back</i>
                     <i class="material-icons" :class="{ disabled: !navigationFuture.length }" @click="navigationForward">arrow_forward</i>
                   </div>
-                  <div id="breadcrumbs">
-                    <div @click="jar = null"><i class="material-icons">home</i></div>
+                  <div id="breadcrumbs-home" :class="{ overflow: breadcrumbsOverflowing }">
+                    <div class="tool" @click="jar = null">
+                      <div class="tooltip">
+                        <span>Home</span>
+                        <div class="tooltip_description">Go back to the version selector</div>
+                      </div>
+                      <i class="material-icons">home</i>
+                    </div>
+                  </div>
+                  <div id="breadcrumbs" ref="breadcrumbs">
                     <div @click="openFolder([])">{{ version }}</div>
                     <div v-for="[i, part] of path.entries()" @click="openFolder(path.slice(0, i + 1))">{{ part }}</div>
                   </div>
@@ -909,7 +1048,8 @@
                 <infinite-scroller id="files" :items="currentFolderContents">
                   <template #default="{ file, value, index }">
                     <div v-if="typeof value === 'object'" @click="select(file, $event)" @dblclick="openFolder(path.concat(file))" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
-                      <i class="material-icons">folder</i>
+                      <i v-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
+                      <i v-else class="material-icons">folder</i>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
                     <div v-else-if="value.endsWith('.png') && hasAnimation(value)" @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
@@ -948,6 +1088,7 @@
               id: version.tag_name,
               type: version.prerelease ? "bedrock-preview" : "bedrock",
               data: {
+                type: version.prerelease ? "bedrock-preview" : "bedrock",
                 downloads: {
                   client: {
                     url: `https://github.com/Mojang/bedrock-samples/archive/refs/tags/${version.tag_name}.zip`
@@ -1366,6 +1507,7 @@
   }
 
   async function getVersionObjects(id) {
+    if (!getVersion(id)) return {}
     const version = await getVersionData(id)
     if (version.type.includes("bedrock")) return {}
     if (version.objects) return version.objects
