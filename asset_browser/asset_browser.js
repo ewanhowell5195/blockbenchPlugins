@@ -1118,6 +1118,8 @@
                       <i v-else-if="file.endsWith('.tga')" class="material-icons">image</i>
                       <i v-else-if="file.endsWith('.ogg') || file.endsWith('.fsb')" class="material-icons">volume_up</i>
                       <i v-else-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
+                      <i v-else-if="file.endsWith('.properties')" class="material-icons">list_alt</i>
+                      <i v-else-if="file.endsWith('.txt')" class="material-icons">description</i>
                       <i v-else class="material-icons">draft</i>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
