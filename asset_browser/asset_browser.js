@@ -1,5 +1,6 @@
 (() => {
   const child_process = require("node:child_process")
+  const crypto = require("node:crypto")
   const os = require("node:os")
 
   let dialog, action, storage
@@ -22,9 +23,14 @@
 
   const loadedJars = {}
 
+  const ignoredExtensions = ["class", "nbt", "mcassetsroot", "mf", "sf", "dsa", "rsa", "jfc", "xml", "md", "toml", "itransformationservice", "hex", "jar"]
+  const ignoredExtensionsRoot = ["txt", "cfg"]
+  const ignoredExtensionsRegex = new RegExp(`\\.(${ignoredExtensions.join("|")})$|^[^\\/]+\\.(?:${ignoredExtensionsRoot.join("|")})$|(?:^|\/)[^\/\\.]+$|(?:^|\/)\\.`, "i")
+
   const javaBlock = new Set(["parent", "textures", "elements", "ambientocclusion", "gui_light", "display", "groups", "texture_size", "overrides"])
 
   const titleCase = str => str.replace(/_|-/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
+  const shaCheck = async (path, sha) => crypto.createHash("sha1").update(await fs.promises.readFile(path)).digest("hex") === sha
   const save = () => localStorage.setItem(id, JSON.stringify(storage))
 
   Plugin.register(id, {
@@ -72,7 +78,7 @@
         value: directory,
         category: "defaults",
         type: "click",
-        name: `${name} - Minecraft Directory`,
+        name: "Ewan's Plugins - Minecraft Directory",
         description: "The location of your .minecraft folder",
         icon: "folder_open",
         click() {
@@ -90,7 +96,7 @@
         value: "",
         category: "defaults",
         type: "click",
-        name: `${name} - Cache Directory`,
+        name: "Ewan's Plugins - Cache Directory",
         description: "The location to cache downloaded content",
         icon: "database",
         click() {
@@ -554,6 +560,9 @@
                   this.setupBreadcrumbs()
                 }
               })
+            },
+            savedFolders() {
+              this.getValidSavedFolders()
             }
           },
           beforeDestroy() {
@@ -597,6 +606,15 @@
               if (this.objects) {
                 Object.assign(this.jar.files, await getVersionObjects(this.version))
               }
+              if (!this.jar.optifineLoaded && this.version.includes("OptiFine")) {
+                const folderName = this.version.replace("-OptiFine", "")
+                const libraryFile = PathModule.join(settings.minecraft_directory.value, "libraries", "optifine", "OptiFine", folderName, `OptiFine-${folderName}.jar`)
+                if (await exists(libraryFile)) {
+                  const zip = await parseZip(await fs.promises.readFile(libraryFile).then(e => e.buffer))
+                  Object.assign(this.jar.files, zip.files)
+                  this.jar.optifineLoaded = true
+                }
+              }
               this.tree = {}
               for (const path of Object.keys(this.jar.files)) {
                 const parts = path.split("/")
@@ -604,6 +622,7 @@
                   parts.splice(0, 1) 
                 }
                 let current = this.tree
+                const zip = parts.some(e => e.endsWith(".zip"))
                 for (const [index, part] of parts.entries()) {
                   if (!current[part]) {
                     current[part] = index === parts.length - 1 ? path : {}
@@ -762,7 +781,7 @@
                 return '<svg width="22" height="22" viewBox="0 0 105 105"><path d="M4.45 24.8h28.22v23.1C16.09 45.93 8.7 39.17 2.72 27.62c-.67-1.29.28-2.82 1.73-2.82zm98.05 5.81v-6.14a1.94 1.94 0 0 0-1.94-1.94H38.93a1.94 1.94 0 0 0-1.94 1.94v22.61a1.94 1.94 0 0 0 1.94 1.94H77.3c.79 0 1.5-.49 1.8-1.22 3.19-7.74 11.1-13.84 21.72-15.26a1.95 1.95 0 0 0 1.68-1.93zM73.24 53.63H41.55c1.93 4.94 1.89 9.6.24 13.52h30.8c-1.79-4.13-1.72-8.94.65-13.52zM41.79 67.14l-.21.5h31.24a7.55 7.55 0 0 1-.22-.5zm33.79 4.49H38.92c-2.72 2.99-6.69 5.17-11.65 6.14v4.71h60.6v-4.91c-5.27-.72-9.45-2.92-12.29-5.94z"/></svg>'
               } else if (id.includes("fabric")) {
                 return '<svg viewBox="-5 -10 110 110" width="22" height="22"><path d="M15.625 85.625V53.93C10.25 52.536 6.25 47.684 6.25 41.875V13.75c0-6.894 5.605-12.5 12.5-12.5h62.5c6.894 0 12.5 5.606 12.5 12.5v71.875c0 1.727-1.398 3.125-3.125 3.125H18.75c-1.727 0-3.125-1.398-3.125-3.125zM12.5 13.75v28.125a6.26 6.26 0 0 0 6.25 6.25h51.738c-1.074-1.848-1.738-3.961-1.738-6.25V13.75c0-2.289.664-4.402 1.738-6.25H18.75a6.26 6.26 0 0 0-6.25 6.25zm75 21.875V13.75a6.26 6.26 0 0 0-6.25-6.25A6.26 6.26 0 0 0 75 13.75v28.125a6.26 6.26 0 0 0 6.25 6.25 6.26 6.26 0 0 0 6.25-6.25zm0 46.875V52.637c-1.848 1.074-3.961 1.738-6.25 1.738H21.875V82.5zM81.25 45c-1.727 0-3.125-1.398-3.125-3.125V13.75c0-1.727 1.398-3.125 3.125-3.125s3.125 1.398 3.125 3.125v28.125c0 1.727-1.398 3.125-3.125 3.125z"/></svg>'
-              } else if (id.includes("preview") || /^\d{2}w\d{2}[a-z]$/.test(id)) {
+              } else if (id.includes("preview") || /^\d{2}w\d{2}[a-z]$/.test(id) || /^\d+\.\d+\.\d+-(?:pre|rc)\d+$/.test(id)) {
                 icon = "update"
               } else if (id.startsWith("v")) {
                 icon = "icon-format_bedrock"
@@ -815,7 +834,6 @@
                   click: () => {
                     storage.savedFolders.push(this.path.slice().concat(name))
                     save()
-                    this.getValidSavedFolders()
                   }
                 },
                 {
@@ -826,7 +844,6 @@
                   click: () => {
                     storage.savedFolders.splice(this.savedFolders.findIndex(e => e.join("/") === path), 1)
                     save()
-                    this.getValidSavedFolders()
                   }
                 }
               ]).show(event)
@@ -850,7 +867,6 @@
                     storage.savedFolders.splice(index, 1)
                     storage.savedFolders.splice(index - 1, 0, folder)
                     save()
-                    this.getValidSavedFolders()
                   }
                 },
                 {
@@ -863,7 +879,6 @@
                     storage.savedFolders.splice(index, 1)
                     storage.savedFolders.splice(index + 1, 0, folder)
                     save()
-                    this.getValidSavedFolders()
                   }
                 },
                 "_",
@@ -874,7 +889,6 @@
                   click: () => {
                     storage.savedFolders.splice(storage.savedFolders.indexOf(folder), 1)
                     save()
-                    this.getValidSavedFolders()
                   }
                 }
               ]).show(event)
@@ -967,7 +981,9 @@
                 }
               }
 
-              return current 
+              delete this.jar.files[file]
+
+              return current
             },
             async getValidSavedFolders() {
               this.validSavedFolders = (await Promise.all(this.savedFolders.map(async (folder) => {
@@ -1446,7 +1462,7 @@
       const encodedPath = ua.subarray(o + 46, o + 46 + n)
       const filePath = td.decode(encodedPath)
 
-      if (!filePath.endsWith("/") && !/\.(class|nbt|mcassetsroot|mf|sf|dsa|rsa|jfc|xml|md)$|(?:^|\/)[^\/\.]+$|(?:^|\/)\./i.test(filePath)) {
+      if (!filePath.endsWith("/") && !ignoredExtensionsRegex.test(filePath)) {
         const h = dv.getUint32(o + 42, true)
         const q = dv.getUint16(h + 8,  true)
         const t = dv.getUint16(h + 10, true)
@@ -1534,12 +1550,17 @@
   async function getVersionAssetsIndex(version) {
     const vanillaAssetsIndexPath = PathModule.join(settings.minecraft_directory.value, "assets", "indexes", version.assets + ".json")
     if (await exists(vanillaAssetsIndexPath)) {
-      version.assetsIndex = JSON.parse(await fs.promises.readFile(vanillaAssetsIndexPath))
-      return version.assetsIndex
+      if (await shaCheck(vanillaAssetsIndexPath, version.assetIndex.sha1)) {
+        version.assetsIndex = JSON.parse(await fs.promises.readFile(vanillaAssetsIndexPath))
+        return version.assetsIndex
+      } else {
+        version.assetsIndex = await fetch(version.assetIndex.url).then(e => e.json())
+        await fs.promises.writeFile(vanillaAssetsIndexPath, JSON.stringify(version.assetsIndex), "utf-8")
+      }
     }
     await cacheDirectory()
     const cacheAssetsIndexPath = PathModule.join(settings.cache_directory.value, `assets_index_${version.assets}.json`)
-    if (await exists(cacheAssetsIndexPath)) {
+    if (await exists(cacheAssetsIndexPath) && await shaCheck(cacheAssetsIndexPath, version.assetIndex.sha1)) {
       version.assetsIndex = JSON.parse(await fs.promises.readFile(cacheAssetsIndexPath))
       return version.assetsIndex
     }
