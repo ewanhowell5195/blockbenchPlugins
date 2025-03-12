@@ -604,14 +604,18 @@
                 return
               }
               if (this.objects) {
-                Object.assign(this.jar.files, await getVersionObjects(this.version))
+                for (const [k, v] of Object.entries(await getVersionObjects(this.version))) {
+                  this.$set(this.jar.files, k, v)
+                }
               }
               if (!this.jar.optifineLoaded && this.version.includes("OptiFine")) {
                 const folderName = this.version.replace("-OptiFine", "")
                 const libraryFile = PathModule.join(settings.minecraft_directory.value, "libraries", "optifine", "OptiFine", folderName, `OptiFine-${folderName}.jar`)
                 if (await exists(libraryFile)) {
-                  const zip = await parseZip(await fs.promises.readFile(libraryFile).then(e => e.buffer))
-                  Object.assign(this.jar.files, zip.files)
+                  const zip = parseZip(await fs.promises.readFile(libraryFile).then(e => e.buffer))
+                  for (const [k, v] of Object.entries(zip.files)) {
+                    this.$set(this.jar.files, k, v)
+                  }
                   this.jar.optifineLoaded = true
                 }
               }
