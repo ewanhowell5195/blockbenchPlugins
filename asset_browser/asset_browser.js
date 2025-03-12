@@ -20,11 +20,12 @@
     versions: []
   }
 
+  const loadedJars = {}
+
   const javaBlock = new Set(["parent", "textures", "elements", "ambientocclusion", "gui_light", "display", "groups", "texture_size", "overrides"])
 
   const titleCase = str => str.replace(/_|-/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
   const save = () => localStorage.setItem(id, JSON.stringify(storage))
-  const getVersion = id => manifest.versions.find(e => e.id === id)
 
   Plugin.register(id, {
     title: name,
@@ -1358,7 +1359,6 @@
     }
   }
 
-
   async function cacheDirectory() {
     if (!await exists(settings.cache_directory.value)) {
       return new Promise(fulfil => {
@@ -1472,18 +1472,32 @@
     return parsedZip
   }
 
+  function getVersion(id) {
+    let version = manifest.versions.find(e => e.id === id)
+    if (!version) {
+      const dataPath = loadedJars[id].files["version.json"]
+      if (dataPath) {
+        try {
+          const data = JSON.parse(dataPath.content)
+          version = manifest.versions.find(e => e.id === data.id)
+        } catch {}
+      }
+    }
+    return version
+  }
+
   async function getVersionData(id) {
     const version = getVersion(id)
     if (version.data) {
       return version.data
     }
-    const vanillaDataPath = PathModule.join(settings.minecraft_directory.value, "versions", id, id + ".json")
+    const vanillaDataPath = PathModule.join(settings.minecraft_directory.value, "versions", version.id, version.id + ".json")
     if (await exists(vanillaDataPath)) {
       version.data = JSON.parse(await fs.promises.readFile(vanillaDataPath))
       return version.data
     }
     await cacheDirectory()
-    const cacheDataPath = PathModule.join(settings.cache_directory.value, `data_${id}.json`)
+    const cacheDataPath = PathModule.join(settings.cache_directory.value, `data_${version.id}.json`)
     if (await exists(cacheDataPath)) {
       version.data = JSON.parse(await fs.promises.readFile(cacheDataPath))
       return version.data
@@ -1511,6 +1525,7 @@
   }
 
   async function getVersionJar(id) {
+    if (loadedJars[id]) return loadedJars[id]
     let jar
     const jarPath = PathModule.join(settings.minecraft_directory.value, "versions", id, id + ".jar")
     if (await exists(jarPath)) {
@@ -1529,6 +1544,7 @@
         loadDownloadedVersions()
       }
     }
+    loadedJars[id] = jar
     return jar
   }
 
