@@ -21,7 +21,7 @@
     versions: []
   }
 
-  const loadedJars = {}
+  let loadedJars = {}
 
   const ignoredExtensions = ["class", "nbt", "mcassetsroot", "mf", "sf", "dsa", "rsa", "jfc", "xml", "md", "toml", "itransformationservice", "hex", "jar"]
   const ignoredExtensionsRoot = ["txt", "cfg"]
@@ -51,22 +51,7 @@
     onload() {
       storage = JSON.parse(localStorage.getItem(id) ?? "{}")
       storage.recents ??= []
-      storage.savedFolders ??= [
-        ["assets", "minecraft", "textures"],
-        ["assets", "minecraft", "models"],
-        ["assets", "minecraft", "textures", "block"],
-        ["assets", "minecraft", "textures", "item"],
-        ["assets", "minecraft", "textures", "blocks"],
-        ["assets", "minecraft", "textures", "items"],
-        ["assets", "minecraft", "textures", "entity"],
-        ["assets", "minecraft", "models", "block"],
-        ["assets", "minecraft", "models", "item"],
-        ["resource_pack", "textures"],
-        ["resource_pack", "textures", "blocks"],
-        ["resource_pack", "textures", "items"],
-        ["resource_pack", "textures", "entity"],
-        ["resource_pack", "models", "entity"]
-      ]
+      loadSidebar()
       let directory
       if (os.platform() === "win32") {
         directory = PathModule.join(os.homedir(), "AppData", "Roaming", ".minecraft")
@@ -460,7 +445,8 @@
             cursor: pointer;
             gap: 4px;
 
-            &:hover {
+            &:hover,
+            &.active {
               color: var(--color-light);
               background-color: var(--color-selected);
             }
@@ -468,8 +454,12 @@
             > span {
               text-overflow: ellipsis;
               overflow: hidden;
-              display: flex;
-              align-items: center;
+
+              &:first-child {
+                display: flex;
+                align-items: center;
+                min-width: 22px;
+              }
             }
           }
 
@@ -566,7 +556,8 @@
             navigationFuture: [],
             breadcrumbsOverflowing: false,
             breadcrumbsResizeObserver: null,
-            validSavedFolders: []
+            validSavedFolders: [],
+            activeSavedFolder: null
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -713,7 +704,18 @@
                 this.$set(data, "texture", "data:image/png;base64," + e.toString("base64"))
               })
             },
-            select(file, event) {
+            select(file, value, event) {
+              if (event.currentTarget.dataset.lastClick) {
+                if (Date.now() - Number(event.currentTarget.dataset.lastClick) < 300) {
+                  if (typeof value === "object") {
+                    return this.openFolder(this.path.concat(file))
+                  } else {
+                    return this.openFile(value)
+                  }
+                }
+              }
+              event.currentTarget.dataset.lastClick = Date.now()
+
               const keys = this.currentFolderContents.map(entry => entry[0])
 
               if (event.shiftKey && this.lastInteracted) {
@@ -813,60 +815,89 @@
               }
               return element.outerHTML
             },
-            async fileContextMenu(name, file, event) {
-              const path = this.path.slice().concat(name).join("/")
+            async fileContextMenu(name, event) {
+              this.lastInteracted = name
+              if (!this.selected.includes(name)) {
+                this.selected = [name]
+              }
+              const selected = await Promise.all(this.selected.map(async e => {
+                const path = this.path.concat(e).join("/")
+                const isFolder = !this.jar.files[path] || e.endsWith(".zip")
+                return {
+                  name: e,
+                  path: path,
+                  type: isFolder ? "folder" : "file",
+                  openable: isFolder || await this.blockbenchOpenable(path),
+                  project: e.endsWith(".png")
+                }
+              }))
+              const selectionType = selected.some(e => e.type === "folder") && selected.some(e => e.type === "file") ? "multi" : selected.some(e => e.type === "folder") ? "folder" : "file"
               new Menu("asset_browser_file", [
                 {
                   id: "open",
                   name: "Open",
-                  icon: typeof file === "object" ? "folder_open" : "file_open",
-                  condition: typeof file === "object" ? true : await this.blockbenchOpenable(file),
-                  click: () => typeof file === "object" ? this.path.push(name) : this.openFile(file)
+                  icon: selectionType === "folder" ? "folder_open" : "file_open",
+                  condition: selectionType !== "multi" && (selectionType === "folder" && selected.length === 1 || selectionType === "file" && selected.some(e => e.openable)),
+                  click: () => selectionType === "folder" ? this.path.push(selected[0].name) : this.openFile()
                 },
                 {
                   id: "open_externally",
                   name: "Open Externally",
                   icon: "open_in_new",
-                  condition: typeof file === "string",
-                  click: () => this.openExternally(file)
+                  condition: selectionType === "file",
+                  click: () => this.openExternally()
                 },
                 "_",
                 {
                   id: "add_to_project",
                   name: "Add to Project",
                   icon: "enable",
-                  condition: Project && !!file.endsWith?.(".png"),
+                  condition: Project && selectionType === "file" && selected.some(e => e.project),
                   click: async () => {
-                    new Texture({
-                      name: PathModule.basename(file),
-                    }).fromDataURL("data:image/png;base64," + (await this.getFileContent(file)).toString("base64")).add()
                     dialog.close()
+                    for (const file of selected) {
+                      if (file.project) {
+                        new Texture({
+                          name: PathModule.basename(file.name),
+                        }).fromDataURL("data:image/png;base64," + (await this.getFileContent(file.path)).toString("base64")).add()
+                      }
+                    }
                   }
                 },
                 {
                   id: "pin_to_sidebar",
                   name: "Pin to Sidebar",
                   icon: "push_pin",
-                  condition: typeof file === "object" && !this.savedFolders.some(e => e.join("/") === path),
+                  condition: selectionType === "folder" && selected.some(e => !this.savedFolders.some(saved => saved.join("/") === e.path)),
                   click: () => {
-                    storage.savedFolders.push(this.path.slice().concat(name))
+                    for (const folder of selected) {
+                      if (!this.savedFolders.some(saved => saved.join("/") === folder.path)) {
+                        storage.savedFolders.push(this.path.slice().concat(folder.name))
+                      }
+                    }
                     save()
                   }
                 },
                 {
-                  id: "pin_to_sidebar",
+                  id: "unpin_from_sidebar",
                   name: "Unpin from Sidebar",
                   icon: "push_pin",
-                  condition: typeof file === "object" && this.savedFolders.some(e => e.join("/") === path),
+                  condition: selectionType === "folder" && !selected.some(e => !this.savedFolders.some(saved => saved.join("/") === e.path)),
                   click: () => {
-                    storage.savedFolders.splice(this.savedFolders.findIndex(e => e.join("/") === path), 1)
+                    for (const folder of selected) {
+                      const index = this.savedFolders.findIndex(e => e.join("/") === folder.path)
+                      if (index !== -1) {
+                        storage.savedFolders.splice(index, 1)
+                      }
+                    }
                     save()
                   }
                 }
               ]).show(event)
             },
-            async folderContextMenu(folder, event) {
-              new Menu("asset_browser_file", [
+            async sidebarItemContextMenu(folder, event) {
+              this.activeSavedFolder = folder
+              const item = new Menu("asset_browser_sidebar_item", [
                 {
                   id: "open",
                   name: "Open",
@@ -878,11 +909,10 @@
                   id: "move_up",
                   name: "Move Up",
                   icon: "arrow_upward",
-                  condition: storage.savedFolders[0] !== folder,
+                  condition: this.validSavedFolders[0] !== folder,
                   click: () => {
-                    const index = storage.savedFolders.indexOf(folder)
-                    storage.savedFolders.splice(index, 1)
-                    storage.savedFolders.splice(index - 1, 0, folder)
+                    storage.savedFolders.splice(storage.savedFolders.indexOf(folder), 1)
+                    storage.savedFolders.splice(storage.savedFolders.indexOf(this.validSavedFolders[this.validSavedFolders.indexOf(folder) - 1]), 0, folder)
                     save()
                   }
                 },
@@ -890,11 +920,10 @@
                   id: "move_down",
                   name: "Move Down",
                   icon: "arrow_downward",
-                  condition: storage.savedFolders[storage.savedFolders.length - 1] !== folder,
+                  condition: this.validSavedFolders[this.validSavedFolders.length - 1] !== folder,
                   click: () => {
-                    const index = storage.savedFolders.indexOf(folder)
-                    storage.savedFolders.splice(index, 1)
-                    storage.savedFolders.splice(index + 1, 0, folder)
+                    storage.savedFolders.splice(storage.savedFolders.indexOf(folder), 1)
+                    storage.savedFolders.splice(storage.savedFolders.indexOf(this.validSavedFolders[this.validSavedFolders.indexOf(folder) + 1]) + 1, 0, folder)
                     save()
                   }
                 },
@@ -906,6 +935,29 @@
                   click: () => {
                     storage.savedFolders.splice(storage.savedFolders.indexOf(folder), 1)
                     save()
+                  }
+                },
+                "_",
+                {
+                  id: "reset",
+                  name: "Reset Sidebar",
+                  icon: "replay",
+                  click: () => {
+                    loadSidebar(true)
+                  }
+                }
+              ], {
+                onClose: () => this.activeSavedFolder = null
+              }).show(event)
+            },
+            async sidebarContextMenu(event) {
+              new Menu("asset_browser_sidebar", [
+                {
+                  id: "reset",
+                  name: "Reset Sidebar",
+                  icon: "replay",
+                  click: () => {
+                    loadSidebar(true)
                   }
                 }
               ]).show(event)
@@ -979,6 +1031,7 @@
             toggleObjects() {
               this.objects = !this.objects
               storage.objects = this.objects
+              loadedJars = {}
               save()
             },
             setupBreadcrumbs() {
@@ -1050,6 +1103,8 @@
                 for (const segment of folder) {
                   if (typeof current === "string" && current.endsWith(".zip")) {
                     current = await this.loadZip(current)
+                  } else if (typeof current === "object" && typeof current[segment] === "string" && segment.endsWith(".zip")) {
+                    current[segment] = await this.loadZip(current[segment])
                   }
                   if (!current || typeof current !== "object" || !(segment in current)) {
                     return null
@@ -1141,15 +1196,15 @@
                     <div v-for="[i, part] of path.entries()" @click="openFolder(path.slice(0, i + 1))">{{ part }}</div>
                   </div>
                 </div>
-                <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }">
-                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder)" @contextmenu="folderContextMenu(folder, $event)">
+                <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }" @contextmenu.self="sidebarContextMenu">
+                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder)" @contextmenu="sidebarItemContextMenu(folder, $event)" :class="{ active: folder === activeSavedFolder }">
                     <span v-html="getFolderIcon(folder)"></span>
                     <span>{{ folder[folder.length - 1] }}</span>
                   </div>
                 </div>
                 <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []">
                   <template #default="{ file, value }">
-                    <div @click="select(file, $event)" @dblclick="typeof value === 'object' ? openFolder(path.concat(file)) : openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
+                    <div @click="select(file, value, $event)" @contextmenu="fileContextMenu(file, $event)" :class="{ selected: selected.includes(file) }">
                       <template v-if="typeof value === 'object'">
                         <i v-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
                         <i v-else class="material-icons">
@@ -1754,5 +1809,47 @@
       }
     }
     dialog.content_vue.downloadedVersions = downloadedVersions.sort((a, b) => b.date - a.date)
+  }
+
+  async function loadSidebar(force) {
+    const defaults = [
+      ["assets", "minecraft", "textures"],
+      ["assets", "minecraft", "models"],
+      ["assets", "minecraft", "textures", "block"],
+      ["assets", "minecraft", "textures", "item"],
+      ["assets", "minecraft", "textures", "blocks"],
+      ["assets", "minecraft", "textures", "items"],
+      ["assets", "minecraft", "textures", "entity"],
+      ["assets", "minecraft", "models", "block"],
+      ["assets", "minecraft", "models", "item"],
+      ["resource_pack", "textures"],
+      ["resource_pack", "textures", "blocks"],
+      ["resource_pack", "textures", "items"],
+      ["resource_pack", "textures", "entity"],
+      ["resource_pack", "models", "entity"]
+    ]
+    if (force) {
+      if (await confirm("Reset Sidebar", "Are you sure you want to reset the sidebar?")) {
+        storage.savedFolders.length = 0
+        storage.savedFolders.push(...defaults)
+        save()
+      }
+    } else {
+      storage.savedFolders ??= defaults
+    }
+  }
+
+  function confirm(title, message) {
+    return new Promise(fulfil => Blockbench.showMessageBox({
+      title,
+      message,
+      buttons: ["dialog.confirm", "dialog.cancel"]
+    }, async button => {
+      if (button === 0) {
+        fulfil(true)
+      } else {
+        fulfil(false)
+      }
+    }))
   }
 })()
