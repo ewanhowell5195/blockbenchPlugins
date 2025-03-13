@@ -468,6 +468,8 @@
             > span {
               text-overflow: ellipsis;
               overflow: hidden;
+              display: flex;
+              align-items: center;
             }
           }
 
@@ -497,6 +499,10 @@
               &.selected {
                 background-color: var(--color-selected);
                 color: var(--color-light);
+
+                > i i {
+                  color: var(--color-selected);
+                }
               }
 
               > i, > img, canvas {
@@ -509,6 +515,17 @@
                 align-items: center;
                 justify-content: center;
                 margin: 8px 0 4px;
+                position: relative;
+
+                i {
+                  position: absolute;
+                  top: 20px;
+                  min-width: 100%;
+                  text-align: center;
+                  color: var(--color-ui);
+                  font-size: 32px;
+                  left: 0;
+                }
               }
 
               > img, canvas {
@@ -777,26 +794,15 @@
             },
             getVersionIcon(id) {
               id = id.toLowerCase()
-              let icon
-              if (id.includes("optifine")) {
-                icon = "icon-format_optifine"
-              } else if (id.includes("quilt")) {
-                icon = "widgets"
-              } else if (id.includes("neoforge")) {
-                return '<svg viewBox="-5 -10 110 110" width="22" height="22" fill-rule="evenodd"><path d="M42.914 28.332a16.67 16.67 0 0 0-12.652 5.82L14.231 52.855l34.777 29.281c.277.234.629.363.992.363a1.54 1.54 0 0 0 .992-.363l34.773-29.281-16.027-18.703a16.67 16.67 0 0 0-12.652-5.82zm-18.98.398c4.75-5.543 11.684-8.73 18.98-8.73h14.172c7.297 0 14.23 3.188 18.98 8.731l18.766 21.891a4.17 4.17 0 0 1 .988 3.051c-.09 1.105-.621 2.133-1.469 2.848L56.359 88.512a9.86 9.86 0 0 1-12.719 0L5.649 56.52c-.848-.715-1.379-1.742-1.469-2.848a4.17 4.17 0 0 1 .988-3.051z"/><path d="M80.762-.516a4.17 4.17 0 0 1 2.57 3.848V38.75H75V13.395L61.281 27.114l-5.895-5.895L76.223.388c1.191-1.191 2.981-1.547 4.539-.902zm-61.524 0a4.16 4.16 0 0 0-2.57 3.848V38.75H25V13.395l13.719 13.719 5.895-5.895L23.777.388c-1.191-1.191-2.98-1.547-4.539-.902zm65.957 49.243l-14.633 7.32A14.58 14.58 0 0 0 62.5 69.09v11.328h-8.332V69.09a22.92 22.92 0 0 1 12.668-20.5l14.633-7.316zm-70.39 0l14.633 7.32a14.58 14.58 0 0 1 8.063 13.043v11.328h8.332V69.09a22.92 22.92 0 0 0-12.668-20.5l-14.633-7.316z"/></svg>'
-              } else if (id.includes("forge")) {
-                return '<svg width="22" height="22" viewBox="0 0 105 105"><path d="M4.45 24.8h28.22v23.1C16.09 45.93 8.7 39.17 2.72 27.62c-.67-1.29.28-2.82 1.73-2.82zm98.05 5.81v-6.14a1.94 1.94 0 0 0-1.94-1.94H38.93a1.94 1.94 0 0 0-1.94 1.94v22.61a1.94 1.94 0 0 0 1.94 1.94H77.3c.79 0 1.5-.49 1.8-1.22 3.19-7.74 11.1-13.84 21.72-15.26a1.95 1.95 0 0 0 1.68-1.93zM73.24 53.63H41.55c1.93 4.94 1.89 9.6.24 13.52h30.8c-1.79-4.13-1.72-8.94.65-13.52zM41.79 67.14l-.21.5h31.24a7.55 7.55 0 0 1-.22-.5zm33.79 4.49H38.92c-2.72 2.99-6.69 5.17-11.65 6.14v4.71h60.6v-4.91c-5.27-.72-9.45-2.92-12.29-5.94z"/></svg>'
-              } else if (id.includes("fabric")) {
-                return '<svg viewBox="-5 -10 110 110" width="22" height="22"><path d="M15.625 85.625V53.93C10.25 52.536 6.25 47.684 6.25 41.875V13.75c0-6.894 5.605-12.5 12.5-12.5h62.5c6.894 0 12.5 5.606 12.5 12.5v71.875c0 1.727-1.398 3.125-3.125 3.125H18.75c-1.727 0-3.125-1.398-3.125-3.125zM12.5 13.75v28.125a6.26 6.26 0 0 0 6.25 6.25h51.738c-1.074-1.848-1.738-3.961-1.738-6.25V13.75c0-2.289.664-4.402 1.738-6.25H18.75a6.26 6.26 0 0 0-6.25 6.25zm75 21.875V13.75a6.26 6.26 0 0 0-6.25-6.25A6.26 6.26 0 0 0 75 13.75v28.125a6.26 6.26 0 0 0 6.25 6.25 6.26 6.26 0 0 0 6.25-6.25zm0 46.875V52.637c-1.848 1.074-3.961 1.738-6.25 1.738H21.875V82.5zM81.25 45c-1.727 0-3.125-1.398-3.125-3.125V13.75c0-1.727 1.398-3.125 3.125-3.125s3.125 1.398 3.125 3.125v28.125c0 1.727-1.398 3.125-3.125 3.125z"/></svg>'
-              } else if (id.includes("preview") || /^\d{2}w\d{2}[a-z]$/.test(id) || /^\d+\.\d+\.\d+-(?:pre|rc)\d+$/.test(id)) {
-                icon = "update"
-              } else if (id.startsWith("v")) {
-                icon = "icon-format_bedrock"
-              } else if (/^[\d\.]+$/.test(id)) {
-                icon = "icon-format_java"
-              } else {
-                icon = "history"
-              }
+              let icon = "history"
+              if (id.includes("optifine")) icon = "icon-format_optifine"
+              else if (id.includes("quilt")) icon = "widgets"
+              else if (id.includes("neoforge")) return '<svg viewBox="-5 -10 110 110" width="22" height="22" fill-rule="evenodd"><path d="M42.914 28.332a16.67 16.67 0 0 0-12.652 5.82L14.231 52.855l34.777 29.281c.277.234.629.363.992.363a1.54 1.54 0 0 0 .992-.363l34.773-29.281-16.027-18.703a16.67 16.67 0 0 0-12.652-5.82zm-18.98.398c4.75-5.543 11.684-8.73 18.98-8.73h14.172c7.297 0 14.23 3.188 18.98 8.731l18.766 21.891a4.17 4.17 0 0 1 .988 3.051c-.09 1.105-.621 2.133-1.469 2.848L56.359 88.512a9.86 9.86 0 0 1-12.719 0L5.649 56.52c-.848-.715-1.379-1.742-1.469-2.848a4.17 4.17 0 0 1 .988-3.051z"/><path d="M80.762-.516a4.17 4.17 0 0 1 2.57 3.848V38.75H75V13.395L61.281 27.114l-5.895-5.895L76.223.388c1.191-1.191 2.981-1.547 4.539-.902zm-61.524 0a4.16 4.16 0 0 0-2.57 3.848V38.75H25V13.395l13.719 13.719 5.895-5.895L23.777.388c-1.191-1.191-2.98-1.547-4.539-.902zm65.957 49.243l-14.633 7.32A14.58 14.58 0 0 0 62.5 69.09v11.328h-8.332V69.09a22.92 22.92 0 0 1 12.668-20.5l14.633-7.316zm-70.39 0l14.633 7.32a14.58 14.58 0 0 1 8.063 13.043v11.328h8.332V69.09a22.92 22.92 0 0 0-12.668-20.5l-14.633-7.316z"/></svg>'
+              else if (id.includes("forge")) return '<svg width="22" height="22" viewBox="0 0 105 105"><path d="M4.45 24.8h28.22v23.1C16.09 45.93 8.7 39.17 2.72 27.62c-.67-1.29.28-2.82 1.73-2.82zm98.05 5.81v-6.14a1.94 1.94 0 0 0-1.94-1.94H38.93a1.94 1.94 0 0 0-1.94 1.94v22.61a1.94 1.94 0 0 0 1.94 1.94H77.3c.79 0 1.5-.49 1.8-1.22 3.19-7.74 11.1-13.84 21.72-15.26a1.95 1.95 0 0 0 1.68-1.93zM73.24 53.63H41.55c1.93 4.94 1.89 9.6.24 13.52h30.8c-1.79-4.13-1.72-8.94.65-13.52zM41.79 67.14l-.21.5h31.24a7.55 7.55 0 0 1-.22-.5zm33.79 4.49H38.92c-2.72 2.99-6.69 5.17-11.65 6.14v4.71h60.6v-4.91c-5.27-.72-9.45-2.92-12.29-5.94z"/></svg>'
+              else if (id.includes("fabric")) return '<svg viewBox="-5 -10 110 110" width="22" height="22"><path d="M15.625 85.625V53.93C10.25 52.536 6.25 47.684 6.25 41.875V13.75c0-6.894 5.605-12.5 12.5-12.5h62.5c6.894 0 12.5 5.606 12.5 12.5v71.875c0 1.727-1.398 3.125-3.125 3.125H18.75c-1.727 0-3.125-1.398-3.125-3.125zM12.5 13.75v28.125a6.26 6.26 0 0 0 6.25 6.25h51.738c-1.074-1.848-1.738-3.961-1.738-6.25V13.75c0-2.289.664-4.402 1.738-6.25H18.75a6.26 6.26 0 0 0-6.25 6.25zm75 21.875V13.75a6.26 6.26 0 0 0-6.25-6.25A6.26 6.26 0 0 0 75 13.75v28.125a6.26 6.26 0 0 0 6.25 6.25 6.26 6.26 0 0 0 6.25-6.25zm0 46.875V52.637c-1.848 1.074-3.961 1.738-6.25 1.738H21.875V82.5zM81.25 45c-1.727 0-3.125-1.398-3.125-3.125V13.75c0-1.727 1.398-3.125 3.125-3.125s3.125 1.398 3.125 3.125v28.125c0 1.727-1.398 3.125-3.125 3.125z"/></svg>'
+              else if (id.includes("preview") || /^\d{2}w\d{2}[a-z]$/.test(id) || /^\d+\.\d+\.\d+-(?:pre|rc)\d+$/.test(id)) icon = "update"
+              else if (id.startsWith("v")) icon = "icon-format_bedrock"
+              else if (/^[\d\.]+$/.test(id)) icon = "icon-format_java"
               const element = Blockbench.getIconNode(icon)
               if (id.includes("quilt")) {
                 element.style.rotate = "90deg"
@@ -900,12 +906,52 @@
                 }
               ]).show(event)
             },
+            getFileIcon(file) {
+              if (file.endsWith(".json") || file === "pack.mcmeta") return "data_object"
+              if (file.endsWith(".fsh") || file.endsWith(".vsh") || file.endsWith(".glsl")) return "ev_shadow"
+              if (file.includes(".mcmeta")) return "theaters"
+              if (file.includes(".tga")) return "image"
+              if (file.endsWith(".ogg") || file.endsWith(".fsb")) return "volume_up"
+              if (file.includes(".zip")) return "folder_zip"
+              if (file.includes(".properties")) return "list_alt"
+              if (file.includes(".txt")) return "description"
+              return "draft"
+            },
             getFolderIcon(path) {
-              if (path.includes("textures")) return "image"
-              if (path.includes("models")) return "deployed_code"
-              if (path.includes("sounds")) return "volume_up"
-              if (path.includes("shaders")) return "ev_shadow"
-              return "folder"
+              if (!Array.isArray(path)) {
+                path = [path]
+              }
+              let icon = "folder"
+              if (path.includes("textures")) icon = "image"
+              else if (path.includes("models") || path.includes("blocks") || path.includes("block")) icon = "deployed_code"
+              else if (path.includes("items") || path.includes("item")) icon = "swords"
+              else if (path.includes("sounds")) icon = "volume_up"
+              else if (path.includes("shaders")) icon = "ev_shadow"
+              else if (path.includes("lang")) icon = "translate"
+              else if (path.includes("texts")) icon = "text_fields"
+              else if (path.includes("particles") || path.includes("particle")) icon = "auto_awesome"
+              else if (path.includes("atlases") || path.includes("map")) icon = "map"
+              else if (path.includes("font")) icon = "font_download"
+              else if (path.includes("post_effect")) icon = "desktop_windows"
+              else if (path.includes("resourcepacks")) icon = "folder_zip"
+              else if (path.includes("equipment")) icon = "checkroom"
+              else if (path.includes("blockstates")) icon = "view_in_ar"
+              else if (path.includes("entities") || path.includes("entity") || path.includes("mob")) icon = "pets"
+              else if (path.includes("painting")) icon = "brush"
+              else if (path.includes("gui") || path.includes("ui")) icon = "call_to_action"
+              else if (path.includes("environment")) icon = "light_mode"
+              else if (path.includes("colormap")) icon = "palette"
+              else if (path.includes("misc")) icon = "help"
+              else if (path.includes("trims")) icon = "content_cut"
+              else if (path.includes("effect") || path.includes("mob_effect")) icon = "auto_fix"
+              else if (path.includes("optifine") || path.includes("mob_effect")) icon = "icon-format_optifine"
+              else if (path.includes("persona_thumbnails")) icon = "groups"
+              else if (path.includes("animations")) icon = "sync"
+              else if (path.includes("animation_controllers")) icon = "rule_settings"
+              else if (path.includes("render_controllers")) icon = "visibility"
+              else if (path.includes("fogs")) icon = "foggy"
+              else if (path.includes("attachables")) icon = "electrical_services"
+              return Blockbench.getIconNode(icon).outerHTML
             },
             openFolder(path) {
               if (JSON.stringify(path) !== JSON.stringify(this.path)) {
@@ -988,6 +1034,8 @@
                 }
               }
 
+              this.jar.zips ??= {}
+              this.jar.zips[file] = this.jar.files[file]
               delete this.jar.files[file]
 
               return current
@@ -1091,15 +1139,18 @@
                 </div>
                 <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }">
                   <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder)" @contextmenu="folderContextMenu(folder, $event)">
-                    <i class="material-icons">{{ getFolderIcon(folder) }}</i>
+                    <span v-html="getFolderIcon(folder)"></span>
                     <span>{{ folder[folder.length - 1] }}</span>
                   </div>
                 </div>
-                <lazy-scroller id="files" :items="currentFolderContents">
+                <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []">
                   <template #default="{ file, value }">
                     <div v-if="typeof value === 'object'" @click="select(file, $event)" @dblclick="openFolder(path.concat(file))" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
                       <i v-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
-                      <i v-else class="material-icons">folder</i>
+                      <i v-else class="material-icons">
+                        <span>folder</span>
+                        <span v-if="!getFolderIcon(file).includes('>folder<')" v-html="getFolderIcon(file)"></span>
+                      </i>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
                     <div v-else-if="value.endsWith('.png') && hasAnimation(value)" @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
@@ -1112,15 +1163,7 @@
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
                     <div v-else @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
-                      <i v-if="file.endsWith('.json') || file === 'pack.mcmeta'" class="material-icons">data_object</i>
-                      <i v-else-if="file.endsWith('.fsh') || file.endsWith('.vsh') || file.endsWith('.glsl')" class="material-icons">ev_shadow</i>
-                      <i v-else-if="file.endsWith('.mcmeta')" class="material-icons">theaters</i>
-                      <i v-else-if="file.endsWith('.tga')" class="material-icons">image</i>
-                      <i v-else-if="file.endsWith('.ogg') || file.endsWith('.fsb')" class="material-icons">volume_up</i>
-                      <i v-else-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
-                      <i v-else-if="file.endsWith('.properties')" class="material-icons">list_alt</i>
-                      <i v-else-if="file.endsWith('.txt')" class="material-icons">description</i>
-                      <i v-else class="material-icons">draft</i>
+                      <i class="material-icons">{{ getFileIcon(file) }}</i>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
                   </template>
@@ -1335,7 +1378,7 @@
   function lazyScrollerComponent() {
     return {
       template: `
-        <div ref="viewport" @scroll="onScroll">
+        <div ref="viewport" @scroll="onScroll" @click.self="$emit('click')">
           <template v-for="item of visibleItems">
             <slot :file="item[0]" :value="item[1]"></slot>
           </template>
