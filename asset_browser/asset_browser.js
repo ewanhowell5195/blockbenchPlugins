@@ -525,6 +525,10 @@
                   color: var(--color-ui);
                   font-size: 32px;
                   left: 0;
+
+                  &.fa {
+                    font-size: 28px;
+                  }
                 }
               }
 
@@ -942,7 +946,7 @@
               else if (path.includes("environment")) icon = "light_mode"
               else if (path.includes("colormap")) icon = "palette"
               else if (path.includes("misc")) icon = "help"
-              else if (path.includes("trims")) icon = "content_cut"
+              else if (path.includes("trims")) icon = "fa-gem"
               else if (path.includes("effect") || path.includes("mob_effect")) icon = "auto_fix"
               else if (path.includes("optifine") || path.includes("mob_effect")) icon = "icon-format_optifine"
               else if (path.includes("persona_thumbnails")) icon = "groups"
@@ -1145,25 +1149,24 @@
                 </div>
                 <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []">
                   <template #default="{ file, value }">
-                    <div v-if="typeof value === 'object'" @click="select(file, $event)" @dblclick="openFolder(path.concat(file))" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
-                      <i v-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
-                      <i v-else class="material-icons">
-                        <span>folder</span>
-                        <span v-if="!getFolderIcon(file).includes('>folder<')" v-html="getFolderIcon(file)"></span>
-                      </i>
-                      <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
-                    </div>
-                    <div v-else-if="value.endsWith('.png') && hasAnimation(value)" @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
-                      <animated-texture :image="jar.files[value].image" :mcmeta="jar.files[value].animation" />
-                      <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
-                    </div>
-                    <div v-else-if="value.endsWith('.png')" @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }" :data-path="value">
-                      <img v-if="textureReady(value)" :src="jar.files[value].texture">
-                      <i v-else class="material-icons">image</i>
-                      <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
-                    </div>
-                    <div v-else @click="select(file, $event)" @dblclick="openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
-                      <i class="material-icons">{{ getFileIcon(file) }}</i>
+                    <div @click="select(file, $event)" @dblclick="typeof value === 'object' ? openFolder(path.concat(file)) : openFile(value)" @contextmenu="fileContextMenu(file, value, $event)" :class="{ selected: selected.includes(file) }">
+                      <template v-if="typeof value === 'object'">
+                        <i v-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
+                        <i v-else class="material-icons">
+                          <span>folder</span>
+                          <span v-if="!getFolderIcon(file).includes('>folder<')" v-html="getFolderIcon(file)"></span>
+                        </i>
+                      </template>
+                      <template v-else-if="value.endsWith('.png') && hasAnimation(value)">
+                        <animated-texture :image="jar.files[value].image" :mcmeta="jar.files[value].animation" />
+                      </template>
+                      <template v-else-if="value.endsWith('.png')">
+                        <img v-if="textureReady(value)" :src="jar.files[value].texture">
+                        <i v-else class="material-icons">image</i>
+                      </template>
+                      <template v-else>
+                        <i class="material-icons">{{ getFileIcon(file) }}</i>
+                      </template>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                     </div>
                   </template>
