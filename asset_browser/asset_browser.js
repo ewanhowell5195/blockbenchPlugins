@@ -105,6 +105,10 @@
         lines: [`<style>#${id} {
           user-select: none;
 
+          .spacer {
+            flex: 1;
+          }
+
           .dialog_wrapper {
             height: calc(100% - 30px);
           }
@@ -411,7 +415,7 @@
 
           #browser-sidebar,
           #files {
-            height: calc(100% - 48px);
+            height: calc(100% - 48px - 24px);
           }
 
           #browser-sidebar {
@@ -532,6 +536,16 @@
               }
             }
           }
+
+          #browser-footer {
+            width: 100%;
+            background-color: var(--color-back);
+            height: 24px;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            gap: 8px;
+          }
         }</style>`],
         component: {
           data: {
@@ -549,6 +563,7 @@
             tree: {},
             textureObserver: null,
             lastInteracted: null,
+            shiftStartItem: null,
             selected: [],
             savedFolders: storage.savedFolders,
             sidebarVisible: true,
@@ -635,10 +650,13 @@
                 }
               }
               this.tree = {}
-              for (const path of Object.keys(this.jar.files)) {
+              for (let [path, value] of Object.entries(this.jar.files)) {
                 const parts = path.split("/")
                 if (parts[0].startsWith("bedrock-samples")) {
-                  parts.splice(0, 1) 
+                  parts.splice(0, 1)
+                  this.$set(this.jar.files, parts.join("/"), value)
+                  delete this.jar.files[path]
+                  path = parts.join("/")
                 }
                 let current = this.tree
                 const zip = parts.some(e => e.endsWith(".zip"))
@@ -668,8 +686,8 @@
               if (this.jar.files[file].animation) return true
               if (this.jar.flipbook) {
                 const split = file.split("/")
-                if (split[1] === "resource_pack") {
-                  const texture = split.slice(2).join("/").slice(0, -4)
+                if (split[0] === "resource_pack") {
+                  const texture = split.slice(1).join("/").slice(0, -4)
                   const anim = this.jar.flipbook.find(e => e.flipbook_texture === texture)
                   if (anim) {
                     this.jar.files[file].animation = {
@@ -710,7 +728,7 @@
                   if (typeof value === "object") {
                     return this.openFolder(this.path.concat(file))
                   } else {
-                    return this.openFile(value)
+                    return this.openFiles()
                   }
                 }
               }
@@ -718,54 +736,85 @@
 
               const keys = this.currentFolderContents.map(entry => entry[0])
 
-              if (event.shiftKey && this.lastInteracted) {
-                const start = keys.indexOf(this.lastInteracted)
+              if (!event.shiftKey) {
+                this.shiftStartItem = null
+              }
+              if (event.shiftKey) {
+                if (!this.shiftStartItem) {
+                  this.shiftStartItem = this.lastInteracted
+                }
+                const start = keys.indexOf(this.shiftStartItem)
+                const selected = this.selected.includes(this.shiftStartItem)
                 const end = keys.indexOf(file)
                 const range = keys.slice(Math.min(start, end), Math.max(start, end) + 1)
-                if (event.ctrlKey && !this.selected.includes(this.lastInteracted)) {
-                  this.selected = this.selected.filter(f => !range.includes(f))
+                if (event.ctrlKey) {
+                  if (selected) {
+                    this.selected = Array.from(new Set(this.selected.concat(range)))
+                  } else {
+                    this.selected = this.selected.filter(e => !range.includes(e))
+                  }
                 } else {
-                  this.selected = event.ctrlKey ? Array.from(new Set(this.selected.concat(range))) : range
+                  this.selected = range
                 }
-              } else if (!event.ctrlKey) {
-                this.selected = [file]
-              } else {
+              } else if (event.ctrlKey) {
                 const index = this.selected.indexOf(file)
                 if (index !== -1) {
                   this.selected.splice(index, 1)
                 } else {
                   this.selected.push(file)
                 }
+              } else {
+                this.selected = [file]
               }
 
               this.lastInteracted = file
             },
             async getFileContent(file) {
-              const data = this.jar.files[file]
+              const data = this.jar.files[file] ?? this.jar.zips?.[file]
+              if (!data) return
               if (!data.content) {
                 data.content = await fs.promises.readFile(data.path)
               }
               return data.content
             },
-            async openFile(file) {
-              const name = PathModule.basename(file)
-              const content = await this.getFileContent(file)
-              if (file.endsWith(".png")) {
-                Codecs.image.load([{
-                  content: "data:image/png;base64," + content.toString("base64")
-                }], name)
+            async openFilesCheck() {
+              if (this.selected.length <= 16) return true
+              if (!await confirm("Open files", `You are about to open ${this.selected.length.toLocaleString()} files. Are you sure you want to continue?`)) return
+              if (this.selected.length > 128) {
+                if (!await confirm("Open files", `Are you really sure? ${this.selected.length.toLocaleString()} files is a lot. Are you absolutely sure you want to continue?`)) return
+              }
+              return true
+            },
+            async openFiles() {
+              if (!(await this.openFilesCheck())) return
+              const files = this.selected.map(e => ({
+                name: e,
+                path: this.path.concat(e).join("/")
+              }))
+              let closeDialog
+              await Promise.all(files.map(async file => {
+                const content = await this.getFileContent(file.path)
+                if (!content) return
+                if (file.name.endsWith(".png")) {
+                  Codecs.image.load([{
+                    content: "data:image/png;base64," + content.toString("base64")
+                  }], name)
+                  closeDialog = true
+                } else if (file.name.endsWith(".zip")) {
+                  await this.loadZip(file.path)
+                  this.openFolder(this.path.concat(file.name))
+                } else if (await this.blockbenchOpenable(file.path)) {
+                  loadModelFile({
+                    content: content.toString(),
+                    path: file.name
+                  })
+                  closeDialog = true
+                } else {
+                  this.openExternally(file.path)
+                }
+              }))
+              if (closeDialog) {
                 dialog.close()
-              } else if (file.endsWith(".zip")) {
-                await this.loadZip(file)
-                this.openFolder(this.path.concat(PathModule.basename(file)))
-              } else if (await this.blockbenchOpenable(file)) {
-                loadModelFile({
-                  content: content.toString(),
-                  path: name
-                })
-                dialog.close()
-              } else {
-                this.openExternally(file)
               }
             },
             async blockbenchOpenable(file) {
@@ -815,11 +864,7 @@
               }
               return element.outerHTML
             },
-            async fileContextMenu(name, event) {
-              this.lastInteracted = name
-              if (!this.selected.includes(name)) {
-                this.selected = [name]
-              }
+            async getDetailedSelection() {
               const selected = await Promise.all(this.selected.map(async e => {
                 const path = this.path.concat(e).join("/")
                 const isFolder = !this.jar.files[path] || e.endsWith(".zip")
@@ -831,21 +876,36 @@
                   project: e.endsWith(".png")
                 }
               }))
-              const selectionType = selected.some(e => e.type === "folder") && selected.some(e => e.type === "file") ? "multi" : selected.some(e => e.type === "folder") ? "folder" : "file"
+              return [
+                selected,
+                selected.some(e => e.type === "folder") && selected.some(e => e.type === "file") ? "multi" : selected.some(e => e.type === "folder") ? "folder" : "file"
+              ]
+            },
+            async fileContextMenu(name, event) {
+              this.lastInteracted = name
+              if (!this.selected.includes(name)) {
+                this.selected = [name]
+              }
+              const [selected, selectionType] = await this.getDetailedSelection()
               new Menu("asset_browser_file", [
                 {
                   id: "open",
                   name: "Open",
                   icon: selectionType === "folder" ? "folder_open" : "file_open",
                   condition: selectionType !== "multi" && (selectionType === "folder" && selected.length === 1 || selectionType === "file" && selected.some(e => e.openable)),
-                  click: () => selectionType === "folder" ? this.path.push(selected[0].name) : this.openFile()
+                  click: () => selectionType === "folder" ? this.path.push(selected[0].name) : this.openFiles()
                 },
                 {
                   id: "open_externally",
                   name: "Open Externally",
                   icon: "open_in_new",
-                  condition: selectionType === "file",
-                  click: () => this.openExternally()
+                  condition: selected.every(e => e.type === "file" || e.name.endsWith("zip")),
+                  click: async () => {
+                    if (!(await this.openFilesCheck())) return
+                    for (const file of selected) {
+                      this.openExternally(file.path)
+                    }
+                  }
                 },
                 "_",
                 {
@@ -854,6 +914,7 @@
                   icon: "enable",
                   condition: Project && selectionType === "file" && selected.some(e => e.project),
                   click: async () => {
+                    if (!(await this.openFilesCheck())) return
                     dialog.close()
                     for (const file of selected) {
                       if (file.project) {
@@ -1031,7 +1092,9 @@
             toggleObjects() {
               this.objects = !this.objects
               storage.objects = this.objects
-              loadedJars = {}
+              if (!this.objects) {
+                loadedJars = {}
+              }
               save()
             },
             setupBreadcrumbs() {
@@ -1113,10 +1176,28 @@
                 }
                 return folder
               }))).filter(Boolean)
+            },
+            async keydownHandler(event) {
+              if (this.jar && !this.loadingMessage) {
+                if (event.ctrlKey && event.key === "a") {
+                  this.selected = this.currentFolderContents.map(e => e[0])
+                } else if (event.key === "Escape") {
+                  event.stopPropagation()
+                  this.selected = []
+                } else if (event.key === "Enter") {
+                  event.stopPropagation()
+                  const [selected, selectionType] = await this.getDetailedSelection()
+                  if (selectionType !== "folder") {
+                    this.openFiles()
+                  } else if (selected.length === 1) {
+                    this.path.push(selected[0].name)
+                  }
+                }
+              }
             }
           },
           template: `
-            <div id="${id}-container">
+            <div id="${id}-container" tabindex="0" @keydown="keydownHandler" @click="event.target.tagName === 'INPUT' ? null : event.currentTarget.focus()">
               <div v-if="!jar && !loadingMessage" id="index">
                 <div class="index-row">
                   <div class="index-column">
@@ -1134,7 +1215,7 @@
                 <hr>
                 <div id="version-search">
                   <input type="text" placeholder="Filter…" class="dark_bordered" v-model="versionSearch" ref="entry" @input="versionSearch = versionSearch.toLowerCase()">
-                  <i class="material-icons" :class="{ active: versionSearch }" @click="versionSearch = ''; $refs.entry.focus()">{{ versionSearch ? "clear" : "search" }}</i>
+                  <i class="material-icons" :class="{ active: versionSearch }" @click="versionSearch = ''; setTimeout(() => $refs.entry.focus(), 0)">{{ versionSearch ? "clear" : "search" }}</i>
                 </div>
                 <div class="index-row" style="flex: 1;">
                   <div class="index-column">
@@ -1226,6 +1307,14 @@
                     </div>
                   </template>
                 </lazy-scroller>
+                <div id="browser-footer">
+                  <div>{{ currentFolderContents.length.toLocaleString() }} item{{ currentFolderContents.length === 1 ? "" : "s" }}</div>
+                  <template v-if="selected.length">
+                    <div style="width: 1px; height: 12px; background-color: var(--color-subtle_text); opacity: 0.25;"></div>
+                    <div>{{ selected.length.toLocaleString() }} selected</div>
+                  </template>
+                  <div class="spacer"></div>
+                </div>
               </div>
             </div>
           `
