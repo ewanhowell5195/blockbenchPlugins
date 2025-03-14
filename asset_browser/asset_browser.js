@@ -102,7 +102,7 @@
       dialog = new Dialog({
         id,
         title: name,
-        width: 780,
+        width: 816,
         resizable: true,
         buttons: [],
         lines: [`<style>#${id} {
@@ -422,15 +422,15 @@
           }
 
           #browser-sidebar {
-            width: 126px;
+            width: 162px;
             border-right: 2px solid var(--color-back);
             overflow-y: auto;
             padding: 8px 0;
-            transform: translateX(-126px);
+            transform: translateX(-162px);
             transition: transform .15s;
 
             ~ #files {
-              margin-left: -126px;
+              margin-left: -162px;
               transition: margin-left .15s;
             }
 
@@ -1269,6 +1269,7 @@
                     </div>
                     <i class="material-icons" :class="{ disabled: navigationHistory.length === 1 }" @click="navigationBack">arrow_back</i>
                     <i class="material-icons" :class="{ disabled: !navigationFuture.length }" @click="navigationForward">arrow_forward</i>
+                    <i class="material-icons" :class="{ disabled: !path.length }" @click="changeFolder(path.slice(0, -1))">arrow_upward</i>
                   </div>
                   <div id="breadcrumbs-home" :class="{ overflow: breadcrumbsOverflowing }">
                     <div class="tool" @click="jar = null">
