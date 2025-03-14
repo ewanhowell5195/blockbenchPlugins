@@ -1199,6 +1199,44 @@
                   } else if (selected.length === 1) {
                     this.path.push(selected[0].name)
                   }
+                } else if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+                  if (!this.selected.length || this.selected.length > 1) {
+                    this.selected = [this.lastInteracted]
+                  } else if (this.selected.length === 1) {
+                    const container = this.$refs.files.$el
+                    const index = this.currentFolderContents.findIndex(e => e[0] === this.selected[0])
+                    if (event.key === "ArrowLeft") {
+                      if (index > 0) {
+                        this.selected = [this.currentFolderContents[index - 1][0]]
+                      }
+                    } else if (event.key === "ArrowRight") {
+                      if (index < this.currentFolderContents.length - 1) {
+                        this.selected = [this.currentFolderContents[index + 1][0]]
+                      }
+                    } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                      const styles = getComputedStyle(container)
+                      const gap = parseInt(styles.columnGap)
+                      const itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[0].offsetWidth + gap)))
+                      if (event.key === "ArrowUp") {
+                        if (index >= itemsPerRow) {
+                          this.selected = [this.currentFolderContents[index - itemsPerRow][0]]
+                        }
+                      } else if (event.key === "ArrowDown") {
+                        if (index + itemsPerRow < this.currentFolderContents.length) {
+                          this.selected = [this.currentFolderContents[index + itemsPerRow][0]]
+                        }
+                      }
+                    }
+                    const selectedElement = container.children[this.currentFolderContents.findIndex(e => e[0] === this.selected[0])]
+                    const containerRect = container.getBoundingClientRect()
+                    const elementRect = selectedElement.getBoundingClientRect()
+                    if (elementRect.top < containerRect.top || elementRect.bottom > containerRect.bottom) {
+                      selectedElement.scrollIntoView({
+                        behavior: "smooth",
+                        block: "nearest"
+                      })
+                    }
+                  }
                 }
               }
             }
@@ -1291,7 +1329,7 @@
                     <span>{{ folder[folder.length - 1] }}</span>
                   </div>
                 </div>
-                <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []">
+                <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []" ref="files">
                   <template #default="{ file, value }">
                     <div @click="select(file, value, $event)" @contextmenu="fileContextMenu(file, $event)" :class="{ selected: selected.includes(file) }">
                       <template v-if="typeof value === 'object'">
