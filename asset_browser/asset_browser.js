@@ -840,7 +840,7 @@
               try {
                 const fileData = JSON.parse(content)
                 const keys = Object.keys(fileData)
-                if (keys.every(e => javaBlock.items.has(e)) && keys.some(javaBlock.oneOf.has(e))) {
+                if (keys.every(e => javaBlock.items.has(e)) && keys.some(e => javaBlock.oneOf.has(e))) {
                   data.blockbenchOpenable = true
                 } else if (keys.includes("format_version") && keys.some(e => e.includes("geometry"))) {
                   data.blockbenchOpenable = true
