@@ -28,7 +28,10 @@
   const ignoredExtensionsRegex = new RegExp(`\\.(${ignoredExtensions.join("|")})$|(?:^|\/)[^\/\\.]+$|(?:^|\/)\\.`, "i")
   const ignoredExtensionsRootRegex = new RegExp(`^[^\\/]+\\.(?:${ignoredExtensionsRoot.join("|")})$`, "i")
 
-  const javaBlock = new Set(["parent", "textures", "elements", "ambientocclusion", "gui_light", "display", "groups", "texture_size", "overrides"])
+  const javaBlock = {
+    oneOf: new Set(["parent", "elements"]),
+    items: new Set(["parent", "textures", "elements", "ambientocclusion", "gui_light", "display", "groups", "texture_size", "overrides"])
+  }
 
   const titleCase = str => str.replace(/_|-/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
   const shaCheck = async (path, sha) => crypto.createHash("sha1").update(await fs.promises.readFile(path)).digest("hex") === sha
@@ -499,6 +502,10 @@
                 }
               }
 
+              * {
+                cursor: pointer;
+              }
+
               > i, > img, canvas {
                 min-width: 64px;
                 min-height: 64px;
@@ -833,7 +840,7 @@
               try {
                 const fileData = JSON.parse(content)
                 const keys = Object.keys(fileData)
-                if (keys.every(e => javaBlock.has(e))) {
+                if (keys.every(e => javaBlock.items.has(e)) && keys.some(javaBlock.oneOf.has(e))) {
                   data.blockbenchOpenable = true
                 } else if (keys.includes("format_version") && keys.some(e => e.includes("geometry"))) {
                   data.blockbenchOpenable = true
