@@ -507,7 +507,11 @@
                 cursor: pointer;
               }
 
-              > i, > img, canvas {
+              img {
+                pointer-events: none;
+              }
+
+              > i, img, canvas {
                 min-width: 64px;
                 min-height: 64px;
                 max-width: 64px;
@@ -518,7 +522,6 @@
                 justify-content: center;
                 margin: 8px 0 4px;
                 position: relative;
-                pointer-events: none;
 
                 i {
                   position: absolute;
@@ -535,7 +538,7 @@
                 }
               }
 
-              > img, canvas {
+              img, canvas {
                 object-fit: contain;
                 background: conic-gradient(var(--color-dark) .25turn, var(--color-back) .25turn .5turn, var(--color-dark) .5turn .75turn, var(--color-back) .75turn) top left/12px 12px;
               }
@@ -546,34 +549,69 @@
             }
 
             &.list {
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
+              row-gap: 4px;
+              column-gap: 0;
+              grid-template-columns: auto 1fr auto auto;
 
               > div {
-                flex-direction: row;
-                min-height: 30px;
+                display: contents;
                 font-size: 16px;
                 text-align: initial;
-                padding: 0 8px;
-                gap: 4px;
 
-                > i, > img, canvas {
+                &.selected > * {
+                  background-color: var(--color-selected);
+                }
+
+                > * {
+                  padding: 0 3px;
+                }
+
+                > i, img, canvas {
+                  box-sizing: initial;
                   margin: 0;
                   min-width: 22px;
-                  min-height: 22px;
+                  min-height: 100%;
                   max-width: 22px;
-                  max-height: 22px;
+                  max-height: 100%;
                   font-size: 22px;
+                  padding-left: 8px;
+                  align-self: center;
 
                   i {
-                    top: 6px;
+                    top: 50%;
+                    left: 2.5px;
                     font-size: 12px;
+                    transform: translateY(calc(-50% + 1px));
 
                     &.fa {
                       font-size: 10px;
+                      transform: translateY(calc(-50% + 6px));
                     }
                   }
+                }
+
+                img, canvas {
+                  padding: 0;
+                  min-height: 22px;
+                  max-height: 22px;
+                }
+
+                > div {
+                  box-sizing: initial;
+                  display: flex;
+                  align-items: center;
+                  min-height: 30px;
+
+                  &:first-child {
+                    max-width: 32px;
+                    padding-left: 8px;
+                  }
+                }
+
+                > :last-child {
+                  padding-right: 8px;
+                  text-align: right;
+                  justify-content: flex-end;
                 }
               }
             }
@@ -1157,7 +1195,11 @@
             },
             changeFolder(path) {
               this.path = path.slice()
-              this.$nextTick(() => this.checkBreadcrumbsOverflow())
+              this.$refs.files.$el.scrollTop = 0
+              this.$nextTick(() => {
+                this.checkBreadcrumbsOverflow()
+                this.$refs.files.onResize()
+              })
             },
             navigationBack() {
               this.navigationFuture.push(this.navigationHistory.pop())
@@ -1287,7 +1329,10 @@
                     } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
                       const styles = getComputedStyle(container)
                       const gap = parseInt(styles.columnGap)
-                      const itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[0].offsetWidth + gap)))
+                      let itemsPerRow = 1
+                      if (this.displayType === "grid") {
+                        itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[0].offsetWidth + gap)))
+                      }
                       if (event.key === "ArrowUp") {
                         if (index >= itemsPerRow) {
                           this.selected = [this.currentFolderContents[index - itemsPerRow][0]]
@@ -1316,6 +1361,7 @@
               this.displayType = type
               storage.display = type
               save()
+              this.$nextTick(() => this.$refs.files.onResize())
             },
             getFileLabel(file, value) {
               const path = this.path.concat(file).join("/")
@@ -1435,7 +1481,14 @@
                 label.replaceAll("Json", "JSON")
                 return label
               }
-            }
+            },
+            imageDimensionsReady(file) {
+              const data = this.jar.files[file]
+              if (data.imageDimensions) return true
+              data.image.decode().then(e => {
+                this.$set(data, "imageDimensions", `${data.image.width} x ${data.image.height}`)
+              })
+            },
           },
           template: `
             <div id="${id}-container" tabindex="0" @keydown="keydownHandler" @click="event.target.tagName === 'INPUT' ? null : event.currentTarget.focus()">
@@ -1539,7 +1592,9 @@
                         <animated-texture :image="jar.files[value].image" :mcmeta="jar.files[value].animation" />
                       </template>
                       <template v-else-if="file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')">
-                        <img v-if="textureReady(value)" :src="jar.files[value].texture">
+                        <div v-if="textureReady(value)">
+                          <img :src="jar.files[value].texture">
+                        </div>
                         <i v-else class="material-icons">image</i>
                       </template>
                       <template v-else>
@@ -1547,7 +1602,8 @@
                       </template>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                       <template v-if="displayType === 'list'">
-                        <div class="spacer"></div>
+                        <div v-if="(file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')) && imageDimensionsReady(value)">{{ jar.files[value].imageDimensions }}</div>
+                        <div v-else></div>
                         <div>{{ getFileLabel(file, value) }}</div>
                       </template>
                     </div>
@@ -1779,7 +1835,7 @@
           <template v-for="item of visibleItems">
             <slot :file="item[0]" :value="item[1]"></slot>
           </template>
-          <div v-if="padderHeight" :style="{ minHeight: padderHeight + 'px', gridColumn: '1 / -1' }"></div>
+          <div v-if="padderHeight" :style="{ minHeight: padderHeight + 'px', gridColumn: '1 / -1', display: 'block' }"></div>
         </div>
       `,
       props: {
@@ -1803,16 +1859,8 @@
       },
       mounted() {
         this.loadMore()
-        const viewport = this.$refs.viewport
-        this.resizeObserver = new ResizeObserver(() => {
-          const firstItem = viewport.children[0]
-          const itemHeight = firstItem.offsetHeight
-          const styles = getComputedStyle(viewport)
-          const gap = parseInt(styles.columnGap)
-          const itemsPerRow = Math.max(1, Math.floor((viewport.clientWidth - parseInt(styles.padding) * 2 + gap) / (viewport.children[0].offsetWidth + gap)))
-          this.padderHeight = (Math.ceil(this.items.length / itemsPerRow) - Math.ceil(this.visibleItems.length / itemsPerRow)) * (itemHeight + gap)
-        })
-        this.resizeObserver.observe(viewport)
+        this.resizeObserver = new ResizeObserver(this.onResize.bind(this))
+        this.resizeObserver.observe(this.$refs.viewport)
       },
       beforeDestroy() {
         if (this.resizeObserver) {
@@ -1820,9 +1868,25 @@
         }
       },
       methods: {
+        onResize() {
+          const viewport = this.$refs.viewport
+          let firstItem = viewport.children[0]
+          const columnMode = getComputedStyle(firstItem).display === "contents"
+          if (columnMode) firstItem = firstItem.children[0]
+          const itemHeight = firstItem.offsetHeight
+          const styles = getComputedStyle(viewport)
+          const gap = parseInt(styles.rowGap)
+          let itemsPerRow = 1
+          if (!columnMode) {
+            itemsPerRow = Math.max(1, Math.floor((viewport.clientWidth - parseInt(styles.padding) * 2 + gap) / (viewport.children[0].offsetWidth + gap)))
+          }
+          this.padderHeight = (Math.ceil(this.items.length / itemsPerRow) - Math.ceil(this.visibleItems.length / itemsPerRow)) * (itemHeight + gap)
+        },
         onScroll() {
           const viewport = this.$refs.viewport
-          const lastItem = viewport.children[viewport.children.length - 2]
+          let lastItem = viewport.children[viewport.children.length - 2]
+
+          if (getComputedStyle(lastItem).display === "contents") lastItem = lastItem.children[0]
 
           const lastItemRect = lastItem.getBoundingClientRect()
           const viewportRect = viewport.getBoundingClientRect()
@@ -1831,8 +1895,7 @@
             this.loadMore()
           }
 
-          this.resizeObserver.disconnect()
-          this.resizeObserver.observe(viewport)
+          this.onResize()
         },
         loadMore() {
           if (this.lastLoadedIndex >= this.items.length) return

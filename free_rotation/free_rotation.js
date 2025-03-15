@@ -397,7 +397,6 @@
                   }
                 }
               }
-              //if (data.cullface) renderedFace.cullface = data.cullface
               if (data.tint >= 0) renderedFace.tintindex = data.tint
               element.faces[face] = renderedFace
             }
@@ -428,8 +427,7 @@
                   translation.multiply(dscale)
                   translation.applyQuaternion(drotation)
                   translation.add(dtranslation)
-                }
-                else {
+                } else {
                   rotation.copy(quat)
                 }
 
