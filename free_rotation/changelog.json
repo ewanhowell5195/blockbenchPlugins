@@ -24,5 +24,18 @@
         ]
       }
     ]
+  },
+  "1.1.0": {
+    "title": "1.1.0",
+    "date": "2025-01-22",
+    "author": "Godlander & Ewan Howell",
+    "categories": [
+      {
+        "title": "New Features",
+        "list": [
+          "GUI Light is now supported"
+        ]
+      }
+    ]
   }
 }
