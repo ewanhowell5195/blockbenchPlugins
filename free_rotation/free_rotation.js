@@ -2,7 +2,7 @@
   const path = require("node:path")
   const os = require("node:os")
 
-  let codec, format, action, properties, styles
+  let codec, format, action, properties, styles, oldGUILightCondition
 
   const id = "free_rotation"
   const name = "Free Rotation"
@@ -51,7 +51,7 @@
     author: "Godlander & Ewan Howell",
     description,
     tags: ["Minecraft: Java Edition", "Rotation"],
-    version: "1.0.1",
+    version: "1.1.0",
     min_version: "4.11.2",
     variant: "desktop",
     await_loading: true,
@@ -557,8 +557,11 @@
           exposed: false
         })
       ]
+      oldGUILightCondition = BarItems.gui_light.condition
+      BarItems.gui_light.condition = () => Format.id || oldGUILightCondition()
     },
     onunload() {
+      BarItems.gui_light.condition = oldGUILightCondition
       codec.delete()
       format.delete()
       action.delete()

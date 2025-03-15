@@ -478,6 +478,7 @@
             padding: 16px;
             flex: 1;
             align-content: start;
+            background-color: var(--color-ui);
 
             > div {
               display: flex;
@@ -517,6 +518,7 @@
                 justify-content: center;
                 margin: 8px 0 4px;
                 position: relative;
+                pointer-events: none;
 
                 i {
                   position: absolute;
@@ -542,6 +544,39 @@
                 font-size: 52px;
               }
             }
+
+            &.list {
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+
+              > div {
+                flex-direction: row;
+                min-height: 30px;
+                font-size: 16px;
+                text-align: initial;
+                padding: 0 8px;
+                gap: 4px;
+
+                > i, > img, canvas {
+                  margin: 0;
+                  min-width: 22px;
+                  min-height: 22px;
+                  max-width: 22px;
+                  max-height: 22px;
+                  font-size: 22px;
+
+                  i {
+                    top: 6px;
+                    font-size: 12px;
+
+                    &.fa {
+                      font-size: 10px;
+                    }
+                  }
+                }
+              }
+            }
           }
 
           #browser-footer {
@@ -550,13 +585,36 @@
             height: 24px;
             display: flex;
             align-items: center;
-            padding: 0 8px;
+            padding: 0 24px 0 8px;
             gap: 8px;
+          }
+
+          #display-type {
+            display: flex;
+
+            i {
+              font-size: 18px;
+              height: 24px;
+              min-width: 24px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+
+              &:hover {
+                color: var(--color-light);
+              }
+
+              &.selected {
+                background-color: var(--color-selected);
+                color: var(--color-light);
+              }
+            }
           }
         }</style>`],
         component: {
           data: {
-            type: "release",
+            type: storage.type ?? "release",
             manifest,
             selectedVersions: {},
             version: null,
@@ -579,7 +637,9 @@
             breadcrumbsOverflowing: false,
             breadcrumbsResizeObserver: null,
             validSavedFolders: [],
-            activeSavedFolder: null
+            activeSavedFolder: null,
+            displayType: storage.display ?? "grid",
+            lastArrowKeyPress: 0
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -626,6 +686,8 @@
             updateVersion() {
               if (this.selectedVersions[this.type]) {
                 this.version = this.selectedVersions[this.type]
+                storage.type = this.type
+                save()
               }
             },
             async loadVersion() {
@@ -659,6 +721,7 @@
               this.tree = {}
               for (let [path, value] of Object.entries(this.jar.files)) {
                 const parts = path.split("/")
+                if (parts[0] === "optifine") continue
                 if (parts[0].startsWith("bedrock-samples")) {
                   parts.splice(0, 1)
                   this.$set(this.jar.files, parts.join("/"), value)
@@ -731,7 +794,7 @@
             },
             select(file, value, event) {
               if (event.currentTarget.dataset.lastClick) {
-                if (Date.now() - Number(event.currentTarget.dataset.lastClick) < 300) {
+                if (Date.now() - Number(event.currentTarget.dataset.lastClick) < 500) {
                   if (typeof value === "object") {
                     return this.openFolder(this.path.concat(file))
                   } else {
@@ -850,9 +913,17 @@
             },
             async openExternally(file) {
               const extension = PathModule.extname(file)
-              const tempPath = PathModule.join(os.tmpdir(), `${PathModule.basename(file, extension)}_${new Date().toISOString().replace(/[:.]/g, "-")}${extension}`)
+              const tempPath = PathModule.join(os.tmpdir(), `${PathModule.basename(file, extension)}_${Date.now()}${extension}`)
               fs.writeFileSync(tempPath, await this.getFileContent(file))
-              exec(`"${tempPath}"`)
+              if (extension) {
+                exec(`"${tempPath}"`)
+              } else if (os.platform() === "win32") {
+                exec(`notepad.exe "${tempPath}"`)
+              } else if (os.platform() === "darwin") {
+                exec(`open -a "TextEdit" "${tempPath}"`)
+              } else {
+                exec(`gedit "${tempPath}" || nano "${tempPath}" || vi "${tempPath}"`)
+              }
             },
             getVersionIcon(id) {
               id = id.toLowerCase()
@@ -1035,7 +1106,7 @@
               if (file.endsWith(".fsh") || file.endsWith(".vsh") || file.endsWith(".glsl")) return "ev_shadow"
               if (file.includes(".mcmeta")) return "theaters"
               if (file.includes(".tga")) return "image"
-              if (file.endsWith(".ogg") || file.endsWith(".fsb")) return "volume_up"
+              if (file.endsWith(".ogg") || file.endsWith(".fsb") || file.endsWith(".mus")) return "volume_up"
               if (file.includes(".zip")) return "folder_zip"
               if (file.includes(".properties")) return "list_alt"
               if (file.includes(".txt")) return "description"
@@ -1232,12 +1303,137 @@
                     const elementRect = selectedElement.getBoundingClientRect()
                     if (elementRect.top < containerRect.top || elementRect.bottom > containerRect.bottom) {
                       selectedElement.scrollIntoView({
-                        behavior: "smooth",
+                        behavior: Date.now() - this.lastArrowKeyPress > 250 ? "smooth" : undefined,
                         block: "nearest"
                       })
                     }
                   }
+                  this.lastArrowKeyPress = Date.now()
                 }
+              }
+            },
+            switchDisplay(type) {
+              this.displayType = type
+              storage.display = type
+              save()
+            },
+            getFileLabel(file, value) {
+              const path = this.path.concat(file).join("/")
+              const ext = file.includes(".") ? file.split(".").pop() : null
+              switch (path) {
+                case "assets": return "Resource Pack Assets"
+                case "data": return "Data Pack Assets"
+                case "doc": return "Documentation"
+                case "pack.png": return "Pack Icon"
+                case "pack.mcmeta": return "Pack Metadata"
+                case "version.json": return "Version Information"
+                case "assets/icons":
+                case "assets/minecraft/icons": return "System Icons"
+                case "assets/icons/snapshot": return "Snapshot Icons"
+                case "assets/minecraft": return "Minecraft Assets"
+                case "assets/realms": return "Realms Assets"
+                case "assets/minecraft/atlases": return "Atlas Definitions"
+                case "assets/minecraft/equipment": return "Equipment Definitions"
+                case "assets/minecraft/font": return "Font Definitions"
+                case "assets/minecraft/items": return "Item Definitions"
+                case "assets/minecraft/particles":
+                case "resource_pack/particles": return "Particle Definitions"
+                case "assets/minecraft/post_effect": return "Post-Processing Effects"
+                case "assets/minecraft/resourcepacks": return "Built-in Resource Packs"
+                case "assets/minecraft/sounds": return "Sound Files"
+                case "assets/minecraft/sounds.json":
+                case "resource_pack/sounds_client.json": return "Sound Definitions"
+                case "assets/minecraft/shaders/core": return "Core Shaders"
+                case "assets/minecraft/shaders/include": return "Include Shaders"
+                case "assets/minecraft/shaders/post": return "Post Shaders"
+                case "assets/minecraft/shaders/program": return "Program Shaders"
+                case "assets/minecraft/optifine/ctm": return "Connected Textures"
+                case "assets/minecraft/optifine/bettergrass.properties": return "Better Grass Properties"
+                case "assets/minecraft/optifine/natural.properties": return "Natural Textures Properties"
+                case "assets/minecraft/texts/credits.json": return "Credits"
+                case "assets/minecraft/texts/splashes.txt": return "Splash Texts"
+                case "assets/minecraft/texts/postcredits.txt": return "Post Credits Text"
+                case "assets/minecraft/texts/end.txt": return "End Poem"
+                case "assets/minecraft/textures/environment": return "Sky & Weather"
+                case "assets/minecraft/textures/entity/enderdragon": return "Ender Dragon"
+                case "assets/minecraft/textures/entity/enderman": return "Enderman"
+                case "assets/minecraft/models/block": return "Block Models"
+                case "assets/minecraft/models/item": return "Item Models"
+                case "assets/minecraft/resourcepacks/programmer_art.zip": return "Programmer Art Resource Pack"
+                case "assets/minecraft/resourcepacks/high_contrast.zip": return "High Contrast Resource Pack"
+                case "behaviour_pack": return "Behaviour Pack Assets"
+                case "resource_pack": return "Resource Pack Assets"
+                case "resource_pack/blocks.json": return "Block Definitions"
+                case "resource_pack/biomes_client.json": return "Biome Definitions"
+                case "resource_pack/textures/flipbook_textures.json": return "Texture Animation Definitions"
+                case "resource_pack/textures/item_texture.json": return "Item Texture Definitions"
+                case "resource_pack/textures/terrain_texture.json": return "Block Texture Definitions"
+                case "resource_pack/entity": return "Entity Definitions"
+                case "resource_pack/models/entity":
+                case "resource_pack/models/mobs.json": return "Entity Models"
+              }
+              switch (PathModule.dirname(path)) {
+                case "assets/minecraft/atlases": return "Atlas Definition"
+                case "assets/minecraft/blockstates": return "Blockstate"
+                case "assets/minecraft/equipment": return "Equipment Definition"
+                case "assets/minecraft/items": return "Item Definition"
+                case "assets/minecraft/particles": return "Particle Definition"
+                case "assets/minecraft/models/block": return "Block Model"
+                case "assets/minecraft/models/item": return "Item Model"
+                case "assets/minecraft/models/item": return "Item Model"
+                case "assets/minecraft/shaders/core":
+                case "assets/minecraft/shaders/program":
+                case "assets/minecraft/shaders/post":
+                  if (ext === "json") return "Shader Program Definition"
+                case "doc/images": return "Template"
+                case "resource_pack/models/entity": return "Entity Model"
+                case "resource_pack/entity": return "Entity Definition"
+                case "resource_pack/animations": return "Animation"
+                case "resource_pack/animation_controllers": return "Animation Controller"
+              }
+              switch (file) {
+                case "lang": return "Language Files"
+                case "entity": return "Entities"
+                case "gui":
+                case "ui": return "User Interface"
+                case "equipment": return "Equipment"
+                case "fish": return "Fish"
+                case "sheep": return "Sheep"
+                case "wolf": return "Wolves"
+                case "hud": return "Heads Up Display"
+                case "documentation": return "Documentation"
+                case "metadata": return "Metadata"
+                case "manifest.json": return "Pack Metadata"
+                case "misc": return "Miscellaneous"
+                case "ambient": return "Ambient"
+                case "fire": return "Fire"
+                case "music": return "Music"
+                case "game": return "Game"
+                case "menu": return "Menu"
+              }
+              switch (ext) {
+                case "png": return "Texture"
+                case "jpg": return "Texture"
+                case "tga": return "Texture"
+                case "mcmeta": return "Texture Metadata"
+                case "json": return "JSON File"
+                case "txt": return "Text File"
+                case "properties": return "Properties File"
+                case "lang": return "Language File"
+                case "ogg":
+                case "fsb": return "Sound File"
+                case "vsh": return "Vertex Shader"
+                case "fsh": return "Fragment Shader"
+                case "glsl": return "Shader"
+                case "icns": return "Icon"
+              }
+              if (typeof value === "object") {
+                let label = titleCase(file)
+                if (!label.endsWith("s")) {
+                  label += "s"
+                }
+                label.replaceAll("Json", "JSON")
+                return label
               }
             }
           },
@@ -1329,7 +1525,7 @@
                     <span>{{ folder[folder.length - 1] }}</span>
                   </div>
                 </div>
-                <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []" ref="files">
+                <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []" ref="files" :class="displayType">
                   <template #default="{ file, value }">
                     <div @click="select(file, value, $event)" @contextmenu="fileContextMenu(file, $event)" :class="{ selected: selected.includes(file) }">
                       <template v-if="typeof value === 'object'">
@@ -1339,10 +1535,10 @@
                           <span v-if="!getFolderIcon(file).includes('>folder<')" v-html="getFolderIcon(file)"></span>
                         </i>
                       </template>
-                      <template v-else-if="value.endsWith('.png') && hasAnimation(value)">
+                      <template v-else-if="file.endsWith('.png') && hasAnimation(value)">
                         <animated-texture :image="jar.files[value].image" :mcmeta="jar.files[value].animation" />
                       </template>
-                      <template v-else-if="value.endsWith('.png')">
+                      <template v-else-if="file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')">
                         <img v-if="textureReady(value)" :src="jar.files[value].texture">
                         <i v-else class="material-icons">image</i>
                       </template>
@@ -1350,6 +1546,10 @@
                         <i class="material-icons">{{ getFileIcon(file) }}</i>
                       </template>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
+                      <template v-if="displayType === 'list'">
+                        <div class="spacer"></div>
+                        <div>{{ getFileLabel(file, value) }}</div>
+                      </template>
                     </div>
                   </template>
                 </lazy-scroller>
@@ -1360,6 +1560,10 @@
                     <div>{{ selected.length.toLocaleString() }} selected</div>
                   </template>
                   <div class="spacer"></div>
+                  <div id="display-type">
+                    <i class="material-icons" :class="{ selected: displayType === 'list' }" @click="switchDisplay('list')">view_list</i>
+                    <i class="material-icons" :class="{ selected: displayType === 'grid' }" @click="switchDisplay('grid')">grid_view</i>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1387,7 +1591,7 @@
           }
           for (const version of data.versions) {
             if (!manifest.types[version.type]) {
-              manifest.types[version.type] = titleCase(version.type)
+              this.content_vue.$set(manifest.types, version.type, titleCase(version.type))
             }
           }
           for (const type of Object.keys(manifest.types)) {
@@ -1575,7 +1779,7 @@
           <template v-for="item of visibleItems">
             <slot :file="item[0]" :value="item[1]"></slot>
           </template>
-          <div v-if="padderHeight" :style="{ height: padderHeight + 'px', gridColumn: '1 / -1' }"></div>
+          <div v-if="padderHeight" :style="{ minHeight: padderHeight + 'px', gridColumn: '1 / -1' }"></div>
         </div>
       `,
       props: {
@@ -1603,9 +1807,10 @@
         this.resizeObserver = new ResizeObserver(() => {
           const firstItem = viewport.children[0]
           const itemHeight = firstItem.offsetHeight
-          const gap = parseFloat(getComputedStyle(viewport).gap) || 0
-          const columns = Math.floor(viewport.clientWidth / firstItem.offsetWidth) || 1
-          this.padderHeight = (Math.ceil(this.items.length / columns) - Math.ceil(this.visibleItems.length / columns)) * (itemHeight + gap)
+          const styles = getComputedStyle(viewport)
+          const gap = parseInt(styles.columnGap)
+          const itemsPerRow = Math.max(1, Math.floor((viewport.clientWidth - parseInt(styles.padding) * 2 + gap) / (viewport.children[0].offsetWidth + gap)))
+          this.padderHeight = (Math.ceil(this.items.length / itemsPerRow) - Math.ceil(this.visibleItems.length / itemsPerRow)) * (itemHeight + gap)
         })
         this.resizeObserver.observe(viewport)
       },
