@@ -558,7 +558,7 @@
         })
       ]
       oldGUILightCondition = BarItems.gui_light.condition
-      BarItems.gui_light.condition = () => Format.id || oldGUILightCondition()
+      BarItems.gui_light.condition = () => Format.id === id || oldGUILightCondition()
     },
     onunload() {
       BarItems.gui_light.condition = oldGUILightCondition
