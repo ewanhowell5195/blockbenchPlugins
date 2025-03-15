@@ -659,7 +659,7 @@
             versionSearch: "",
             recentVersions: storage.recents,
             downloadedVersions: [],
-            objects: storage.objects,
+            objects: storage.objects ?? true,
             jar: null,
             loadingMessage: null,
             path: [],
@@ -1139,7 +1139,8 @@
                 }
               ]).show(event)
             },
-            getFileIcon(file) {
+            getFileIcon(file, value) {
+              if (file.includes(".lang") || value.startsWith("assets/minecraft/lang/")) return "translate"
               if (file.endsWith(".json") || file === "pack.mcmeta") return "data_object"
               if (file.endsWith(".fsh") || file.endsWith(".vsh") || file.endsWith(".glsl")) return "ev_shadow"
               if (file.includes(".mcmeta")) return "theaters"
@@ -1407,6 +1408,10 @@
                 case "assets/minecraft/models/item": return "Item Models"
                 case "assets/minecraft/resourcepacks/programmer_art.zip": return "Programmer Art Resource Pack"
                 case "assets/minecraft/resourcepacks/high_contrast.zip": return "High Contrast Resource Pack"
+                case "assets/minecraft/lang/en_us.json":
+                case "assets/minecraft/lang/en_us.lang":
+                case "assets/minecraft/optifine/lang/en_us.lang": return "English (US)"
+                case "assets/minecraft/lang/deprecated.json": return "Deprecated Language Keys"
                 case "behaviour_pack": return "Behaviour Pack Assets"
                 case "resource_pack": return "Resource Pack Assets"
                 case "resource_pack/blocks.json": return "Block Definitions"
@@ -1417,6 +1422,10 @@
                 case "resource_pack/entity": return "Entity Definitions"
                 case "resource_pack/models/entity":
                 case "resource_pack/models/mobs.json": return "Entity Models"
+                case "resource_pack/texts/languages.json": return "Languages"
+                case "resource_pack/texts/language_names.json": return "Language Names"
+                case "resource_pack/texts/ja_JP": return "Japanese Assets"
+                case "resource_pack/texts/zh_TW": return "Chinese (Traditional) Assets"
               }
               switch (PathModule.dirname(path)) {
                 case "assets/minecraft/atlases": return "Atlas Definition"
@@ -1436,6 +1445,35 @@
                 case "resource_pack/entity": return "Entity Definition"
                 case "resource_pack/animations": return "Animation"
                 case "resource_pack/animation_controllers": return "Animation Controller"
+                case "assets/minecraft/lang":
+                case "assets/minecraft/optifine/lang":
+                  if (this.jar.files["pack.mcmeta"]) {
+                    let content = this.jar.files["pack.mcmeta"].content
+                    if (!content) {
+                      content = fs.readFileSync(this.jar.files["pack.mcmeta"].path)
+                      this.jar.files["pack.mcmeta"].content = content
+                    }
+                    const data = JSON.parse(content)
+                    const lang = data.language?.[PathModule.basename(file, PathModule.extname(file))]
+                    if (lang) {
+                      return `${lang.name} (${lang.region})`
+                    }
+                  }
+                  return "Language File"
+                case "resource_pack/texts":
+                  if (this.jar.files["resource_pack/texts/language_names.json"]) {
+                    let content = this.jar.files["resource_pack/texts/language_names.json"].content
+                    if (!content) {
+                      content = fs.readFileSync(this.jar.files["resource_pack/texts/language_names.json"].path)
+                      this.jar.files["resource_pack/texts/language_names.json"].content = content
+                    }
+                    const data = JSON.parse(content)
+                    const id = PathModule.basename(file, PathModule.extname(file))
+                    const lang = data.find(e => e[0] === id)
+                    if (lang) {
+                      return lang[1]
+                    }
+                  }
               }
               switch (file) {
                 case "lang": return "Language Files"
@@ -1598,7 +1636,7 @@
                         <i v-else class="material-icons">image</i>
                       </template>
                       <template v-else>
-                        <i class="material-icons">{{ getFileIcon(file) }}</i>
+                        <i class="material-icons">{{ getFileIcon(file, value) }}</i>
                       </template>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                       <template v-if="displayType === 'list'">
