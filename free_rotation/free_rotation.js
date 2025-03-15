@@ -353,6 +353,7 @@
               elements: [element],
               display: {}
             }
+            if (project.front_gui_light) model.gui_light = "front"
             let size = [
               (cube.to[0] - cube.from[0]) / downscale,
               (cube.to[1] - cube.from[1]) / downscale,
@@ -428,6 +429,9 @@
                   translation.applyQuaternion(drotation)
                   translation.add(dtranslation)
                 }
+                else {
+                  rotation.copy(quat)
+                }
 
                 model.display[slot] = {
                   rotation: (new THREE.Euler()).setFromQuaternion(rotation, "XYZ").toArray().slice(0,3).map(e => Math.radToDeg(e)),
@@ -439,8 +443,6 @@
 
             models.push(autoStringify(model))
           }
-
-          if (project.front_gui_light) model.gui_light = "front"
 
           mode.select()
           return models
