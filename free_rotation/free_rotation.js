@@ -353,6 +353,7 @@
               elements: [element],
               display: {}
             }
+            if (project.front_gui_light) model.gui_light = "front"
             let size = [
               (cube.to[0] - cube.from[0]) / downscale,
               (cube.to[1] - cube.from[1]) / downscale,
@@ -427,6 +428,9 @@
                   translation.multiply(dscale)
                   translation.applyQuaternion(drotation)
                   translation.add(dtranslation)
+                }
+                else {
+                  rotation.copy(quat)
                 }
 
                 model.display[slot] = {
