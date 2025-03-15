@@ -33,6 +33,13 @@
     items: new Set(["parent", "textures", "elements", "ambientocclusion", "gui_light", "display", "groups", "texture_size", "overrides"])
   }
 
+  const item_parents = [
+    "item/generated", "minecraft:item/generated",
+    "item/handheld", "minecraft:item/handheld",
+    "item/handheld_rod", "minecraft:item/handheld_rod",
+    "builtin/generated", "minecraft:builtin/generated"
+  ]
+
   const titleCase = str => str.replace(/_|-/g, " ").replace(/\w\S*/g, str => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase())
   const shaCheck = async (path, sha) => crypto.createHash("sha1").update(await fs.promises.readFile(path)).digest("hex") === sha
   const save = () => localStorage.setItem(id, JSON.stringify(storage))
@@ -895,11 +902,15 @@
             },
             async openFiles() {
               if (!(await this.openFilesCheck())) return
-              const files = this.selected.map(e => ({
-                name: e,
-                path: this.path.concat(e).join("/")
-              }))
+              const files = this.selected.map(e => {
+                const path = this.path.concat(e).join("/")
+                return ({
+                  name: e,
+                  path
+                })
+              })
               let closeDialog
+              const blockbenchOpen = []
               await Promise.all(files.map(async file => {
                 const content = await this.getFileContent(file.path)
                 if (!content) return
@@ -912,17 +923,108 @@
                   await this.loadZip(file.path)
                   this.openFolder(this.path.concat(file.name))
                 } else if (await this.blockbenchOpenable(file.path)) {
-                  loadModelFile({
-                    content: content.toString(),
-                    path: file.name
-                  })
-                  closeDialog = true
+                  try {
+                    blockbenchOpen.push({
+                      content: JSON.parse(content),
+                      name: file.name,
+                      type: this.jar.files[file.path].formatType
+                    })
+                    closeDialog = true
+                  } catch {}
                 } else {
                   this.openExternally(file.path)
                 }
               }))
               if (closeDialog) {
                 dialog.close()
+              }
+              if (blockbenchOpen.length) {
+                for (const model of blockbenchOpen) {
+                  if (model.type === "java") {
+                    await this.loadJavaBlockItemModel(model, blockbenchOpen.length)
+                  } else {
+                    loadModelFile({
+                      content: JSON.stringify(model.content),
+                      path: `${Date.now()}/${model.name}`
+                    })
+                  }
+                }
+              }
+            },
+            async loadJavaBlockItemModel(model, loadCount = 1) {
+              let noElements, textures
+              if (!model.content.elements && !(item_parents.includes(model.content.parent) && model.content.textures?.layer0)) {
+                noElements = true
+                model.content.elements = []
+              }
+              textures = new Map
+              if (model.content.textures) {
+                for (const [k, v] of Object.entries(model.content.textures)) {
+                  if (v.startsWith("#")) continue
+                  const content = await this.getFileContent(`assets/minecraft/textures/${v.replace(/\w+:/, "")}.png`)
+                  const data = "data:image/png;base64," + content.toString("base64")
+                  textures.set(data, {
+                    id: k,
+                    path: model.content.textures[k]
+                  })
+                  model.content.textures[k] = data
+                }
+              }
+              loadModelFile({
+                content: JSON.stringify(model.content),
+                path: `${Date.now()}/${model.name}`
+              })
+              for (const texture of Project.textures) {
+                const data = textures.get(texture.img.src)
+                if (data) {
+                  texture.minecraft_id = "#" + data.id
+                  const match = data.path.match(/^(?:([^:]+):)?(?:(.+)\/)?([^\/]+)$/)
+                  texture.name = match[3] + ".png"
+                  texture.namespace = match[1] ?? "minecraft"
+                  if (match[2]) {
+                    texture.folder = match[2]
+                  }
+                }
+              }
+              if (loadCount === 1 && noElements) {
+                Blockbench.showMessageBox({
+                  translateKey: "child_model_only",
+                  icon: "info",
+                  message: tl("message.child_model_only.message", [model.parent]),
+                  commands: !model.content.parent.replace(/\w+:/, "").startsWith("builtin") && {
+                    open: "message.child_model_only.open",
+                    open_with_textures: {
+                      text: "message.child_model_only.open_with_textures",
+                      condition: Texture.all.length > 0
+                    }
+                  }
+                }, async result => {
+                  if (result !== "open" && result !== "open_with_textures") return
+                  const currentProject = Project
+                  const path = `assets/minecraft/models/${model.content.parent.replace(/\w+:/, "")}.json`
+                  const content = await this.getFileContent(path)
+
+                  try {
+                    await this.loadJavaBlockItemModel({
+                      content: JSON.parse(content),
+                      name: PathModule.basename(path)
+                    })
+                    
+                    if (result === "open_with_textures") {
+                      Project.textures.forEachReverse(tex => {
+                        if (tex.error == 3 && tex.name.startsWith("#")) {
+                          const loaded_tex = currentProject.textures.find(e => e.minecraft_id === tex.name)
+                          if (loaded_tex) {
+                            tex.fromDataURL(loaded_tex.img.src)
+                            tex.name = loaded_tex.name
+                            tex.namespace = loaded_tex.namespace
+                            tex.folder = loaded_tex.folder
+                          }
+                        }
+                      })
+                    }
+                  } catch {}
+                })
               }
             },
             async blockbenchOpenable(file) {
@@ -943,8 +1045,10 @@
                 const keys = Object.keys(fileData)
                 if (keys.every(e => javaBlock.items.has(e)) && keys.some(e => javaBlock.oneOf.has(e))) {
                   data.blockbenchOpenable = true
+                  data.formatType = "java"
                 } else if (keys.includes("format_version") && keys.some(e => e.includes("geometry"))) {
                   data.blockbenchOpenable = true
+                  data.formatType = "bedrock"
                 }
               } catch {}
               return data.blockbenchOpenable
