@@ -440,6 +440,8 @@
             models.push(autoStringify(model))
           }
 
+          if (project.front_gui_light) model.gui_light = "front"
+
           mode.select()
           return models
         }
