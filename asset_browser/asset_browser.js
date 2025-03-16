@@ -559,6 +559,7 @@
               row-gap: 4px;
               column-gap: 0;
               grid-template-columns: auto 1fr auto auto;
+              padding-top: 0;
 
               > div {
                 display: contents;
@@ -570,7 +571,7 @@
                 }
 
                 > * {
-                  padding: 0 3px;
+                  padding: 0 10px;
                 }
 
                 > i, img, canvas {
@@ -608,21 +609,21 @@
                   display: flex;
                   align-items: center;
                   min-height: 30px;
+                }
 
-                  &:first-child {
-                    max-width: 32px;
-                    padding-left: 8px;
-                  }
-
-                  &:nth-child(3) {
-                    padding-right: 17px;
-                  }
+                > :first-child {
+                  max-width: 32px;
+                  padding: 0 3px 0 8px;
                 }
 
                 > :last-child {
                   padding-right: 8px;
                   text-align: right;
                   justify-content: flex-end;
+                }
+
+                > :nth-child(2) {
+                  padding-left: 3px;
                 }
               }
             }
@@ -660,6 +661,52 @@
               }
             }
           }
+
+          #files-header {
+            > div {
+              position: sticky;
+              top: 0;
+              background-color: var(--color-ui);
+              border-bottom: 2px solid var(--color-back);
+              text-align: left !important;
+              justify-content: space-between !important;
+              z-index: 2 !important;
+            }
+
+            > :first-child {
+              grid-column: span 2;
+              min-width: 100%;
+              box-sizing: border-box !important;
+
+              &::before {
+                content: "";
+                position: absolute;
+                height: 2px;
+                width: 16px;
+                left: -16px;
+                bottom: -2px;
+                background-color: var(--color-back);
+              }
+            }
+
+            > :nth-child(2) {
+              padding-left: 10px !important;
+            }
+
+            > :not(:last-child) {
+              border-right: 2px solid var(--color-back);
+            }
+
+            > :last-child::before {
+              content: "";
+              position: absolute;
+              height: 2px;
+              width: 16px;
+              right: -16px;
+              bottom: -2px;
+              background-color: var(--color-back);
+            }
+          }
         }</style>`],
         component: {
           data: {
@@ -690,7 +737,9 @@
             displayType: storage.display ?? "grid",
             lastArrowKeyPress: 0,
             typeFindText: "",
-            typeFindLastKey: 0
+            typeFindLastKey: 0,
+            sort: "alphabetical",
+            direction: "forward"
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -1442,7 +1491,7 @@
                       const gap = parseInt(styles.rowGap)
                       let itemsPerRow = 1
                       if (this.displayType === "grid") {
-                        itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[0].offsetWidth + gap)))
+                        itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[1].offsetWidth + gap)))
                       }
                       if (event.key === "ArrowUp") {
                         if (index >= itemsPerRow) {
@@ -1454,7 +1503,7 @@
                         }
                       }
                     }
-                    const selectedElement = container.children[this.currentFolderContents.findIndex(e => e[0] === this.selected[0])]
+                    const selectedElement = container.children[this.currentFolderContents.findIndex(e => e[0] === this.selected[0]) + 1]
                     const containerRect = container.getBoundingClientRect()
                     const elementRect = selectedElement.getBoundingClientRect()
                     if (elementRect.top < containerRect.top || elementRect.bottom > containerRect.bottom) {
@@ -1476,17 +1525,17 @@
                   const index = this.currentFolderContents.findIndex(e => e[0].toLowerCase().startsWith(this.typeFindText))
                   if (index !== -1) {
                     this.selected = [this.currentFolderContents[index][0]]
-                    if (this.$refs.files.$el.children[index]) {
-                      const scrollTo = this.displayType === "grid" ? this.$refs.files.$el.children[index] : this.$refs.files.$el.children[index].children[0]
+                    if (this.$refs.files.$el.children[index + 1]) {
+                      const scrollTo = this.displayType === "grid" ? this.$refs.files.$el.children[index + 1] : this.$refs.files.$el.children[index + 1].children[0]
                       scrollTo.scrollIntoView({ block: "center" })
                     } else {
                       const container = this.$refs.files.$el
                       const styles = getComputedStyle(container)
                       const gap = parseInt(styles.rowGap)
-                      let firstItem = container.children[0]
+                      let firstItem = container.children[1]
                       let itemsPerRow = 1
                       if (this.displayType === "grid") {
-                        itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[0].offsetWidth + gap)))
+                        itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[1].offsetWidth + gap)))
                       } else {
                         firstItem = firstItem.children[0]
                       }
@@ -1662,9 +1711,13 @@
             },
             imageDimensionsReady(file) {
               const data = this.jar.files[file]
+              if (data.imageDimensions === "decoding") return false
               if (data.imageDimensions) return true
+              this.$set(data, "imageDimensions", "decoding")
               data.image.decode().then(e => {
                 this.$set(data, "imageDimensions", `${data.image.width} x ${data.image.height}`)
+              }).catch(() => {
+                console.log(file)
               })
             },
           },
@@ -1757,6 +1810,13 @@
                   </div>
                 </div>
                 <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []" ref="files" :class="displayType">
+                  <template #before-list>
+                    <div id="files-header" :style="displayType === 'grid' ? { display: 'none' } : {}">
+                      <div>Name</div>
+                      <div>Size</div>
+                      <div>Type</div>
+                    </div>
+                  </template>
                   <template #default="{ file, value }">
                     <div @click="select(file, value, $event)" @contextmenu="fileContextMenu(file, $event)" :class="{ selected: selected.includes(file) }">
                       <template v-if="typeof value === 'object'">
@@ -2010,6 +2070,7 @@
     return {
       template: `
         <div ref="viewport" @scroll="onScroll" @click.self="$emit('click')">
+          <slot name="before-list"></slot>
           <template v-for="item of visibleItems">
             <slot :file="item[0]" :value="item[1]"></slot>
           </template>
@@ -2048,7 +2109,7 @@
       methods: {
         onResize() {
           const viewport = this.$refs.viewport
-          let firstItem = viewport.children[0]
+          let firstItem = viewport.children[1]
           const columnMode = getComputedStyle(firstItem).display === "contents"
           if (columnMode) firstItem = firstItem.children[0]
           const itemHeight = firstItem.offsetHeight
@@ -2056,7 +2117,7 @@
           const gap = parseInt(styles.rowGap)
           let itemsPerRow = 1
           if (!columnMode) {
-            itemsPerRow = Math.max(1, Math.floor((viewport.clientWidth - parseInt(styles.padding) * 2 + gap) / (viewport.children[0].offsetWidth + gap)))
+            itemsPerRow = Math.max(1, Math.floor((viewport.clientWidth - parseInt(styles.padding) * 2 + gap) / (viewport.children[1].offsetWidth + gap)))
           }
           this.padderHeight = (Math.ceil(this.items.length / itemsPerRow) - Math.ceil(this.visibleItems.length / itemsPerRow)) * (itemHeight + gap)
         },
@@ -2077,12 +2138,12 @@
           this.onResize()
         },
         loadMore() {
-          if (this.lastLoadedIndex >= this.items.length) return
+          if (this.lastLoadedIndex >= this.items.length) return this.$nextTick(() => this.onResize())
 
           this.visibleItems.push(...this.items.slice(this.lastLoadedIndex, this.lastLoadedIndex + this.batchSize))
           this.lastLoadedIndex += this.batchSize
 
-          this.onScroll()
+          this.$nextTick(() => this.onScroll())
         },
         resetScroller() {
           this.visibleItems = []
