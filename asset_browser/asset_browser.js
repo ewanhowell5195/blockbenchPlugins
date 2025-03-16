@@ -2063,6 +2063,7 @@
         onScroll() {
           const viewport = this.$refs.viewport
           let lastItem = viewport.children[viewport.children.length - 2]
+          if (!lastItem) return
 
           if (getComputedStyle(lastItem).display === "contents") lastItem = lastItem.children[0]
 
@@ -2081,7 +2082,7 @@
           this.visibleItems.push(...this.items.slice(this.lastLoadedIndex, this.lastLoadedIndex + this.batchSize))
           this.lastLoadedIndex += this.batchSize
 
-          this.loadMore()
+          this.onScroll()
         },
         resetScroller() {
           this.visibleItems = []
