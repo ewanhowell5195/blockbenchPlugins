@@ -613,6 +613,10 @@
                     max-width: 32px;
                     padding-left: 8px;
                   }
+
+                  &:nth-child(3) {
+                    padding-right: 17px;
+                  }
                 }
 
                 > :last-child {
@@ -684,7 +688,9 @@
             validSavedFolders: [],
             activeSavedFolder: null,
             displayType: storage.display ?? "grid",
-            lastArrowKeyPress: 0
+            lastArrowKeyPress: 0,
+            typeFindText: "",
+            typeFindLastKey: 0
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -1433,7 +1439,7 @@
                       }
                     } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
                       const styles = getComputedStyle(container)
-                      const gap = parseInt(styles.columnGap)
+                      const gap = parseInt(styles.rowGap)
                       let itemsPerRow = 1
                       if (this.displayType === "grid") {
                         itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[0].offsetWidth + gap)))
@@ -1452,13 +1458,43 @@
                     const containerRect = container.getBoundingClientRect()
                     const elementRect = selectedElement.getBoundingClientRect()
                     if (elementRect.top < containerRect.top || elementRect.bottom > containerRect.bottom) {
-                      selectedElement.scrollIntoView({
+                      const scrollTo = this.displayType === "grid" ? selectedElement : selectedElement.children[0]
+                      scrollTo.scrollIntoView({
                         behavior: Date.now() - this.lastArrowKeyPress > 250 ? "smooth" : undefined,
                         block: "nearest"
                       })
                     }
                   }
                   this.lastArrowKeyPress = Date.now()
+                } if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+                  if (Date.now() - this.typeFindLastKey > 1000) {
+                    this.typeFindText = event.key.toLowerCase()
+                  } else {
+                    this.typeFindText += event.key.toLowerCase()
+                  }
+                  this.typeFindLastKey = Date.now()
+                  const index = this.currentFolderContents.findIndex(e => e[0].toLowerCase().startsWith(this.typeFindText))
+                  if (index !== -1) {
+                    this.selected = [this.currentFolderContents[index][0]]
+                    if (this.$refs.files.$el.children[index]) {
+                      const scrollTo = this.displayType === "grid" ? this.$refs.files.$el.children[index] : this.$refs.files.$el.children[index].children[0]
+                      scrollTo.scrollIntoView({ block: "center" })
+                    } else {
+                      const container = this.$refs.files.$el
+                      const styles = getComputedStyle(container)
+                      const gap = parseInt(styles.rowGap)
+                      let firstItem = container.children[0]
+                      let itemsPerRow = 1
+                      if (this.displayType === "grid") {
+                        itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[0].offsetWidth + gap)))
+                      } else {
+                        firstItem = firstItem.children[0]
+                      }
+                      const itemHeight = firstItem.offsetHeight
+                      container.scrollTop = Math.floor(index / itemsPerRow) * (itemHeight + gap)
+                      this.$refs.files.onScroll()
+                    }
+                  }
                 }
               }
             },
@@ -1466,7 +1502,7 @@
               this.displayType = type
               storage.display = type
               save()
-              this.$nextTick(() => this.$refs.files.onResize())
+              this.$nextTick(() => this.$refs.files.onScroll())
             },
             getFileLabel(file, value) {
               const path = this.path.concat(file).join("/")
@@ -2034,7 +2070,7 @@
           const viewportRect = viewport.getBoundingClientRect()
 
           if (lastItemRect.bottom <= viewportRect.bottom + 128) {
-            this.loadMore()
+            return this.loadMore()
           }
 
           this.onResize()
@@ -2044,6 +2080,8 @@
 
           this.visibleItems.push(...this.items.slice(this.lastLoadedIndex, this.lastLoadedIndex + this.batchSize))
           this.lastLoadedIndex += this.batchSize
+
+          this.loadMore()
         },
         resetScroller() {
           this.visibleItems = []
