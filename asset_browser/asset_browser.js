@@ -478,152 +478,160 @@
           }
 
           #files {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, 114px);
-            gap: 10px;
             overflow-y: auto;
-            padding: 16px;
-            flex: 1;
-            align-content: start;
+            contain: strict;
             background-color: var(--color-ui);
+            flex: 1;
+            padding: 16px;
 
             > div {
-              display: flex;
-              align-items: center;
-              text-align: center;
-              flex-direction: column;
-              padding: 0 4px 4px;
-              cursor: pointer;
-              font-size: 14px;
-              word-break: break-word;
-
-              &:hover {
-                color: var(--color-light);
-              }
-
-              &.selected {
-                background-color: var(--color-selected);
-                color: var(--color-light);
-
-                > i i {
-                  color: var(--color-selected);
-                }
-              }
-
-              * {
-                cursor: pointer;
-              }
-
-              img {
-                pointer-events: none;
-              }
-
-              > i, img, canvas {
-                min-width: 64px;
-                min-height: 64px;
-                max-width: 64px;
-                max-height: 64px;
-                font-size: 64px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin: 8px 0 4px;
-                position: relative;
-
-                i {
-                  position: absolute;
-                  top: 20px;
-                  min-width: 100%;
-                  text-align: center;
-                  color: var(--color-ui);
-                  font-size: 32px;
-                  left: 0;
-
-                  &.fa {
-                    font-size: 28px;
-                  }
-                }
-              }
-
-              img, canvas {
-                object-fit: contain;
-                background: conic-gradient(var(--color-dark) .25turn, var(--color-back) .25turn .5turn, var(--color-dark) .5turn .75turn, var(--color-back) .75turn) top left/12px 12px;
-              }
-
-              > .fa {
-                font-size: 52px;
-              }
-            }
-
-            &.list {
-              row-gap: 4px;
-              column-gap: 0;
-              grid-template-columns: auto 1fr auto auto;
-              padding-top: 0;
+              min-width: 100%;
+              display: grid;
+              grid-template-columns: repeat(auto-fit, 114px);
+              gap: 10px;
+              align-content: start;
 
               > div {
-                display: contents;
-                font-size: 16px;
-                text-align: initial;
+                display: flex;
+                align-items: center;
+                text-align: center;
+                flex-direction: column;
+                padding: 0 4px 4px;
+                cursor: pointer;
+                font-size: 14px;
+                word-break: break-word;
 
-                &.selected > * {
-                  background-color: var(--color-selected);
+                &:hover {
+                  color: var(--color-light);
                 }
 
-                > * {
-                  padding: 0 10px;
+                &.selected {
+                  background-color: var(--color-selected);
+                  color: var(--color-light);
+
+                  > i i {
+                    color: var(--color-selected);
+                  }
+                }
+
+                * {
+                  cursor: pointer;
+                }
+
+                img {
+                  pointer-events: none;
                 }
 
                 > i, img, canvas {
-                  box-sizing: initial;
-                  margin: 0;
-                  min-width: 22px;
-                  min-height: 100%;
-                  max-width: 22px;
-                  max-height: 100%;
-                  font-size: 22px;
-                  padding-left: 8px;
-                  align-self: center;
+                  min-width: 64px;
+                  min-height: 64px;
+                  max-width: 64px;
+                  max-height: 64px;
+                  font-size: 64px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  margin: 8px 0 4px;
+                  position: relative;
 
                   i {
-                    top: 50%;
-                    left: 2.5px;
-                    font-size: 12px;
-                    transform: translateY(calc(-50% + 1px));
+                    position: absolute;
+                    top: 20px;
+                    min-width: 100%;
+                    text-align: center;
+                    color: var(--color-ui);
+                    font-size: 32px;
+                    left: 0;
 
                     &.fa {
-                      font-size: 10px;
-                      transform: translateY(calc(-50% + 6px));
+                      font-size: 28px;
                     }
                   }
                 }
 
                 img, canvas {
-                  padding: 0;
-                  min-height: 22px;
-                  max-height: 22px;
+                  object-fit: contain;
+                  background: conic-gradient(var(--color-dark) .25turn, var(--color-back) .25turn .5turn, var(--color-dark) .5turn .75turn, var(--color-back) .75turn) top left/12px 12px;
                 }
+
+                > .fa {
+                  font-size: 52px;
+                }
+              }
+            }
+
+            &.list {
+              padding-top: 0;
+
+              > div {
+                row-gap: 4px;
+                column-gap: 0;
+                grid-template-columns: auto 1fr auto auto;
 
                 > div {
-                  box-sizing: initial;
-                  display: flex;
-                  align-items: center;
-                  min-height: 30px;
-                }
+                  display: contents;
+                  font-size: 16px;
+                  text-align: initial;
 
-                > :first-child {
-                  max-width: 32px;
-                  padding: 0 3px 0 8px;
-                }
+                  &.selected > * {
+                    background-color: var(--color-selected);
+                  }
 
-                > :last-child {
-                  padding-right: 8px;
-                  text-align: right;
-                  justify-content: flex-end;
-                }
+                  > * {
+                    padding: 0 10px;
+                  }
 
-                > :nth-child(2) {
-                  padding-left: 3px;
+                  > i, img, canvas {
+                    box-sizing: initial;
+                    margin: 0;
+                    min-width: 22px;
+                    min-height: 100%;
+                    max-width: 22px;
+                    max-height: 100%;
+                    font-size: 22px;
+                    padding-left: 8px;
+                    align-self: center;
+
+                    i {
+                      top: 50%;
+                      left: 2.5px;
+                      font-size: 12px;
+                      transform: translateY(calc(-50% + 1px));
+
+                      &.fa {
+                        font-size: 10px;
+                        transform: translateY(calc(-50% + 6px));
+                      }
+                    }
+                  }
+
+                  img, canvas {
+                    padding: 0;
+                    min-height: 22px;
+                    max-height: 22px;
+                  }
+
+                  > div {
+                    box-sizing: initial;
+                    display: flex;
+                    align-items: center;
+                    min-height: 30px;
+                  }
+
+                  > :first-child {
+                    max-width: 32px;
+                    padding: 0 3px 0 8px;
+                  }
+
+                  > :last-child {
+                    padding-right: 8px;
+                    text-align: right;
+                    justify-content: flex-end;
+                  }
+
+                  > :nth-child(2) {
+                    padding-left: 3px;
+                  }
                 }
               }
             }
@@ -738,6 +746,7 @@
             lastArrowKeyPress: 0,
             typeFindText: "",
             typeFindLastKey: 0,
+            typeFindStart: 0,
             sort: "alphabetical",
             direction: "forward"
           },
@@ -884,13 +893,6 @@
                 } catch {}
                 this.jar.files[file].animation = false
               }
-            },
-            textureReady(file) {
-              const data = this.jar.files[file]
-              if (data.texture) return true
-              this.getFileContent(file).then(e => {
-                this.$set(data, "texture", "data:image/png;base64," + e.toString("base64"))
-              })
             },
             select(file, value, event) {
               if (event.currentTarget.dataset.lastClick) {
@@ -1476,7 +1478,7 @@
                   if (!this.selected.length || this.selected.length > 1) {
                     this.selected = [this.lastInteracted]
                   } else if (this.selected.length === 1) {
-                    const container = this.$refs.files.$el
+                    const container = this.$refs.files.$refs.container
                     const index = this.currentFolderContents.findIndex(e => e[0] === this.selected[0])
                     if (event.key === "ArrowLeft") {
                       if (index > 0) {
@@ -1504,7 +1506,7 @@
                       }
                     }
                     const selectedElement = container.children[this.currentFolderContents.findIndex(e => e[0] === this.selected[0]) + 1]
-                    const containerRect = container.getBoundingClientRect()
+                    const containerRect = this.$refs.files.$el.getBoundingClientRect()
                     const elementRect = selectedElement.getBoundingClientRect()
                     if (elementRect.top < containerRect.top || elementRect.bottom > containerRect.bottom) {
                       const scrollTo = this.displayType === "grid" ? selectedElement : selectedElement.children[0]
@@ -1525,24 +1527,21 @@
                   const index = this.currentFolderContents.findIndex(e => e[0].toLowerCase().startsWith(this.typeFindText))
                   if (index !== -1) {
                     this.selected = [this.currentFolderContents[index][0]]
-                    if (this.$refs.files.$el.children[index + 1]) {
-                      const scrollTo = this.displayType === "grid" ? this.$refs.files.$el.children[index + 1] : this.$refs.files.$el.children[index + 1].children[0]
-                      scrollTo.scrollIntoView({ block: "center" })
-                    } else {
-                      const container = this.$refs.files.$el
-                      const styles = getComputedStyle(container)
-                      const gap = parseInt(styles.rowGap)
-                      let firstItem = container.children[1]
-                      let itemsPerRow = 1
-                      if (this.displayType === "grid") {
-                        itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[1].offsetWidth + gap)))
+                    const container = this.$refs.files.$refs.container
+                    let scrollTo, currentItems, newItems
+                    const compare = Date.now()
+                    this.typeFindStart = compare
+                    do {
+                      currentItems = container.children.length
+                      if (container.children[index + 1]) {
+                        scrollTo = this.displayType === "grid" ? container.children[index + 1] : container.children[index + 1].children[0]
                       } else {
-                        firstItem = firstItem.children[0]
+                        this.$refs.files.loadMore()
+                        await this.$nextTick()
                       }
-                      const itemHeight = firstItem.offsetHeight
-                      container.scrollTop = Math.floor(index / itemsPerRow) * (itemHeight + gap)
-                      this.$refs.files.onScroll()
-                    }
+                      newItems = container.children.length
+                    } while (!scrollTo && currentItems !== newItems && this.typeFindStart === compare)
+                    scrollTo?.scrollIntoView({ block: "center" })
                   }
                 }
               }
@@ -1709,16 +1708,9 @@
                 return label
               }
             },
-            imageDimensionsReady(file) {
+            getImageDimensions(file) {
               const data = this.jar.files[file]
-              if (data.imageDimensions === "decoding") return false
-              if (data.imageDimensions) return true
-              this.$set(data, "imageDimensions", "decoding")
-              data.image.decode().then(e => {
-                this.$set(data, "imageDimensions", `${data.image.width} x ${data.image.height}`)
-              }).catch(() => {
-                console.log(file)
-              })
+              return `${data.image.width} x ${data.image.height}`
             },
           },
           template: `
@@ -1830,17 +1822,16 @@
                         <animated-texture :image="jar.files[value].image" :mcmeta="jar.files[value].animation" />
                       </template>
                       <template v-else-if="file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')">
-                        <div v-if="textureReady(value)">
-                          <img :src="jar.files[value].texture">
+                        <div>
+                          <img :src="jar.files[value].image.src">
                         </div>
-                        <i v-else class="material-icons">image</i>
                       </template>
                       <template v-else>
                         <i class="material-icons">{{ getFileIcon(file, value) }}</i>
                       </template>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                       <template v-if="displayType === 'list'">
-                        <div v-if="(file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')) && imageDimensionsReady(value)">{{ jar.files[value].imageDimensions }}</div>
+                        <div v-if="(file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg'))">{{ getImageDimensions(value) }}</div>
                         <div v-else></div>
                         <div>{{ getFileLabel(file, value) }}</div>
                       </template>
@@ -1963,7 +1954,6 @@
           lastTick: 0,
           playRate: 1,
           paused: false,
-          imageDecoded: false,
           interpolate: false,
           boundTick: null
         }
@@ -1973,15 +1963,11 @@
         this.ctx = this.$refs.canvas.getContext("2d")
         this.$refs.canvas.width = 16
         this.$refs.canvas.height = 16
-
-        this.image.decode().then(() => {
-          if (!this.$refs.canvas) return
-          this.imageDecoded = true
-          this.setMCMETA(this.mcmeta)
-          if (!this.paused && "animation" in this.mcmeta) {
-            this.play()
-          }
-        })
+        if (!this.$refs.canvas) return
+        this.setMCMETA(this.mcmeta)
+        if (!this.paused && "animation" in this.mcmeta) {
+          this.play()
+        }
       },
       destroyed() {
         this.pause()
@@ -2030,11 +2016,9 @@
           }
         },
         play() {
-          if (this.imageDecoded) {
-            this.paused = false
-            this.lastTick = performance.now()
-            requestAnimationFrame(this.boundTick)
-          }
+          this.paused = false
+          this.lastTick = performance.now()
+          requestAnimationFrame(this.boundTick)
         },
         pause() {
           this.paused = true
@@ -2070,11 +2054,12 @@
     return {
       template: `
         <div ref="viewport" @scroll="onScroll" @click.self="$emit('click')">
-          <slot name="before-list"></slot>
-          <template v-for="item of visibleItems">
-            <slot :file="item[0]" :value="item[1]"></slot>
-          </template>
-          <div v-if="padderHeight" :style="{ minHeight: padderHeight + 'px', gridColumn: '1 / -1', display: 'block' }"></div>
+          <div ref="container" :style="{ minHeight: height + 'px' }" @click.self="$emit('click')">
+            <slot name="before-list"></slot>
+            <template v-for="item of visibleItems">
+              <slot :file="item[0]" :value="item[1]"></slot>
+            </template>
+          </div>
         </div>
       `,
       props: {
@@ -2083,9 +2068,9 @@
       data() {
         return {
           visibleItems: [],
-          lastLoadedIndex: 0,
+          loadedCount: 0,
           batchSize: 128,
-          padderHeight: 128
+          height: 0
         }
       },
       watch: {
@@ -2108,46 +2093,56 @@
       },
       methods: {
         onResize() {
-          const viewport = this.$refs.viewport
-          let firstItem = viewport.children[1]
+          const container = this.$refs.container
+          let firstItem = container.children[1]
           const columnMode = getComputedStyle(firstItem).display === "contents"
           if (columnMode) firstItem = firstItem.children[0]
-          const itemHeight = firstItem.offsetHeight
-          const styles = getComputedStyle(viewport)
+          const styles = getComputedStyle(container)
           const gap = parseInt(styles.rowGap)
           let itemsPerRow = 1
           if (!columnMode) {
-            itemsPerRow = Math.max(1, Math.floor((viewport.clientWidth - parseInt(styles.padding) * 2 + gap) / (viewport.children[1].offsetWidth + gap)))
+            itemsPerRow = Math.max(1, Math.floor((container.clientWidth - parseInt(styles.padding) * 2 + gap) / (container.children[1].offsetWidth + gap)))
           }
-          this.padderHeight = (Math.ceil(this.items.length / itemsPerRow) - Math.ceil(this.visibleItems.length / itemsPerRow)) * (itemHeight + gap)
+          const loadedRows = Math.ceil((this.loadedCount) / itemsPerRow)
+          const remainingRows = Math.ceil((this.items.length - this.loadedCount - 1) / itemsPerRow)
+          let loadedHeight = 0
+          for (let i = 0; i < loadedRows; i++) {
+            let firstItemInRow = container.children[i * itemsPerRow + 1]
+            if (columnMode) firstItemInRow = firstItemInRow.children[0]
+            loadedHeight += firstItemInRow.offsetHeight
+          }
+          const remainingHeight = remainingRows * loadedHeight / loadedRows
+          this.height = loadedHeight + remainingHeight + gap * (loadedRows + remainingRows - 1)
         },
         onScroll() {
-          const viewport = this.$refs.viewport
-          let lastItem = viewport.children[viewport.children.length - 2]
+          const container = this.$refs.container
+          let lastItem = container.children[container.children.length - 1]
           if (!lastItem) return
 
           if (getComputedStyle(lastItem).display === "contents") lastItem = lastItem.children[0]
 
           const lastItemRect = lastItem.getBoundingClientRect()
-          const viewportRect = viewport.getBoundingClientRect()
+          const containerRect = this.$refs.viewport.getBoundingClientRect()
 
-          if (lastItemRect.bottom <= viewportRect.bottom + 128) {
+          if (lastItemRect.bottom <= containerRect.bottom + 128) {
             return this.loadMore()
           }
 
           this.onResize()
         },
         loadMore() {
-          if (this.lastLoadedIndex >= this.items.length) return this.$nextTick(() => this.onResize())
+          if (this.loadedCount >= this.items.length) return this.$nextTick(() => this.onResize())
 
-          this.visibleItems.push(...this.items.slice(this.lastLoadedIndex, this.lastLoadedIndex + this.batchSize))
-          this.lastLoadedIndex += this.batchSize
+          const newItems = this.items.slice(this.loadedCount, this.loadedCount + this.batchSize)
+
+          this.visibleItems.push(...newItems)
+          this.loadedCount += newItems.length
 
           this.$nextTick(() => this.onScroll())
         },
         resetScroller() {
           this.visibleItems = []
-          this.lastLoadedIndex = 0
+          this.loadedCount = 0
           this.loadMore()
         }
       }
@@ -2459,12 +2454,12 @@
   async function loadSidebar(force) {
     const defaults = [
       ["assets", "minecraft", "textures"],
-      ["assets", "minecraft", "models"],
       ["assets", "minecraft", "textures", "block"],
       ["assets", "minecraft", "textures", "item"],
       ["assets", "minecraft", "textures", "blocks"],
       ["assets", "minecraft", "textures", "items"],
       ["assets", "minecraft", "textures", "entity"],
+      ["assets", "minecraft", "models"],
       ["assets", "minecraft", "models", "block"],
       ["assets", "minecraft", "models", "item"],
       ["resource_pack", "textures"],
