@@ -688,6 +688,11 @@
               text-align: left !important;
               justify-content: space-between !important;
               z-index: 2 !important;
+              color: var(--color-text);
+
+              &:hover {
+                color: var(--color-light);
+              }
             }
 
             > :first-child {
@@ -756,8 +761,8 @@
             typeFindText: "",
             typeFindLastKey: 0,
             typeFindStart: 0,
-            sort: "alphabetical",
-            direction: "forward"
+            sort: "name",
+            sortDirection: "forwards"
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -793,7 +798,11 @@
                 const isFolderB = typeof vb === "object" || kb.endsWith(".zip")
                 if (isFolderA && !isFolderB) return -1
                 if (isFolderB && !isFolderA) return 1
-                return naturalSorter(ka, kb)
+                if (this.sortDirection === "forwards") {
+                  return naturalSorter(ka, kb)
+                } else {
+                  return naturalSorter(kb, ka)
+                }
               })
               this.lastInteracted = entries[0][0]
               this.selected = []
@@ -865,7 +874,9 @@
                 storage.recents.splice(storage.recents.indexOf(this.version), 1)
               }
               storage.recents.unshift(this.version)
-              storage.recents = storage.recents.slice(0, 20)
+              if (storage.length > 20) {
+                storage.recents.length = 20
+              }
               save()
               this.loadingMessage = null
             },
@@ -1333,7 +1344,7 @@
                 {
                   id: "move_up",
                   name: "Move Up",
-                  icon: "move_up",
+                  icon: "arrow_upward",
                   condition: this.validSavedFolders[0] !== folder,
                   click: () => {
                     storage.savedFolders.splice(storage.savedFolders.indexOf(folder), 1)
@@ -1344,7 +1355,7 @@
                 {
                   id: "move_down",
                   name: "Move Down",
-                  icon: "move_down",
+                  icon: "arrow_downward",
                   condition: this.validSavedFolders[this.validSavedFolders.length - 1] !== folder,
                   click: () => {
                     storage.savedFolders.splice(storage.savedFolders.indexOf(folder), 1)
@@ -1808,6 +1819,14 @@
               const data = this.jar.files[file]
               return `${data.image.width} x ${data.image.height}`
             },
+            changeSort(type) {
+              if (this.sort === type) {
+                this.sortDirection = this.sortDirection === "forwards" ? "backwards" : "forwards"
+              } else {
+                this.sort = type
+                this.sortDirection = "forwards"
+              }
+            }
           },
           template: `
             <div id="${id}-container" tabindex="0" @keydown="keydownHandler" @click="event.target.tagName === 'INPUT' ? null : event.currentTarget.focus()">
@@ -1900,9 +1919,18 @@
                 <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []" ref="files" :class="displayType">
                   <template #before-list>
                     <div id="files-header" :style="displayType === 'grid' ? { display: 'none' } : {}">
-                      <div>Name</div>
-                      <div>Size</div>
-                      <div>Type</div>
+                      <div @click="changeSort('name')">
+                        <span>Name</span>
+                        <i :style="sort === 'name' ? {} : { visibility: 'hidden' }" class="material-icons">{{ sortDirection === "forwards" ? "arrow_upward" : "arrow_downward" }}</i>
+                      </div>
+                      <div @click="changeSort('size')">
+                        <span>Size</span>
+                        <i :style="sort === 'size' ? {} : { visibility: 'hidden' }" class="material-icons">{{ sortDirection === "forwards" ? "arrow_upward" : "arrow_downward" }}</i>
+                      </div>
+                      <div @click="changeSort('type')">
+                        <span>Type</span>
+                        <i :style="sort === 'type' ? {} : { visibility: 'hidden' }" class="material-icons">{{ sortDirection === "forwards" ? "arrow_upward" : "arrow_downward" }}</i>
+                      </div>
                     </div>
                   </template>
                   <template #default="{ file, value }">
