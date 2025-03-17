@@ -689,6 +689,7 @@
               justify-content: space-between !important;
               z-index: 2 !important;
               color: var(--color-text);
+              gap: 8px;
 
               &:hover {
                 color: var(--color-light);
@@ -762,7 +763,8 @@
             typeFindLastKey: 0,
             typeFindStart: 0,
             sort: "name",
-            sortDirection: "forwards"
+            sortDirection: "forwards",
+            currentFolderData: {}
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -788,21 +790,56 @@
           },
           computed: {
             currentFolderContents() {
+              this.currentFolderData = {}
               let current = this.tree
               for (const part of this.path) {
                 if (!current[part]) return []
                 current = current[part]
               }
+              for (const [k, v] of Object.entries(current)) {
+                this.currentFolderData[k] = {
+                  label: this.getFileLabel(k, v),
+                  dimensions: typeof v === "object" ? undefined : this.getImageDimensions(v)
+                }
+              }
+
               const entries = Object.entries(current).sort(([ka, va], [kb, vb]) => {
                 const isFolderA = typeof va === "object" || ka.endsWith(".zip")
                 const isFolderB = typeof vb === "object" || kb.endsWith(".zip")
-                if (isFolderA && !isFolderB) return -1
-                if (isFolderB && !isFolderA) return 1
-                if (this.sortDirection === "forwards") {
-                  return naturalSorter(ka, kb)
+                if (this.sort === "size") {
+                  if (isFolderA && !isFolderB) return 1
+                  if (isFolderB && !isFolderA) return -1
                 } else {
-                  return naturalSorter(kb, ka)
+                  if (isFolderA && !isFolderB) return -1
+                  if (isFolderB && !isFolderA) return 1
                 }
+                if (this.sort === "size") {
+                  const dimsA = this.currentFolderData[ka].dimensions
+                  const dimsB = this.currentFolderData[kb].dimensions
+
+                  if (dimsA && !dimsB) return -1
+                  if (dimsB && !dimsA) return 1
+
+                  if (dimsA && dimsB) {
+                    const areaA = dimsA[0] * dimsA[1]
+                    const areaB = dimsB[0] * dimsB[1]
+                    if (areaA !== areaB) {
+                      return this.sortDirection === "forwards" ? areaB - areaA : areaA - areaB
+                    }
+                  }
+                } else if (this.sort === "type") {
+                  const labelA = this.currentFolderData[ka].label
+                  const labelB = this.currentFolderData[kb].label
+
+                  if (labelA && !labelB) return -1
+                  if (labelB && !labelA) return 1
+
+                  if (labelA && labelB) {
+                    const sort = this.sortDirection === "forwards" ? naturalSorter(labelA, labelB) : naturalSorter(labelB, labelA)
+                    if (sort) return sort
+                  }
+                }
+                return this.sortDirection === "forwards" ? naturalSorter(ka, kb) : naturalSorter(kb, ka)
               })
               this.lastInteracted = entries[0][0]
               this.selected = []
@@ -1817,7 +1854,9 @@
             },
             getImageDimensions(file) {
               const data = this.jar.files[file]
-              return `${data.image.width} x ${data.image.height}`
+              if (data.image?.width) {
+                return [data.image.width, data.image.height]
+              }
             },
             changeSort(type) {
               if (this.sort === type) {
@@ -1955,9 +1994,9 @@
                       </template>
                       <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
                       <template v-if="displayType === 'list'">
-                        <div v-if="(file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg'))">{{ getImageDimensions(value) }}</div>
+                        <div v-if="(file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg'))">{{ currentFolderData[file].dimensions?.join(" x ") }}</div>
                         <div v-else></div>
-                        <div>{{ getFileLabel(file, value) }}</div>
+                        <div>{{ currentFolderData[file].label }}</div>
                       </template>
                     </div>
                   </template>
