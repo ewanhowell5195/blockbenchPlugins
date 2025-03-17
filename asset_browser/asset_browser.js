@@ -1172,13 +1172,19 @@
               const tempPath = PathModule.join(os.tmpdir(), `${PathModule.basename(file, extension)}_${Date.now()}${extension}`)
               fs.writeFileSync(tempPath, await this.getFileContent(file))
               if (extension) {
-                exec(`"${tempPath}"`)
+                if (os.platform() === "win32") {
+                  exec(`"${tempPath}"`)
+                } else if (os.platform() === "darwin") {
+                  exec(`open "${tempPath}"`)
+                } else {
+                  exec(`xdg-open "${tempPath}"`)
+                }
               } else if (os.platform() === "win32") {
                 exec(`notepad.exe "${tempPath}"`)
               } else if (os.platform() === "darwin") {
                 exec(`open -a "TextEdit" "${tempPath}"`)
               } else {
-                exec(`gedit "${tempPath}" || nano "${tempPath}" || vi "${tempPath}"`)
+                exec(`xdg-open "${tempPath}"`)
               }
             },
             getVersionIcon(id) {
