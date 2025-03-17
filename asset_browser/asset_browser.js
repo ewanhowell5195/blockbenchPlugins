@@ -797,10 +797,10 @@
                 current = current[part]
               }
               for (const [k, v] of Object.entries(current)) {
-                this.currentFolderData[k] = {
+                this.$set(this.currentFolderData, k, {
                   label: this.getFileLabel(k, v),
                   dimensions: typeof v === "object" ? undefined : this.getImageDimensions(v)
-                }
+                })
               }
 
               const entries = Object.entries(current).sort(([ka, va], [kb, vb]) => {
