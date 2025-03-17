@@ -1253,9 +1253,87 @@
                 },
                 "_",
                 {
+                  id: "rename",
+                  name: "Rename",
+                  icon: "edit",
+                  click: () => {
+                    new Dialog({
+                      id: "asset_browser_rename_sidebar_item",
+                      title: "Rename Pinned Folder",
+                      part_order: ["form", "lines"],
+                      form: {
+                        path: {
+                          type: "info",
+                          text: `<div style="display: flex; align-items: center;"><div style="min-width: 149px;">Path:</div> ${folder[0].join("/")}</div>`
+                        },
+                        name: {
+                          label: "Name",
+                          placeholder: "Textures",
+                          value: folder[1] ?? folder[0][folder[0].length - 1]
+                        },
+                        icon: {
+                          label: "Icon",
+                          placeholder: "image",
+                          value: folder[2]
+                        }
+                      },
+                      lines: [`
+                        <style>
+                          #asset_browser_rename_sidebar_item {
+                            table {
+                              width: 100%;
+                              border-collapse: collapse;
+                            }
+
+                            code {
+                              background-color: var(--color-back);
+                              border: 1px solid var(--color-border);
+                              padding: 0 4px;
+                            }
+
+                            th, td {
+                              border: 1px solid var(--color-border);
+                              padding: 4px 8px;
+                            }
+                          }
+                        </style>
+                        <p style="margin: 16px 0 8px;">Icons can be from any of the following sources:</p>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Icon Source</th>
+                              <th>Formatting</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td><a href="https://fonts.google.com/icons">Google Material Icons</a></td>
+                              <td><code>icon_name</code></td>
+                            </tr>
+                            <tr>
+                              <td><a href="https://fontawesome.com/search?ic=free">Font Awesome Free</a></td>
+                              <td><code>fa-icon_name</code></td>
+                            </tr>
+                            <tr>
+                              <td><a href="https://www.blockbench.net/wiki/docs/blockbench#available-icons">Blockbench</a></td>
+                              <td><code>icon-icon_name</code></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      `],
+                      onConfirm: result => {
+                        this.$set(folder, 1, result.name.trim() || null)
+                        this.$set(folder, 2, result.icon.trim().toLowerCase().replaceAll(" ", "_") || null)
+                        save()
+                      }
+                    }).show()
+                  }
+                },
+                "_",
+                {
                   id: "move_up",
                   name: "Move Up",
-                  icon: "arrow_upward",
+                  icon: "move_up",
                   condition: this.validSavedFolders[0] !== folder,
                   click: () => {
                     storage.savedFolders.splice(storage.savedFolders.indexOf(folder), 1)
@@ -1266,7 +1344,7 @@
                 {
                   id: "move_down",
                   name: "Move Down",
-                  icon: "arrow_downward",
+                  icon: "move_down",
                   condition: this.validSavedFolders[this.validSavedFolders.length - 1] !== folder,
                   click: () => {
                     storage.savedFolders.splice(storage.savedFolders.indexOf(folder), 1)
@@ -1321,7 +1399,10 @@
               if (file.includes(".txt")) return "description"
               return "draft"
             },
-            getFolderIcon(path) {
+            getFolderIcon(path, custom) {
+              if (custom) {
+                return Blockbench.getIconNode(custom).outerHTML
+              }
               if (!Array.isArray(path)) {
                 path = [path]
               }
@@ -1679,7 +1760,6 @@
               }
               switch (file) {
                 case "lang": return "Language Files"
-                case "entity": return "Entities"
                 case "gui":
                 case "ui": return "User Interface"
                 case "equipment": return "Equipment"
@@ -1718,7 +1798,9 @@
                 if (!label.endsWith("s")) {
                   label += "s"
                 }
-                label.replaceAll("Json", "JSON")
+                label = label.replaceAll("Json", "JSON")
+                             .replaceAll("Entitys", "Entities")
+                             .replaceAll("Bodys", "Bodies")
                 return label
               }
             },
@@ -1811,7 +1893,7 @@
                 </div>
                 <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }" @contextmenu.self="sidebarContextMenu">
                   <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder[0])" @contextmenu="sidebarItemContextMenu(folder, $event)" :class="{ active: folder === activeSavedFolder }">
-                    <span v-html="getFolderIcon(folder[0])"></span>
+                    <span v-html="getFolderIcon(folder[0], folder[2])"></span>
                     <span>{{ folder[1] ?? folder[0][folder[0].length - 1] }}</span>
                   </div>
                 </div>
