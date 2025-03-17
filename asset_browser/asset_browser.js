@@ -21,6 +21,13 @@
     versions: []
   }
 
+  const customIcons = {
+    creeper: '<svg width="22" height="22" viewBox="0 0 2.91 2.91" fill="currentColor"><path d="M.397.397h2.117v2.117h-.529V1.72H1.72v-.265h.529V.926H1.72v.529h-.529V.926h-.53v.529h.529v.265H.926v.794H.397zm.794 1.852h.529v.265h-.529z"/></svg>',
+    forge: '<svg width="22" height="22" viewBox="0 0 105 105" fill="currentColor"><path d="M4.45 24.8h28.22v23.1C16.09 45.93 8.7 39.17 2.72 27.62c-.67-1.29.28-2.82 1.73-2.82zm98.05 5.81v-6.14a1.94 1.94 0 0 0-1.94-1.94H38.93a1.94 1.94 0 0 0-1.94 1.94v22.61a1.94 1.94 0 0 0 1.94 1.94H77.3c.79 0 1.5-.49 1.8-1.22 3.19-7.74 11.1-13.84 21.72-15.26a1.95 1.95 0 0 0 1.68-1.93zM73.24 53.63H41.55c1.93 4.94 1.89 9.6.24 13.52h30.8c-1.79-4.13-1.72-8.94.65-13.52zM41.79 67.14l-.21.5h31.24a7.55 7.55 0 0 1-.22-.5zm33.79 4.49H38.92c-2.72 2.99-6.69 5.17-11.65 6.14v4.71h60.6v-4.91c-5.27-.72-9.45-2.92-12.29-5.94z"/></svg>',
+    neoforge: '<svg viewBox="-5 -10 110 110" width="22" height="22" fill-rule="evenodd" fill="currentColor"><path d="M42.914 28.332a16.67 16.67 0 0 0-12.652 5.82L14.231 52.855l34.777 29.281c.277.234.629.363.992.363a1.54 1.54 0 0 0 .992-.363l34.773-29.281-16.027-18.703a16.67 16.67 0 0 0-12.652-5.82zm-18.98.398c4.75-5.543 11.684-8.73 18.98-8.73h14.172c7.297 0 14.23 3.188 18.98 8.731l18.766 21.891a4.17 4.17 0 0 1 .988 3.051c-.09 1.105-.621 2.133-1.469 2.848L56.359 88.512a9.86 9.86 0 0 1-12.719 0L5.649 56.52c-.848-.715-1.379-1.742-1.469-2.848a4.17 4.17 0 0 1 .988-3.051z"/><path d="M80.762-.516a4.17 4.17 0 0 1 2.57 3.848V38.75H75V13.395L61.281 27.114l-5.895-5.895L76.223.388c1.191-1.191 2.981-1.547 4.539-.902zm-61.524 0a4.16 4.16 0 0 0-2.57 3.848V38.75H25V13.395l13.719 13.719 5.895-5.895L23.777.388c-1.191-1.191-2.98-1.547-4.539-.902zm65.957 49.243l-14.633 7.32A14.58 14.58 0 0 0 62.5 69.09v11.328h-8.332V69.09a22.92 22.92 0 0 1 12.668-20.5l14.633-7.316zm-70.39 0l14.633 7.32a14.58 14.58 0 0 1 8.063 13.043v11.328h8.332V69.09a22.92 22.92 0 0 0-12.668-20.5l-14.633-7.316z"/></svg>',
+    fabric: '<svg viewBox="-5 -10 110 110" width="22" height="22" fill="currentColor"><path d="M15.625 85.625V53.93C10.25 52.536 6.25 47.684 6.25 41.875V13.75c0-6.894 5.605-12.5 12.5-12.5h62.5c6.894 0 12.5 5.606 12.5 12.5v71.875c0 1.727-1.398 3.125-3.125 3.125H18.75c-1.727 0-3.125-1.398-3.125-3.125zM12.5 13.75v28.125a6.26 6.26 0 0 0 6.25 6.25h51.738c-1.074-1.848-1.738-3.961-1.738-6.25V13.75c0-2.289.664-4.402 1.738-6.25H18.75a6.26 6.26 0 0 0-6.25 6.25zm75 21.875V13.75a6.26 6.26 0 0 0-6.25-6.25A6.26 6.26 0 0 0 75 13.75v28.125a6.26 6.26 0 0 0 6.25 6.25 6.26 6.26 0 0 0 6.25-6.25zm0 46.875V52.637c-1.848 1.074-3.961 1.738-6.25 1.738H21.875V82.5zM81.25 45c-1.727 0-3.125-1.398-3.125-3.125V13.75c0-1.727 1.398-3.125 3.125-3.125s3.125 1.398 3.125 3.125v28.125c0 1.727-1.398 3.125-3.125 3.125z"/></svg>'
+  }
+
   let loadedJars = {}
 
   const ignoredExtensions = ["class", "nbt", "mcassetsroot", "mf", "sf", "dsa", "rsa", "jfc", "xml", "md", "toml", "itransformationservice", "hex", "jar"]
@@ -189,19 +196,11 @@
               &:hover {
                 background-color: var(--color-selected);
                 color: var(--color-light);
-
-                svg {
-                  fill: var(--color-light);
-                }
               }
 
               span {
                 display: flex;
                 align-items: center
-              }
-
-              svg {
-                fill: var(--color-text);
               }
             }
           }
@@ -534,7 +533,7 @@
                   margin: 8px 0 4px;
                   position: relative;
 
-                  i {
+                  i, svg {
                     position: absolute;
                     top: 20px;
                     min-width: 100%;
@@ -546,6 +545,11 @@
                     &.fa {
                       font-size: 28px;
                     }
+                  }
+
+                  svg {
+                    width: 32px;
+                    height: 32px;
                   }
                 }
 
@@ -592,7 +596,7 @@
                     padding-left: 8px;
                     align-self: center;
 
-                    i {
+                    i, svg {
                       top: 50%;
                       left: 2.5px;
                       font-size: 12px;
@@ -602,6 +606,11 @@
                         font-size: 10px;
                         transform: translateY(calc(-50% + 6px));
                       }
+                    }
+
+                    svg {
+                      width: 12px;
+                      height: 12px;
                     }
                   }
 
@@ -1129,9 +1138,9 @@
               let icon = "history"
               if (id.includes("optifine")) icon = "icon-format_optifine"
               else if (id.includes("quilt")) icon = "widgets"
-              else if (id.includes("neoforge")) return '<svg viewBox="-5 -10 110 110" width="22" height="22" fill-rule="evenodd"><path d="M42.914 28.332a16.67 16.67 0 0 0-12.652 5.82L14.231 52.855l34.777 29.281c.277.234.629.363.992.363a1.54 1.54 0 0 0 .992-.363l34.773-29.281-16.027-18.703a16.67 16.67 0 0 0-12.652-5.82zm-18.98.398c4.75-5.543 11.684-8.73 18.98-8.73h14.172c7.297 0 14.23 3.188 18.98 8.731l18.766 21.891a4.17 4.17 0 0 1 .988 3.051c-.09 1.105-.621 2.133-1.469 2.848L56.359 88.512a9.86 9.86 0 0 1-12.719 0L5.649 56.52c-.848-.715-1.379-1.742-1.469-2.848a4.17 4.17 0 0 1 .988-3.051z"/><path d="M80.762-.516a4.17 4.17 0 0 1 2.57 3.848V38.75H75V13.395L61.281 27.114l-5.895-5.895L76.223.388c1.191-1.191 2.981-1.547 4.539-.902zm-61.524 0a4.16 4.16 0 0 0-2.57 3.848V38.75H25V13.395l13.719 13.719 5.895-5.895L23.777.388c-1.191-1.191-2.98-1.547-4.539-.902zm65.957 49.243l-14.633 7.32A14.58 14.58 0 0 0 62.5 69.09v11.328h-8.332V69.09a22.92 22.92 0 0 1 12.668-20.5l14.633-7.316zm-70.39 0l14.633 7.32a14.58 14.58 0 0 1 8.063 13.043v11.328h8.332V69.09a22.92 22.92 0 0 0-12.668-20.5l-14.633-7.316z"/></svg>'
-              else if (id.includes("forge")) return '<svg width="22" height="22" viewBox="0 0 105 105"><path d="M4.45 24.8h28.22v23.1C16.09 45.93 8.7 39.17 2.72 27.62c-.67-1.29.28-2.82 1.73-2.82zm98.05 5.81v-6.14a1.94 1.94 0 0 0-1.94-1.94H38.93a1.94 1.94 0 0 0-1.94 1.94v22.61a1.94 1.94 0 0 0 1.94 1.94H77.3c.79 0 1.5-.49 1.8-1.22 3.19-7.74 11.1-13.84 21.72-15.26a1.95 1.95 0 0 0 1.68-1.93zM73.24 53.63H41.55c1.93 4.94 1.89 9.6.24 13.52h30.8c-1.79-4.13-1.72-8.94.65-13.52zM41.79 67.14l-.21.5h31.24a7.55 7.55 0 0 1-.22-.5zm33.79 4.49H38.92c-2.72 2.99-6.69 5.17-11.65 6.14v4.71h60.6v-4.91c-5.27-.72-9.45-2.92-12.29-5.94z"/></svg>'
-              else if (id.includes("fabric")) return '<svg viewBox="-5 -10 110 110" width="22" height="22"><path d="M15.625 85.625V53.93C10.25 52.536 6.25 47.684 6.25 41.875V13.75c0-6.894 5.605-12.5 12.5-12.5h62.5c6.894 0 12.5 5.606 12.5 12.5v71.875c0 1.727-1.398 3.125-3.125 3.125H18.75c-1.727 0-3.125-1.398-3.125-3.125zM12.5 13.75v28.125a6.26 6.26 0 0 0 6.25 6.25h51.738c-1.074-1.848-1.738-3.961-1.738-6.25V13.75c0-2.289.664-4.402 1.738-6.25H18.75a6.26 6.26 0 0 0-6.25 6.25zm75 21.875V13.75a6.26 6.26 0 0 0-6.25-6.25A6.26 6.26 0 0 0 75 13.75v28.125a6.26 6.26 0 0 0 6.25 6.25 6.26 6.26 0 0 0 6.25-6.25zm0 46.875V52.637c-1.848 1.074-3.961 1.738-6.25 1.738H21.875V82.5zM81.25 45c-1.727 0-3.125-1.398-3.125-3.125V13.75c0-1.727 1.398-3.125 3.125-3.125s3.125 1.398 3.125 3.125v28.125c0 1.727-1.398 3.125-3.125 3.125z"/></svg>'
+              else if (id.includes("forge")) return customIcons.forge
+              else if (id.includes("neoforge")) return customIcons.neoforge
+              else if (id.includes("fabric")) return customIcons.fabric
               else if (id.includes("preview") || /^\d{2}w\d{2}[a-z]$/.test(id) || /^\d+\.\d+\.\d+-(?:pre|rc)\d+$/.test(id)) icon = "update"
               else if (id.startsWith("v")) icon = "icon-format_bedrock"
               else if (/^[\d\.]+$/.test(id)) icon = "icon-format_java"
@@ -1206,11 +1215,11 @@
                   id: "pin_to_sidebar",
                   name: "Pin to Sidebar",
                   icon: "push_pin",
-                  condition: selectionType === "folder" && selected.some(e => !this.savedFolders.some(saved => saved.join("/") === e.path)),
+                  condition: selectionType === "folder" && selected.some(e => !this.savedFolders.some(saved => saved[0].join("/") === e.path)),
                   click: () => {
                     for (const folder of selected) {
-                      if (!this.savedFolders.some(saved => saved.join("/") === folder.path)) {
-                        storage.savedFolders.push(this.path.slice().concat(folder.name))
+                      if (!this.savedFolders.some(saved => saved[0].join("/") === folder.path)) {
+                        storage.savedFolders.push([this.path.slice().concat(folder.name)])
                       }
                     }
                     save()
@@ -1220,10 +1229,10 @@
                   id: "unpin_from_sidebar",
                   name: "Unpin from Sidebar",
                   icon: "push_pin",
-                  condition: selectionType === "folder" && !selected.some(e => !this.savedFolders.some(saved => saved.join("/") === e.path)),
+                  condition: selectionType === "folder" && !selected.some(e => !this.savedFolders.some(saved => saved[0].join("/") === e.path)),
                   click: () => {
                     for (const folder of selected) {
-                      const index = this.savedFolders.findIndex(e => e.join("/") === folder.path)
+                      const index = this.savedFolders.findIndex(e => e[0].join("/") === folder.path)
                       if (index !== -1) {
                         storage.savedFolders.splice(index, 1)
                       }
@@ -1317,7 +1326,8 @@
                 path = [path]
               }
               let icon
-              for (const part of path) {
+              for (let i = path.length - 1; i >= 0; i--) {
+                const part = path[i]
                 if (part === "textures") icon = "image"
                 else if (part === "models" || part === "blocks" || part === "block") icon = "deployed_code"
                 else if (part === "items" || part === "item") icon = "swords"
@@ -1332,7 +1342,7 @@
                 else if (part === "resourcepacks") icon = "folder_zip"
                 else if (part === "equipment") icon = "checkroom"
                 else if (part === "blockstates") icon = "view_in_ar"
-                else if (part === "entities" || part === "entity" || part === "mob") icon = "pets"
+                else if (part === "entities" || part === "entity" || part === "mob") icon = "creeper"
                 else if (part === "painting") icon = "brush"
                 else if (part === "gui" || part === "ui") icon = "call_to_action"
                 else if (part === "environment") icon = "light_mode"
@@ -1349,6 +1359,7 @@
                 else if (part === "attachables") icon = "electrical_services"
                 if (icon) break
               }
+              if (icon in customIcons) return customIcons[icon]
               return Blockbench.getIconNode(icon ?? "folder").outerHTML
             },
             openFolder(path) {
@@ -1446,9 +1457,9 @@
               return current
             },
             async getValidSavedFolders() {
-              this.validSavedFolders = (await Promise.all(this.savedFolders.map(async (folder) => {
+              this.validSavedFolders = (await Promise.all(this.savedFolders.map(async folder => {
                 let current = this.tree
-                for (const segment of folder) {
+                for (const segment of folder[0]) {
                   if (typeof current === "string" && current.endsWith(".zip")) {
                     current = await this.loadZip(current)
                   } else if (typeof current === "object" && typeof current[segment] === "string" && segment.endsWith(".zip")) {
@@ -1799,9 +1810,9 @@
                   </div>
                 </div>
                 <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }" @contextmenu.self="sidebarContextMenu">
-                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder)" @contextmenu="sidebarItemContextMenu(folder, $event)" :class="{ active: folder === activeSavedFolder }">
-                    <span v-html="getFolderIcon(folder)"></span>
-                    <span>{{ folder[folder.length - 1] }}</span>
+                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder[0])" @contextmenu="sidebarItemContextMenu(folder, $event)" :class="{ active: folder === activeSavedFolder }">
+                    <span v-html="getFolderIcon(folder[0])"></span>
+                    <span>{{ folder[1] ?? folder[0][folder[0].length - 1] }}</span>
                   </div>
                 </div>
                 <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []" ref="files" :class="displayType">
@@ -2456,20 +2467,20 @@
 
   async function loadSidebar(force) {
     const defaults = [
-      ["assets", "minecraft", "textures"],
-      ["assets", "minecraft", "textures", "block"],
-      ["assets", "minecraft", "textures", "item"],
-      ["assets", "minecraft", "textures", "blocks"],
-      ["assets", "minecraft", "textures", "items"],
-      ["assets", "minecraft", "textures", "entity"],
-      ["assets", "minecraft", "models"],
-      ["assets", "minecraft", "models", "block"],
-      ["assets", "minecraft", "models", "item"],
-      ["resource_pack", "textures"],
-      ["resource_pack", "textures", "blocks"],
-      ["resource_pack", "textures", "items"],
-      ["resource_pack", "textures", "entity"],
-      ["resource_pack", "models", "entity"]
+      [["assets", "minecraft", "textures"], "Textures"],
+      [["assets", "minecraft", "textures", "block"], "Block Textures"],
+      [["assets", "minecraft", "textures", "item"], "Item Textures"],
+      [["assets", "minecraft", "textures", "blocks"], "Block Textures"],
+      [["assets", "minecraft", "textures", "items"], "Item Textures"],
+      [["assets", "minecraft", "textures", "entity"], "Entity Textures"],
+      [["assets", "minecraft", "models"], "Models"],
+      [["assets", "minecraft", "models", "block"], "Block Models"],
+      [["assets", "minecraft", "models", "item"], "Item Models"],
+      [["resource_pack", "textures"], "Textures"],
+      [["resource_pack", "textures", "blocks"], "Block Textures"],
+      [["resource_pack", "textures", "items"], "Item Textures"],
+      [["resource_pack", "textures", "entity"], "Entity Textures"],
+      [["resource_pack", "models", "entity"], "Entity Models"]
     ]
     if (force) {
       if (await confirm("Reset Sidebar", "Are you sure you want to reset the sidebar?")) {
