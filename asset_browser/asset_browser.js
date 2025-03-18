@@ -659,6 +659,7 @@
                     display: flex;
                     align-items: center;
                     min-height: 30px;
+                    line-height: 1.2;
                   }
 
                   > :first-child {
@@ -677,6 +678,15 @@
                   }
                 }
               }
+            }
+
+            &.message {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              font-size: 1.5rem;
+              color: var(--color-subtle_text);
             }
           }
 
@@ -774,7 +784,7 @@
             versionSearch: "",
             recentVersions: storage.recents,
             downloadedVersions: [],
-            objects: storage.objects ?? true,
+            objects: storage.objects,
             jar: null,
             loadingMessage: null,
             path: [],
@@ -800,7 +810,10 @@
             sortDirection: "forwards",
             currentFolderData: {},
             searchOpen: false,
-            searchText: null
+            searchText: "",
+            searchTimeout: null,
+            filesMessage: null,
+            itemCount: 0
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -827,57 +840,178 @@
           computed: {
             currentFolderContents() {
               this.currentFolderData = {}
-              let current = this.tree
-              for (const part of this.path) {
-                if (!current[part]) return []
-                current = current[part]
+              let current
+              const searchText = this.searchText.trim().toLowerCase()
+
+              if (this.searchOpen && searchText) {
+                current = {}
+                const currentFolder = this.path.join("/") + "/"
+                const folders = new Set
+                for (const k of Object.keys(this.jar.files)) {
+                  folders.add(PathModule.dirname(k))
+                  if (k.startsWith(currentFolder) || currentFolder === "/") {
+                    let relativePath = k
+                    if (currentFolder !== "/") {
+                      relativePath = k.slice(currentFolder.length)
+                    }
+                    if (relativePath.toLowerCase().includes(searchText)) {
+                      current[relativePath] = k
+                      this.$set(this.currentFolderData, relativePath, {
+                        label: this.getFileLabel(relativePath.split("/"), relativePath, k),
+                        dimensions: this.getImageDimensions(k)
+                      })
+                    }
+                  }
+                }
+                for (const folder of folders) {
+                  if (folder === ".") continue
+                  if (folder.startsWith(currentFolder) || currentFolder === "/") {
+                    let relativePath = folder
+                    if (currentFolder !== "/") {
+                      relativePath = folder.slice(currentFolder.length)
+                    }
+                    if (relativePath.toLowerCase().includes(searchText)) {
+                      let content = this.tree
+                      for (const part of folder.split("/")) {
+                        content = content[part]
+                      }
+                      current[relativePath] = content
+                      this.$set(this.currentFolderData, relativePath, {
+                        label: this.getFileLabel(relativePath.split("/"), relativePath, content)
+                      })
+                    }
+                  }
+                }
+              } else {
+                current = this.tree
+                for (const part of this.path) {
+                  const subparts = part.split("/")
+                  for (const subpart of subparts) {
+                    current = current[subpart]
+                  }
+                }
+                for (const [k, v] of Object.entries(current)) {
+                  this.$set(this.currentFolderData, k, {
+                    label: this.getFileLabel(this.path, k, v),
+                    dimensions: typeof v === "object" ? undefined : this.getImageDimensions(v)
+                  })
+                }
               }
-              for (const [k, v] of Object.entries(current)) {
-                this.$set(this.currentFolderData, k, {
-                  label: this.getFileLabel(k, v),
-                  dimensions: typeof v === "object" ? undefined : this.getImageDimensions(v)
+
+              this.filesMessage = null
+              this.itemCount = Object.keys(current).length
+              if (this.itemCount > 4000) {
+                this.filesMessage = "Too many results, try narrowing your search"
+                return []
+              } else if (!this.itemCount) {
+                this.filesMessage = "No results"
+                return []
+              }
+
+              let entries
+
+              if (this.searchOpen && searchText && this.sort === "name") {
+                entries = Object.entries(current).sort(([ka, va], [kb, vb]) => {
+                  ka = ka.toLowerCase()
+                  kb = kb.toLowerCase()
+
+                  const isFolderA = typeof va === "object"
+                  const isFolderB = typeof vb === "object"
+
+                  const extA = PathModule.extname(ka)
+                  const extB = PathModule.extname(kb)
+                  const baseA = PathModule.basename(ka, PathModule.extname(ka))
+                  const baseB = PathModule.basename(kb, PathModule.extname(kb))
+
+                  if (baseA === searchText && baseB === searchText) {
+                    if (isFolderA !== isFolderB) return isFolderA ? 1 : -1
+                    return naturalSorter(ka, kb)
+                  }
+                  if (baseA === searchText) return -1
+                  if (baseB === searchText) return 1
+
+                  const aIndex = ka.lastIndexOf(searchText)
+                  const bIndex = kb.lastIndexOf(searchText)
+
+                  const slashCount = (ka.slice(aIndex + searchText.length).match(/\//g)?.length ?? 0) - (kb.slice(bIndex + searchText.length).match(/\//g)?.length ?? 0)
+                  if (slashCount !== 0) {
+                    return slashCount
+                  }
+
+                  const aBefore = ka.slice(0, aIndex).lastIndexOf("/")
+                  const aAfter = ka.slice(aIndex + searchText.length).indexOf("/")
+                  const aSection = PathModule.basename(ka.slice(
+                    aBefore === -1 ? 0 : aBefore + 1, 
+                    aIndex + searchText.length + (aAfter === -1 ? Infinity : aAfter)
+                  ), extA)
+
+                  const bBefore = kb.slice(0, bIndex).lastIndexOf("/")
+                  const bAfter = kb.slice(bIndex + searchText.length).indexOf("/")
+                  const bSection = PathModule.basename(kb.slice(
+                    bBefore === -1 ? 0 : bBefore + 1, 
+                    bIndex + searchText.length + (bAfter === -1 ? Infinity : bAfter)
+                  ), extB)
+
+                  if (aSection.startsWith(searchText)) {
+                    if (bSection.startsWith(searchText)) {
+                      const beforeSlashCount = (ka.slice(0, aIndex).match(/\//g)?.length ?? 0) - (kb.slice(0, bIndex).match(/\//g)?.length ?? 0)
+                      if (beforeSlashCount !== 0) return beforeSlashCount
+                      return naturalSorter(aSection, bSection)
+                    }
+                    return -1
+                  }
+                  if (bSection.startsWith(searchText)) return 1
+
+                  return naturalSorter(aSection, bSection)
+                })
+                if (this.sortDirection === "backwards") {
+                  entries.reverse()
+                }
+              } else {
+                entries = Object.entries(current).sort(([ka, va], [kb, vb]) => {
+                  ka = ka.toLowerCase()
+                  kb = kb.toLowerCase()
+
+                  const isFolderA = typeof va === "object" || ka.endsWith(".zip")
+                  const isFolderB = typeof vb === "object" || kb.endsWith(".zip")
+                  if (this.sort === "size") {
+                    if (isFolderA && !isFolderB) return 1
+                    if (isFolderB && !isFolderA) return -1
+                  } else {
+                    if (isFolderA && !isFolderB) return -1
+                    if (isFolderB && !isFolderA) return 1
+                  }
+                  if (this.sort === "size") {
+                    const dimsA = this.currentFolderData[ka].dimensions
+                    const dimsB = this.currentFolderData[kb].dimensions
+
+                    if (dimsA && !dimsB) return -1
+                    if (dimsB && !dimsA) return 1
+
+                    if (dimsA && dimsB) {
+                      const areaA = dimsA[0] * dimsA[1]
+                      const areaB = dimsB[0] * dimsB[1]
+                      if (areaA !== areaB) {
+                        return this.sortDirection === "forwards" ? areaB - areaA : areaA - areaB
+                      }
+                    }
+                  } else if (this.sort === "type") {
+                    const labelA = this.currentFolderData[ka].label
+                    const labelB = this.currentFolderData[kb].label
+
+                    if (labelA && !labelB) return -1
+                    if (labelB && !labelA) return 1
+
+                    if (labelA && labelB) {
+                      const sort = this.sortDirection === "forwards" ? naturalSorter(labelA, labelB) : naturalSorter(labelB, labelA)
+                      if (sort) return sort
+                    }
+                  }
+                  return this.sortDirection === "forwards" ? naturalSorter(ka, kb) : naturalSorter(kb, ka)
                 })
               }
 
-              const entries = Object.entries(current).sort(([ka, va], [kb, vb]) => {
-                const isFolderA = typeof va === "object" || ka.endsWith(".zip")
-                const isFolderB = typeof vb === "object" || kb.endsWith(".zip")
-                if (this.sort === "size") {
-                  if (isFolderA && !isFolderB) return 1
-                  if (isFolderB && !isFolderA) return -1
-                } else {
-                  if (isFolderA && !isFolderB) return -1
-                  if (isFolderB && !isFolderA) return 1
-                }
-                if (this.sort === "size") {
-                  const dimsA = this.currentFolderData[ka].dimensions
-                  const dimsB = this.currentFolderData[kb].dimensions
-
-                  if (dimsA && !dimsB) return -1
-                  if (dimsB && !dimsA) return 1
-
-                  if (dimsA && dimsB) {
-                    const areaA = dimsA[0] * dimsA[1]
-                    const areaB = dimsB[0] * dimsB[1]
-                    if (areaA !== areaB) {
-                      return this.sortDirection === "forwards" ? areaB - areaA : areaA - areaB
-                    }
-                  }
-                } else if (this.sort === "type") {
-                  const labelA = this.currentFolderData[ka].label
-                  const labelB = this.currentFolderData[kb].label
-
-                  if (labelA && !labelB) return -1
-                  if (labelB && !labelA) return 1
-
-                  if (labelA && labelB) {
-                    const sort = this.sortDirection === "forwards" ? naturalSorter(labelA, labelB) : naturalSorter(labelB, labelA)
-                    if (sort) return sort
-                  }
-                }
-                return this.sortDirection === "forwards" ? naturalSorter(ka, kb) : naturalSorter(kb, ka)
-              })
-              this.lastInteracted = entries[0][0]
+              this.lastInteracted = entries[0]?.[0]
               this.selected = []
               return entries
             }
@@ -896,7 +1030,7 @@
               this.navigationHistory = [[]]
               this.navigationFuture = []
               this.searchOpen = false
-              this.searchText = null
+              this.searchText = ""
               this.jar = await getVersionJar(this.version)
               if (!Object.keys(this.jar.files).length) {
                 this.jar = null
@@ -906,6 +1040,12 @@
               }
               if (this.objects) {
                 for (const [k, v] of Object.entries(await getVersionObjects(this.version))) {
+                  if (k.endsWith(".png") || k.endsWith(".jpg") || k.endsWith(".jpeg")) {
+                    v.content = await fs.promises.readFile(v.path)
+                    const img = new Image
+                    img.src = "data:image/png;base64," + v.content.toString("base64")
+                    v.image = img
+                  }
                   this.$set(this.jar.files, k, v)
                 }
               }
@@ -1309,9 +1449,10 @@
                   icon: "push_pin",
                   condition: selectionType === "folder" && selected.some(e => !this.savedFolders.some(saved => saved[0].join("/") === e.path)),
                   click: () => {
+                    const path = this.path.flatMap(e => e.split("/"))
                     for (const folder of selected) {
                       if (!this.savedFolders.some(saved => saved[0].join("/") === folder.path)) {
-                        storage.savedFolders.push([this.path.slice().concat(folder.name)])
+                        storage.savedFolders.push([path.concat(folder.name)])
                       }
                     }
                     save()
@@ -1543,20 +1684,39 @@
               }
             },
             changeFolder(path) {
+              this.searchOpen = false
+              this.searchText = ""
               this.path = path.slice()
-              this.$refs.files.$el.scrollTop = 0
+              if (this.$refs.files) {
+                this.$refs.files.$el.scrollTop = 0
+              }
               this.$nextTick(() => {
                 this.checkBreadcrumbsOverflow()
                 this.$refs.files.onResize()
               })
             },
+            navigationSearch(item) {
+              this.searchOpen = true
+              this.searchText = item.search
+              this.path = item.path.slice()
+            },
             navigationBack() {
               this.navigationFuture.push(this.navigationHistory.pop())
-              this.changeFolder(this.navigationHistory[this.navigationHistory.length - 1])
+              const prev = this.navigationHistory[this.navigationHistory.length - 1]
+              if (Array.isArray(prev)) {
+                this.changeFolder(prev)
+              } else {
+                this.navigationSearch(prev)
+              }
             },
             navigationForward() {
               this.navigationHistory.push(this.navigationFuture.pop())
-              this.changeFolder(this.navigationHistory[this.navigationHistory.length - 1])
+              const next = this.navigationHistory[this.navigationHistory.length - 1]
+              if (Array.isArray(next)) {
+                this.changeFolder(next)
+              } else {
+                this.navigationSearch(next)
+              }
             },
             toggleObjects() {
               this.objects = !this.objects
@@ -1647,6 +1807,7 @@
               }))).filter(Boolean)
             },
             async keydownHandler(event) {
+              if (this.$refs.browserSearch === document.activeElement) return
               if (this.jar && !this.loadingMessage) {
                 if (event.ctrlKey && event.key === "a") {
                   this.selected = this.currentFolderContents.map(e => e[0])
@@ -1737,10 +1898,12 @@
               this.displayType = type
               storage.display = type
               save()
+              this.$refs.files.$el.scrollTop = 0
               this.$nextTick(() => this.$refs.files.onScroll())
             },
-            getFileLabel(file, value) {
-              const path = this.path.concat(file).join("/")
+            getFileLabel(folder, file, value) {
+              const path = folder.concat(file).join("/")
+              file = PathModule.basename(path)
               const ext = file.includes(".") ? file.split(".").pop() : null
               switch (path) {
                 case "assets": return "Resource Pack Assets"
@@ -1909,12 +2072,34 @@
                 this.sort = type
                 this.sortDirection = "forwards"
               }
+              this.$refs.files.$el.scrollTop = 0
             },
             openSearch() {
-              this.searchOpen = true
-              setTimeout(() => {
-                this.$refs.browserSearch.focus()
-              }, 0)
+              this.searchOpen = !this.searchOpen
+              this.makeSearch()
+              if (this.searchOpen) {
+                setTimeout(() => {
+                  this.$refs.browserSearch.focus()
+                }, 0)
+              }
+            },
+            makeSearch() {
+              clearTimeout(this.searchTimeout)
+              this.searchTimeout = setTimeout(() => {
+                const searchText = this.searchOpen ? this.searchText.trim().toLowerCase() : ""
+                const prev = this.navigationHistory[this.navigationHistory.length - 1]
+                if (searchText) {
+                  if (!Array.isArray(prev) && prev.search === searchText) return
+                  this.navigationHistory.push({
+                    search: searchText,
+                    path: this.path.slice()
+                  })
+                } else {
+                  if (Array.isArray(prev) && prev.join("/") === this.path.join("/")) return
+                  this.navigationHistory.push(this.path.slice())
+                }
+                this.navigationFuture = []
+              }, 1000)
             }
           },
           template: `
@@ -1999,9 +2184,8 @@
                     <div v-for="[i, part] of path.entries()" @click="openFolder(path.slice(0, i + 1))">{{ part }}</div>
                   </div>
                   <div id="browser-search" :class="{ open: searchOpen }" :style="{ width: searchOpen ? 'calc(100% - ' + ($refs.navigation.clientWidth + $refs.homeButton.clientWidth) + 'px)' : '54px' }">
-                    <i class="material-icons" @click="openSearch">search</i>
-                    <input type="text" placeholder="Search…" ref="browserSearch">
-                    <i class="material-icons" @click="searchOpen = false">close</i>
+                    <i class="material-icons" @click="openSearch">{{ searchOpen ? "close" : "search" }}</i>
+                    <input type="text" placeholder="Search…" ref="browserSearch" v-model="searchText" @input="makeSearch">
                   </div>
                 </div>
                 <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }" @contextmenu.self="sidebarContextMenu">
@@ -2010,7 +2194,7 @@
                     <span>{{ folder[1] ?? folder[0][folder[0].length - 1] }}</span>
                   </div>
                 </div>
-                <lazy-scroller id="files" :items="currentFolderContents" @click="selected = []" ref="files" :class="displayType">
+                <lazy-scroller v-if="currentFolderContents.length" id="files" :items="currentFolderContents" @click="selected = []" ref="files" :class="displayType">
                   <template #before-list>
                     <div id="files-header" :style="displayType === 'grid' ? { display: 'none' } : {}">
                       <div @click="changeSort('name')">
@@ -2027,7 +2211,7 @@
                       </div>
                     </div>
                   </template>
-                  <template #default="{ file, value }">
+                  <template v-if="currentFolderContents.length" #default="{ file, value }">
                     <div @click="select(file, value, $event)" @contextmenu="fileContextMenu(file, $event)" :class="{ selected: selected.includes(file) }">
                       <template v-if="typeof value === 'object'">
                         <i v-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
@@ -2041,13 +2225,13 @@
                       </template>
                       <template v-else-if="file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')">
                         <div>
-                          <img :src="jar.files[value].image.src">
+                          <img :src="jar.files[value].image?.src">
                         </div>
                       </template>
                       <template v-else>
                         <i class="material-icons">{{ getFileIcon(file, value) }}</i>
                       </template>
-                      <div>{{ file.replace(/(_|\\.)/g, '$1​') }}</div>
+                      <div>{{ file.replace(/(_|\\.|\\/)/g, '$1​') }}</div>
                       <template v-if="displayType === 'list'">
                         <div v-if="(file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg'))">{{ currentFolderData[file].dimensions?.join(" x ") }}</div>
                         <div v-else></div>
@@ -2056,8 +2240,9 @@
                     </div>
                   </template>
                 </lazy-scroller>
+                <div v-else id="files" class="message">{{ filesMessage }}</div>
                 <div id="browser-footer">
-                  <div>{{ currentFolderContents.length.toLocaleString() }} item{{ currentFolderContents.length === 1 ? "" : "s" }}</div>
+                  <div>{{ itemCount.toLocaleString() }} item{{ itemCount === 1 ? "" : "s" }}</div>
                   <template v-if="selected.length">
                     <div style="width: 1px; height: 12px; background-color: var(--color-subtle_text); opacity: 0.25;"></div>
                     <div>{{ selected.length.toLocaleString() }} selected</div>
@@ -2313,6 +2498,10 @@
         onResize() {
           const container = this.$refs.container
           let firstItem = container.children[1]
+          if (!firstItem) {
+            this.height = 0
+            return
+          }
           const columnMode = getComputedStyle(firstItem).display === "contents"
           if (columnMode) firstItem = firstItem.children[0]
           const styles = getComputedStyle(container)
@@ -2448,13 +2637,9 @@
           dateValue: d,
           encodedPath,
           compressionMethod: q,
-          compressedContent: ua.subarray(h + 30 + n + e, h + 30 + n + e + s),
-          get image() {
-            const img = new Image
-            img.src = "data:image/png;base64," + this.content.toString("base64")
-            return img
-          }
+          compressedContent: ua.subarray(h + 30 + n + e, h + 30 + n + e + s)
         }
+
         if (q === 0) {
           parsedZip.files[filePath].content = Buffer.from(parsedZip.files[filePath].compressedContent)
         } else {
@@ -2471,6 +2656,12 @@
               return c
             }
           })
+        }
+
+        if (filePath.endsWith(".png") || filePath.endsWith(".jpg") || filePath.endsWith(".jpeg")) {
+          const img = new Image
+          img.src = "data:image/png;base64," + parsedZip.files[filePath].content.toString("base64")
+          parsedZip.files[filePath].image = img
         }
       }
 
