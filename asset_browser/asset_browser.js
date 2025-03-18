@@ -262,13 +262,15 @@
             background-color: var(--color-back);
             width: 100%;
             display: flex;
+            position: relative;
 
-            > div:not(:last-child) {
-              border-right: 2px solid var(--color-dark);
+            > div:not(:first-child) {
+              border-left: 2px solid var(--color-dark);
             }
           }
 
-          #browser-navigation {
+          #browser-navigation,
+          #browser-search {
             display: flex;
             align-items: center;
             padding: 0 8px;
@@ -328,18 +330,7 @@
                 transform: translate(-50%, -50%) rotate(45deg);
               }
             }
-          }
-
-          #breadcrumbs-home.overflow::before {
-            content: "";
-            width: 64px;
-            background-image: linear-gradient(90deg, var(--color-back) 10%, transparent);
-            position: absolute;
-            top: 0;
-            right: -64px;
-            bottom: 0;
-            pointer-events: none;
-          }
+          }          
 
           #breadcrumbs,
           #breadcrumbs-home {
@@ -352,17 +343,6 @@
             scrollbar-width: initial;
             scrollbar-color: initial;
             position: relative;
-
-            &#breadcrumbs-home {
-              overflow-x: visible;
-              border-right: none;
-              padding-right: 16px;
-              z-index: 1;
-
-              > div::after {
-                content: "chevron_right";
-              }
-            }
 
             &::-webkit-scrollbar {
               height: 8px;
@@ -412,13 +392,67 @@
               }
 
               > i {
-                display: block;
+                display: flex;
                 margin: 0;
+                justify-content: center;
+              }
+
+              .tooltip {
+                right: initial !important;
+                left: 0;
+                bottom: -28px;
               }
             }
 
             .tooltip {
               font-weight: 400;
+            }
+          }
+
+          #breadcrumbs-home {
+            overflow-x: visible;
+            z-index: 1;
+
+            > div::after {
+              content: "chevron_right";
+            }
+
+            &.overflow::before {
+              content: "";
+              width: 64px;
+              background-image: linear-gradient(90deg, var(--color-back) 10%, transparent);
+              position: absolute;
+              top: 0;
+              right: -64px;
+              bottom: 0;
+              pointer-events: none;
+            }
+          }
+
+          #breadcrumbs {
+            border-left: none !important;
+            margin: 0 54px 0 8px;
+          }
+
+          #browser-search {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            background-color: var(--color-back);
+            transition: width .3s;
+            overflow: hidden;
+            z-index: 1;
+            gap: 8px;
+
+            &:not(.open) > :not(:first-child) {
+              visibility: hidden;
+            }
+
+            input {
+              height: 100%;
+              flex: 1;
+              text-overflow: ellipsis;
             }
           }
 
@@ -764,7 +798,9 @@
             typeFindStart: 0,
             sort: "name",
             sortDirection: "forwards",
-            currentFolderData: {}
+            currentFolderData: {},
+            searchOpen: false,
+            searchText: null
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -859,6 +895,8 @@
               this.path = []
               this.navigationHistory = [[]]
               this.navigationFuture = []
+              this.searchOpen = false
+              this.searchText = null
               this.jar = await getVersionJar(this.version)
               if (!Object.keys(this.jar.files).length) {
                 this.jar = null
@@ -1871,6 +1909,12 @@
                 this.sort = type
                 this.sortDirection = "forwards"
               }
+            },
+            openSearch() {
+              this.searchOpen = true
+              setTimeout(() => {
+                this.$refs.browserSearch.focus()
+              }, 0)
             }
           },
           template: `
@@ -1932,7 +1976,7 @@
               </div>
               <div v-else id="browser">
                 <div id="browser-header">
-                  <div id="browser-navigation">
+                  <div id="browser-navigation" ref="navigation">
                     <div v-if="validSavedFolders.length" class="tool" @click="sidebarVisible = !sidebarVisible">
                       <div class="tooltip">{{ sidebarVisible ? "Collapse Sidebar" : "Open Sidebar" }}</div>
                       <i class="material-icons">{{ sidebarVisible ? "left_panel_close" : "left_panel_open" }}</i>
@@ -1941,7 +1985,7 @@
                     <i class="material-icons" :class="{ disabled: !navigationFuture.length }" @click="navigationForward">arrow_forward</i>
                     <i class="material-icons" :class="{ disabled: !path.length }" @click="changeFolder(path.slice(0, -1))">arrow_upward</i>
                   </div>
-                  <div id="breadcrumbs-home" :class="{ overflow: breadcrumbsOverflowing }">
+                  <div id="breadcrumbs-home" ref="homeButton" :class="{ overflow: breadcrumbsOverflowing }">
                     <div class="tool" @click="jar = null">
                       <div class="tooltip">
                         <span>Home</span>
@@ -1953,6 +1997,11 @@
                   <div id="breadcrumbs" ref="breadcrumbs">
                     <div @click="openFolder([])">{{ version }}</div>
                     <div v-for="[i, part] of path.entries()" @click="openFolder(path.slice(0, i + 1))">{{ part }}</div>
+                  </div>
+                  <div id="browser-search" :class="{ open: searchOpen }" :style="{ width: searchOpen ? 'calc(100% - ' + ($refs.navigation.clientWidth + $refs.homeButton.clientWidth) + 'px)' : '54px' }">
+                    <i class="material-icons" @click="openSearch">search</i>
+                    <input type="text" placeholder="Search…" ref="browserSearch">
+                    <i class="material-icons" @click="searchOpen = false">close</i>
                   </div>
                 </div>
                 <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }" @contextmenu.self="sidebarContextMenu">
