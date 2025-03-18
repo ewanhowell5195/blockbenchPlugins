@@ -427,6 +427,14 @@
               bottom: 0;
               pointer-events: none;
             }
+
+            .tool {
+              margin: 0;
+            }
+
+            .tooltip {
+              left: -7px !important;
+            }
           }
 
           #breadcrumbs {
@@ -659,7 +667,6 @@
                     display: flex;
                     align-items: center;
                     min-height: 30px;
-                    line-height: 1.2;
                   }
 
                   > :first-child {
@@ -675,6 +682,13 @@
 
                   > :nth-child(2) {
                     padding-left: 3px;
+                    display: block;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
+                    overflow: hidden;
+                    direction: rtl;
+                    text-align: left;
+                    line-height: 29px;
                   }
                 }
               }
@@ -2100,6 +2114,16 @@
                 }
                 this.navigationFuture = []
               }, 1000)
+            },
+            truncate(file) {
+              if (this.displayType === "grid" && file.length > 32) {
+                if (this.searchOpen && this.searchText) {
+                  file = "…" + file.slice(-31)
+                } else {
+                  file = file.slice(0, 31) + "…"
+                }
+              }
+              return file.replace(/(_|\.|\/)/g, '$1​')
             }
           },
           template: `
@@ -2183,13 +2207,13 @@
                     <div @click="openFolder([])">{{ version }}</div>
                     <div v-for="[i, part] of path.entries()" @click="openFolder(path.slice(0, i + 1))">{{ part }}</div>
                   </div>
-                  <div id="browser-search" :class="{ open: searchOpen }" :style="{ width: searchOpen ? 'calc(100% - ' + ($refs.navigation.clientWidth + $refs.homeButton.clientWidth) + 'px)' : '54px' }">
+                  <div id="browser-search" :class="{ open: searchOpen }" :style="{ width: searchOpen ? 'calc(100% - 2px - ' + ($refs.navigation.clientWidth + $refs.homeButton.clientWidth) + 'px)' : '54px' }">
                     <i class="material-icons" @click="openSearch">{{ searchOpen ? "close" : "search" }}</i>
                     <input type="text" placeholder="Search…" ref="browserSearch" v-model="searchText" @input="makeSearch">
                   </div>
                 </div>
                 <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }" @contextmenu.self="sidebarContextMenu">
-                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder[0])" @contextmenu="sidebarItemContextMenu(folder, $event)" :class="{ active: folder === activeSavedFolder }">
+                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder[0])" @contextmenu="sidebarItemContextMenu(folder, $event)" :class="{ active: folder === activeSavedFolder }" :title="folder[0].join('/')">
                     <span v-html="getFolderIcon(folder[0], folder[2])"></span>
                     <span>{{ folder[1] ?? folder[0][folder[0].length - 1] }}</span>
                   </div>
@@ -2212,7 +2236,7 @@
                     </div>
                   </template>
                   <template v-if="currentFolderContents.length" #default="{ file, value }">
-                    <div @click="select(file, value, $event)" @contextmenu="fileContextMenu(file, $event)" :class="{ selected: selected.includes(file) }">
+                    <div @click="select(file, value, $event)" @contextmenu="fileContextMenu(file, $event)" :class="{ selected: selected.includes(file) }" :title="file">
                       <template v-if="typeof value === 'object'">
                         <i v-if="file.endsWith('.zip')" class="material-icons">folder_zip</i>
                         <i v-else class="material-icons">
@@ -2231,7 +2255,7 @@
                       <template v-else>
                         <i class="material-icons">{{ getFileIcon(file, value) }}</i>
                       </template>
-                      <div>{{ file.replace(/(_|\\.|\\/)/g, '$1​') }}</div>
+                      <div>{{ truncate(file) }}</div>
                       <template v-if="displayType === 'list'">
                         <div v-if="(file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg'))">{{ currentFolderData[file].dimensions?.join(" x ") }}</div>
                         <div v-else></div>
