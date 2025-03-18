@@ -3,7 +3,7 @@
   const crypto = require("node:crypto")
   const os = require("node:os")
 
-  let dialog, action, storage
+  let dialog, action, action2, storage
 
   const id = "asset_browser"
   const name = "Asset Browser"
@@ -827,7 +827,9 @@
             searchText: "",
             searchTimeout: null,
             filesMessage: null,
-            itemCount: 0
+            itemCount: 0,
+            ready: Promise.withResolvers(),
+            lastOpenFormat: null
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -1038,9 +1040,9 @@
                 save()
               }
             },
-            async loadVersion() {
+            async loadVersion(path = []) {
               this.loadingMessage = `Loading ${this.version}…`
-              this.path = []
+              this.path = path
               this.navigationHistory = [[]]
               this.navigationFuture = []
               this.searchOpen = false
@@ -2312,6 +2314,7 @@
           manifest.latest = data.latest
           manifest.versions = data.versions
           this.content_vue.version = manifest.versions.find(e => e.type === "release").id
+          this.content_vue.ready.resolve()
           loadDownloadedVersions()
         },
         onOpen() {
@@ -2349,12 +2352,45 @@
         icon,
         click: () => dialog.show()
       })
+      action2 = new Action({
+        id: id + "_shortcut",
+        name,
+        description,
+        icon,
+        click() {
+          dialog.show()
+          setTimeout(async () => {
+            if (dialog.content_vue.lastOpenFormat === Format.id) return
+            dialog.content_vue.lastOpenFormat = Format.id
+            await dialog.content_vue.ready.promise
+            let type, path
+            if (["java_block", "modded_entity", "optifine_entity"].includes(Format.id)) {
+              type = "release"
+              path = ["assets", "minecraft", "textures"]
+              if (Format.id !== "java_block") path.push("entity")
+            } else if (["bedrock", "bedrock_block"].includes(Format.id)) {
+              type = "bedrock"
+              path = ["resource_pack", "textures", Format.id === "bedrock" ? "entity" : "blocks"]
+            }
+            if (type) {
+              const latest = manifest.versions.find(e => e.type === type)
+              dialog.content_vue.type = type
+              dialog.content_vue.version = latest.id
+              dialog.content_vue.selectedVersions[type] = latest.id
+              dialog.content_vue.updateVersion()
+              dialog.content_vue.loadVersion(path)
+            }
+          }, 0)
+        }
+      })
       MenuBar.addAction(action, "tools")
+      Toolbars.texturelist.add(action2, 4)
       dialog.show()
     },
     onunload() {
       dialog.close()
       action.delete()
+      action2.delete()
     }
   })
 
