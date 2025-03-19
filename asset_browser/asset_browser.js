@@ -2452,7 +2452,7 @@
         click() {
           dialog.show()
           setTimeout(async () => {
-            if (dialog.content_vue.lastOpenFormat === Format.id) return
+            if (dialog.content_vue.lastOpenFormat === Format.id && dialog.content_vue.jar) return
             dialog.content_vue.lastOpenFormat = Format.id
             await dialog.content_vue.ready.promise
             let type, path
