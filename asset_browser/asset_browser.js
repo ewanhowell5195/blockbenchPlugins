@@ -136,8 +136,13 @@
             margin: 0;
           }
 
+          .dialog_resize_handle {
+            z-index: 2;
+          }
+
           #${id}-container {
             height: 100%;
+            position: relative;
           }
 
           #index,
@@ -250,6 +255,10 @@
             height: 100%;
             font-size: 24px;
             gap: 16px;
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            background-color: color-mix(in srgb, var(--color-ui), transparent 25%);
           }
 
           #progress-bar-container {
@@ -856,7 +865,8 @@
             ready: Promise.withResolvers(),
             lastOpenFormat: null,
             progressDone: 0,
-            progressTotal: 0
+            progressTotal: 0,
+            exporting: false
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -1424,6 +1434,12 @@
               }
               const dir = Blockbench.pickDirectory()
               if (!dir) return
+              if (!(await confirm("Confirm Export", `Are you sure you want to export to the following folder:<br><code>${dir}</code><br><br>Existing files with matching names will be overwritten.`))) return
+
+              this.exporting = true
+              this.loadingMessage = "Exporting files…"
+              this.progressDone = 0
+              this.progressTotal = 0
               
               const folders = new Set()
               const exportFiles = []
@@ -1454,10 +1470,21 @@
                 }
               }
 
+              this.progressTotal = exportFiles.length
+
               await Promise.all(Array.from(folders).map(folder => fs.promises.mkdir(PathModule.join(dir, folder), { recursive: true })))
-              await Promise.all(exportFiles.map(async filePath => fs.promises.writeFile(PathModule.join(dir, filePath), await this.getFileContent(this.path.concat(filePath).join("/")))))
+              
+              for (let i = 0; i < exportFiles.length; i += 256) {
+                await Promise.all(exportFiles.slice(i, i + 256).map(async filePath => {
+                  await fs.promises.writeFile(PathModule.join(dir, filePath), await this.getFileContent(this.path.concat(filePath).join("/")))
+                  this.progressDone++
+                }))
+              }
 
               Blockbench.showQuickMessage(`Exported ${exportFiles.length} files`)
+
+              this.exporting = false
+              this.loadingMessage = null
             },
             getVersionIcon(id) {
               id = id.toLowerCase()
@@ -1499,7 +1526,7 @@
                 this.selected = [name]
               }
               const [selected, selectionType] = await this.getDetailedSelection()
-              new Menu("asset_browser_file", [
+              new Menu(`${id}_context_menu`, [
                 {
                   id: "open",
                   name: "Open",
@@ -1575,9 +1602,9 @@
                 }
               ]).show(event)
             },
-            async sidebarItemContextMenu(folder, event) {
+            sidebarItemContextMenu(folder, event) {
               this.activeSavedFolder = folder
-              const item = new Menu("asset_browser_sidebar_item", [
+              new Menu(`${id}_context_menu`, [
                 {
                   id: "open",
                   name: "Open",
@@ -1708,8 +1735,8 @@
                 onClose: () => this.activeSavedFolder = null
               }).show(event)
             },
-            async sidebarContextMenu(event) {
-              new Menu("asset_browser_sidebar", [
+            sidebarContextMenu(event) {
+              new Menu(`${id}_context_menu`, [
                 {
                   id: "reset",
                   name: "Reset Sidebar",
@@ -1717,6 +1744,23 @@
                   click: () => {
                     loadSidebar(true)
                   }
+                }
+              ]).show(event)
+            },
+            folderContextMenu(event) {
+              new Menu(`${id}_context_menu`, [
+                {
+                  id: "export_selection",
+                  name: "Export Selection",
+                  icon: "fa-file-export",
+                  condition: this.selected.length,
+                  click: () => this.exportFiles(this.selected)
+                },
+                {
+                  id: "export_folder",
+                  name: "Export Folder",
+                  icon: "fa-file-export",
+                  click: () => this.exportFiles(this.currentFolderContents.map(e => e[0]))
                 }
               ]).show(event)
             },
@@ -2277,7 +2321,7 @@
                   <div id="progress-bar-text">{{ progressDone }} / {{ progressTotal }} - {{ Math.round(progressDone / progressTotal * 100) }}%</div>
                 </template>
               </div>
-              <div v-else id="browser">
+              <div v-if="jar && (!loadingMessage || exporting)" id="browser">
                 <div id="browser-header">
                   <div id="browser-navigation" ref="navigation">
                     <div v-if="validSavedFolders.length" class="tool" @click="sidebarVisible = !sidebarVisible">
@@ -2312,7 +2356,7 @@
                     <span>{{ folder[1] ?? folder[0][folder[0].length - 1] }}</span>
                   </div>
                 </div>
-                <lazy-scroller v-if="currentFolderContents.length" id="files" :items="currentFolderContents" @click="selected = []" ref="files" :class="displayType">
+                <lazy-scroller v-if="currentFolderContents.length" id="files" :items="currentFolderContents" @click="selected = []" ref="files" :class="displayType" @contextmenu="folderContextMenu">
                   <template #before-list>
                     <div id="files-header" :style="displayType === 'grid' ? { display: 'none' } : {}">
                       <div @click="changeSort('name')">
@@ -2608,8 +2652,8 @@
   function lazyScrollerComponent() {
     return {
       template: `
-        <div ref="viewport" @scroll="onScroll" @click.self="$emit('click')">
-          <div ref="container" :style="{ minHeight: height + 'px' }" @click.self="$emit('click')">
+        <div ref="viewport" @scroll="onScroll" @click.self="$emit('click')" @contextmenu.self="$emit('contextmenu', $event)">
+          <div ref="container" :style="{ minHeight: height + 'px' }" @click.self="$emit('click')" @contextmenu.self="$emit('contextmenu', $event)">
             <slot name="before-list"></slot>
             <template v-for="item of visibleItems">
               <slot :file="item[0]" :value="item[1]"></slot>
