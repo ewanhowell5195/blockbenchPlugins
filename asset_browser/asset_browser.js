@@ -928,10 +928,7 @@
               } else {
                 current = this.tree
                 for (const part of this.path) {
-                  const subparts = part.split("/")
-                  for (const subpart of subparts) {
-                    current = current[subpart]
-                  }
+                   current = current[part]
                 }
                 for (const [k, v] of Object.entries(current)) {
                   this.$set(this.currentFolderData, k, {
@@ -1410,6 +1407,58 @@
                 exec(`xdg-open "${tempPath}"`)
               }
             },
+            async exportFiles(files) {
+              let current = this.tree
+              for (const part of this.path) {
+                current = current[part]
+              }
+              if (files.length === 1 && (typeof current[files[0]] === "string" || files[0].endsWith(".zip"))) {
+                const ext = PathModule.extname(files[0]).slice(1) || "txt"
+                return Blockbench.export({
+                  extensions: [ext],
+                  type: ext.toUpperCase(),
+                  name: PathModule.basename(files[0], "." + ext),
+                  savetype: "buffer",
+                  content: await this.getFileContent(this.path.concat(files[0]).join("/"))
+                }, () => Blockbench.showQuickMessage(`Exported ${files[0]}`))
+              }
+              const dir = Blockbench.pickDirectory()
+              if (!dir) return
+              
+              const folders = new Set()
+              const exportFiles = []
+
+              async function traverse(node, currentPath) {
+                let hasFiles = false
+                for (const key of Object.keys(node)) {
+                  const newPath = currentPath.concat(key)
+                  if (typeof node[key] === "string" || key.endsWith(".zip")) {
+                    exportFiles.push(newPath.join("/"))
+                    hasFiles = true
+                  } else {
+                    if (await traverse(node[key], newPath)) {
+                      folders.add(newPath.join("/"))
+                    }
+                  }
+                }
+                return hasFiles
+              }
+
+              for (const file of files) {
+                if (!current[file]) continue
+                if (typeof current[file] === "string" || file.endsWith(".zip")) {
+                  exportFiles.push(file)
+                } else {
+                  folders.add(file)
+                  await traverse(current[file], [file])
+                }
+              }
+
+              await Promise.all(Array.from(folders).map(folder => fs.promises.mkdir(PathModule.join(dir, folder), { recursive: true })))
+              await Promise.all(exportFiles.map(async filePath => fs.promises.writeFile(PathModule.join(dir, filePath), await this.getFileContent(this.path.concat(filePath).join("/")))))
+
+              Blockbench.showQuickMessage(`Exported ${exportFiles.length} files`)
+            },
             getVersionIcon(id) {
               id = id.toLowerCase()
               let icon = "history"
@@ -1472,8 +1521,8 @@
                 },
                 "_",
                 {
-                  id: "add_to_project",
-                  name: "Add to Project",
+                  id: "import_to_project",
+                  name: "Import to Project",
                   icon: "enable",
                   condition: Project && selectionType === "file" && selected.some(e => e.project),
                   click: async () => {
@@ -1494,10 +1543,9 @@
                   icon: "push_pin",
                   condition: selectionType === "folder" && selected.some(e => !this.savedFolders.some(saved => saved[0].join("/") === e.path)),
                   click: () => {
-                    const path = this.path.flatMap(e => e.split("/"))
                     for (const folder of selected) {
                       if (!this.savedFolders.some(saved => saved[0].join("/") === folder.path)) {
-                        storage.savedFolders.push([path.concat(folder.name)])
+                        storage.savedFolders.push([this.path.slice().concat(folder.name)])
                       }
                     }
                     save()
@@ -1517,6 +1565,13 @@
                     }
                     save()
                   }
+                },
+                "_",
+                {
+                  id: "export",
+                  name: "Export",
+                  icon: "fa-file-export",
+                  click: () => this.exportFiles(this.selected)
                 }
               ]).show(event)
             },
@@ -1590,7 +1645,7 @@
                             </tr>
                             <tr>
                               <td><a href="https://fontawesome.com/search?ic=free">Font Awesome Free</a></td>
-                              <td><code>fa-icon_name</code></td>
+                              <td><code>fa-icon-name</code></td>
                             </tr>
                             <tr>
                               <td><a href="https://www.blockbench.net/wiki/docs/blockbench#available-icons">Blockbench</a></td>
@@ -1724,6 +1779,7 @@
             },
             openFolder(path) {
               if (JSON.stringify(path) !== JSON.stringify(this.path)) {
+                path = path.flatMap(e => e.split("/"))
                 this.changeFolder(path)
                 this.navigationHistory.push(path.slice())
                 this.navigationFuture = []
