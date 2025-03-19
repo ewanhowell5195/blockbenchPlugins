@@ -249,6 +249,31 @@
             flex-direction: column;
             height: 100%;
             font-size: 24px;
+            gap: 16px;
+          }
+
+          #progress-bar-container {
+            width: calc(100% - 80px);
+            max-width: 512px;
+            height: 24px;
+            background-color: var(--color-back);
+            position: relative;
+          }
+
+          #progress-bar {
+            height: 100%;
+            background-color: var(--color-accent);
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            height: 16px;
+            transition: width .5s ease;
+          }
+
+          #progress-bar-text {
+            margin-top: -12px;
+            font-size: 20px;
+            color: var(--color-subtle_text);
           }
 
           #browser {
@@ -699,7 +724,7 @@
               align-items: center;
               justify-content: center;
               text-align: center;
-              font-size: 1.5rem;
+              font-size: 24px;
               color: var(--color-subtle_text);
             }
           }
@@ -829,7 +854,9 @@
             filesMessage: null,
             itemCount: 0,
             ready: Promise.withResolvers(),
-            lastOpenFormat: null
+            lastOpenFormat: null,
+            progressDone: 0,
+            progressTotal: 0
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -1047,6 +1074,8 @@
               this.navigationFuture = []
               this.searchOpen = false
               this.searchText = ""
+              this.progressDone = 0
+              this.progressTotal = 0
               this.jar = await getVersionJar(this.version)
               if (!Object.keys(this.jar.files).length) {
                 this.jar = null
@@ -1055,7 +1084,7 @@
                 return
               }
               if (this.objects) {
-                for (const [k, v] of Object.entries(await getVersionObjects(this.version))) {
+                for (const [k, v] of Object.entries(await getVersionObjects(this, this.version))) {
                   if (k.endsWith(".png") || k.endsWith(".jpg") || k.endsWith(".jpeg")) {
                     v.content = await fs.promises.readFile(v.path)
                     const img = new Image
@@ -1687,6 +1716,7 @@
                 else if (part === "render_controllers") icon = "visibility"
                 else if (part === "fogs") icon = "foggy"
                 else if (part === "attachables") icon = "electrical_services"
+                else if (part === "ctm") icon = "extension"
                 if (icon) break
               }
               if (icon in customIcons) return customIcons[icon]
@@ -2184,6 +2214,12 @@
               </div>
               <div v-else-if="loadingMessage" id="loading">
                 <div>{{ loadingMessage }}</div>
+                <template v-if="progressTotal">
+                  <div id="progress-bar-container">
+                    <div id="progress-bar" :style="{ width: 'calc(' + Math.round(progressDone / progressTotal * 100) + '% - 8px)' }"></div>
+                  </div>
+                  <div id="progress-bar-text">{{ progressDone }} / {{ progressTotal }} - {{ Math.round(progressDone / progressTotal * 100) }}%</div>
+                </template>
               </div>
               <div v-else id="browser">
                 <div id="browser-header">
@@ -2215,7 +2251,7 @@
                   </div>
                 </div>
                 <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }" @contextmenu.self="sidebarContextMenu">
-                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder[0])" @contextmenu="sidebarItemContextMenu(folder, $event)" :class="{ active: folder === activeSavedFolder }" :title="folder[0].join('/')">
+                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder[0])" @contextmenu="sidebarItemContextMenu(folder, $event)" :class="{ active: folder === activeSavedFolder }" :title="folder[1] ? folder[1] + ' - ' + folder[0].join('/') : folder[0]?.join('/')">
                     <span v-html="getFolderIcon(folder[0], folder[2])"></span>
                     <span>{{ folder[1] ?? folder[0][folder[0].length - 1] }}</span>
                   </div>
@@ -2812,7 +2848,7 @@
     return jar
   }
 
-  async function getVersionObjects(id) {
+  async function getVersionObjects(vue, id) {
     if (!getVersion(id)) return {}
     const version = await getVersionData(id)
     if (version.type.includes("bedrock")) return {}
@@ -2825,6 +2861,7 @@
     version.objects = {}
 
     dialog.content_vue.loadingMessage = `Loading ${id} objects…`
+    vue.progressTotal = objectsEntries.length
 
     for (let i = 0; i < objectsEntries.length; i += 256) {
       const files = []
@@ -2844,7 +2881,7 @@
             }
             version.objects[packPath] = { path: cacheObjectPath }
           }
-          this.done++
+          vue.progressDone++
           fulfil()
         }))
       }
@@ -2935,7 +2972,11 @@
       [["resource_pack", "textures", "blocks"], "Block Textures"],
       [["resource_pack", "textures", "items"], "Item Textures"],
       [["resource_pack", "textures", "entity"], "Entity Textures"],
-      [["resource_pack", "models", "entity"], "Entity Models"]
+      [["resource_pack", "models", "entity"], "Entity Models"],
+      [["item"], "Item Textures"],
+      [["mob"], "Entity Textures"],
+      [["assets", "minecraft", "optifine"], "OptiFine"],
+      [["assets", "minecraft", "optifine", "ctm"], "CTM"]
     ]
     if (force) {
       if (await confirm("Reset Sidebar", "Are you sure you want to reset the sidebar?")) {
