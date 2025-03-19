@@ -1271,10 +1271,19 @@
                     blockbenchOpen.push({
                       content: JSON.parse(content),
                       name: file.name,
-                      type: this.jar.files[file.path].formatType
+                      path: this.path.concat(file.name).join("/"),
+                      type: this.jar.files[file.path].formatType ?? "json"
                     })
-                    closeDialog = true
-                  } catch {}
+                    if (this.jar.files[file.path].formatType) {
+                      closeDialog = true
+                    }
+                  } catch {
+                    blockbenchOpen.push({
+                      content: content.toString(),
+                      name: file.name,
+                      path: this.path.concat(file.name).join("/")
+                    })
+                  }
                 } else {
                   this.openExternally(file.path)
                 }
@@ -1283,14 +1292,162 @@
                 dialog.close()
               }
               if (blockbenchOpen.length) {
-                for (const model of blockbenchOpen) {
-                  if (model.type === "java") {
-                    await this.loadJavaBlockItemModel(model, blockbenchOpen.length)
-                  } else {
+                for (const file of blockbenchOpen) {
+                  if (file.type === "java") {
+                    await this.loadJavaBlockItemModel(file, blockbenchOpen.length)
+                  } else if (file.type === "bedrock") {
                     loadModelFile({
-                      content: JSON.stringify(model.content),
-                      path: `${Date.now()}/${model.name}`
+                      content: JSON.stringify(file.content),
+                      path: `${Date.now()}/${file.name}`
                     })
+                  } else {
+                    const extension = PathModule.extname(file.name) || ".txt"
+                    const parent = this
+                    new Dialog({
+                      id: id + "_text_viewer",
+                      title: file.name,
+                      width: 816,
+                      resizable: true,
+                      buttons: [],
+                      lines: [`<style>#${id}_text_viewer {
+                        .dialog_wrapper {
+                          height: calc(100% - 30px);
+                        }
+
+                        .dialog_content {
+                          height: 100%;
+                          margin: 0;
+                          background-color: var(--color-back);
+                        }
+
+                        .prism-editor-wrapper {
+                          overflow: hidden;
+                          border: none;
+                          user-select: text !important;
+                        }
+
+                        .prism-editor__line-numbers {
+                          min-height: 320px !important;
+                        }
+
+                        #${id}_toolbar {
+                          display: flex;
+                          position: sticky;
+                          top: 0;
+                          z-index: 1;
+                          background-color: var(--color-ui);
+
+                          > div {
+                            cursor: pointer;
+                            padding: 4px 8px;
+
+                            &:hover,
+                            &.active {
+                              background-color: var(--color-selected);
+                            }
+                          }
+                        }
+                      }`],
+                      component: {
+                        data: {
+                          content: file.type === "json" ? autoStringify(file.content) : file.content,
+                          type: file.type,
+                          activeToolbarItem: null,
+                          extension,
+                          name: PathModule.basename(file.name, extension)
+                        },
+                        components: {
+                          VuePrismEditor
+                        },
+                        methods: {
+                          contextMenu(event, id, menu) {
+                            this.activeToolbarItem = id
+                            const coords = event.currentTarget.getBoundingClientRect()
+                            return new Menu(`${id}_context_menu`, menu, {
+                              onClose: () => this.activeToolbarItem = null
+                            }).open({
+                              clientX: coords.left,
+                              clientY: coords.bottom - 1
+                            })
+                          },
+                          contentContextMenu(event) {
+                            const selection = window.getSelection().toString()
+                            if (!selection) return
+                            new Menu(`${id}_context_menu`, [
+                              {
+                                id: "copy",
+                                name: "Copy",
+                                icon: "content_copy",
+                                click: () => navigator.clipboard.writeText(selection)
+                              }
+                            ]).open(event)
+                          },
+                          fileContextMenu(event) {
+                            this.contextMenu(event, "file", [
+                              {
+                                id: "save",
+                                name: "Save",
+                                icon: "save",
+                                click: () => Blockbench.export({
+                                  extensions: [this.extension.slice(1)],
+                                  type: this.extension.toUpperCase(),
+                                  name: this.name,
+                                  savetype: "buffer",
+                                  content: Buffer.from(this.content)
+                                }, () => Blockbench.showQuickMessage(`Saved ${file.name}`))
+                              },
+                              {
+                                id: "copy",
+                                name: "Copy",
+                                icon: "content_copy",
+                                click: () => navigator.clipboard.writeText(this.content)
+                              }
+                            ])
+                          },
+                          editContextMenu(event) {
+                            this.contextMenu(event, "edit", [{
+                              id: "edit_externally",
+                              name: "Edit Externally",
+                              icon: "open_in_new",
+                              click: () => parent.openExternally(file.path)
+                            }])
+                          },
+                          languageContextMenu(event) {
+                            const menu = this.contextMenu(event, "language", [
+                              {
+                                id: "text",
+                                name: "Text",
+                                icon: "text_fields",
+                                click: () => this.type = "plaintext",
+                                enabled: true
+                              },
+                              {
+                                id: "json",
+                                name: "JSON",
+                                icon: "data_object",
+                                click: () => this.type = "json",
+                                enabled: true
+                              }
+                            ])
+                            if (this.type === "json") {
+                              menu.node.children[1].classList.add("enabled")
+                            } else {
+                              menu.node.children[0].classList.add("enabled")
+                            }
+                          }
+                        },
+                        template: `
+                          <div id="${id}_text_viewer_container">
+                            <div id="${id}_toolbar">
+                              <div @click="fileContextMenu" @contextmenu="fileContextMenu" :class="{ active: activeToolbarItem === 'file' }">File</div>
+                              <div @click="editContextMenu" @contextmenu="editContextMenu" :class="{ active: activeToolbarItem === 'edit' }">Edit</div>
+                              <div @click="languageContextMenu" @contextmenu="languageContextMenu" :class="{ active: activeToolbarItem === 'language' }">Language</div>
+                            </div>
+                            <vue-prism-editor id="${id}_text_viewer_editor" v-model="content" :language="type" line-numbers readonly @contextmenu="contentContextMenu"/>
+                          </div>
+                        `
+                      }
+                    }).show()
                   }
                 }
               }
@@ -1374,7 +1531,7 @@
             async blockbenchOpenable(file) {
               const data = this.jar.files[file]
               if (data.blockbenchOpenable !== undefined) return data.blockbenchOpenable
-              if (file.endsWith(".png") || file.endsWith(".zip")) {
+              if (["png", "zip", "mcmeta", "txt", "cfg", "glsl", "vsh", "fsh", "properties"].includes(PathModule.extname(file).slice(1)) || !file.includes(".")) {
                 data.blockbenchOpenable = true
                 return true
               }
@@ -1382,20 +1539,18 @@
                 data.blockbenchOpenable = false
                 return false
               }
-              data.blockbenchOpenable = false
+              data.blockbenchOpenable = true
               const content = await this.getFileContent(file)
               try {
                 const fileData = JSON.parse(content)
                 const keys = Object.keys(fileData)
                 if (keys.every(e => javaBlock.items.has(e)) && keys.some(e => javaBlock.oneOf.has(e))) {
-                  data.blockbenchOpenable = true
                   data.formatType = "java"
                 } else if (keys.includes("format_version") && keys.some(e => e.includes("geometry"))) {
-                  data.blockbenchOpenable = true
                   data.formatType = "bedrock"
                 }
               } catch {}
-              return data.blockbenchOpenable
+              return true
             },
             async openExternally(file) {
               const extension = PathModule.extname(file)
@@ -1600,7 +1755,7 @@
                   icon: "fa-file-export",
                   click: () => this.exportFiles(this.selected)
                 }
-              ]).show(event)
+              ]).open(event)
             },
             sidebarItemContextMenu(folder, event) {
               this.activeSavedFolder = folder
@@ -1733,7 +1888,7 @@
                 }
               ], {
                 onClose: () => this.activeSavedFolder = null
-              }).show(event)
+              }).open(event)
             },
             sidebarContextMenu(event) {
               new Menu(`${id}_context_menu`, [
@@ -1762,7 +1917,7 @@
                   icon: "fa-file-export",
                   click: () => this.exportFiles(this.currentFolderContents.map(e => e[0]))
                 }
-              ]).show(event)
+              ]).open(event)
             },
             getFileIcon(file, value) {
               if (file.includes(".lang") || value.startsWith("assets/minecraft/lang/")) return "translate"
