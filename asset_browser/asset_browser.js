@@ -1452,7 +1452,7 @@
                 }
               }
             },
-            async loadJavaBlockItemModel(model, loadCount = 1) {
+            async loadJavaBlockItemModel(model, loadCount = 1, importMode) {
               let noElements, textures
               if (!model.content.elements && !(item_parents.includes(model.content.parent) && model.content.textures?.layer0)) {
                 noElements = true
@@ -1471,19 +1471,25 @@
                   model.content.textures[k] = data
                 }
               }
-              loadModelFile({
-                content: JSON.stringify(model.content),
-                path: `${Date.now()}/${model.name}`
-              })
+              if (importMode) {
+                Codecs.java_block.parse(model.content, model.name, true)
+              } else {
+                loadModelFile({
+                  content: JSON.stringify(model.content),
+                  path: `${Date.now()}/${model.name}`
+                })
+              }
               for (const texture of Project.textures) {
-                const data = textures.get(texture.img.src)
-                if (data) {
-                  texture.minecraft_id = "#" + data.id
-                  const match = data.path.match(/^(?:([^:]+):)?(?:(.+)\/)?([^\/]+)$/)
-                  texture.name = match[3] + ".png"
-                  texture.namespace = match[1] ?? "minecraft"
-                  if (match[2]) {
-                    texture.folder = match[2]
+                if (!texture.name) {
+                  const data = textures.get(texture.img.src)
+                  if (data) {
+                    texture.minecraft_id = "#" + data.id
+                    const match = data.path.match(/^(?:([^:]+):)?(?:(.+)\/)?([^\/]+)$/)
+                    texture.name = match[3] + ".png"
+                    texture.namespace = match[1] ?? "minecraft"
+                    if (match[2]) {
+                      texture.folder = match[2]
+                    }
                   }
                 }
               }
@@ -1554,27 +1560,26 @@
             },
             async blockbenchImportable(file) {
               const data = this.jar.files[file]
-              if (data.blockbenchImportable !== undefined) return data.blockbenchImportable
-              if (["png", "zip", "mcmeta", "txt", "cfg", "glsl", "vsh", "fsh", "properties"].includes(PathModule.extname(file).slice(1)) || !file.includes(".")) {
-                data.blockbenchOpenable = true
+              if (data.blockbenchImportable !== undefined) return data.blockbenchImportable?.() ?? data.blockbenchImportable
+              if (file.endsWith(".png")) {
+                data.blockbenchImportable = true
                 return true
               }
               if (!file.endsWith(".json")) {
-                data.blockbenchOpenable = false
+                data.blockbenchImportable = false
                 return false
               }
-              data.blockbenchOpenable = true
+              data.blockbenchImportable = false
               const content = await this.getFileContent(file)
               try {
                 const fileData = JSON.parse(content)
                 const keys = Object.keys(fileData)
                 if (keys.every(e => javaBlock.items.has(e)) && keys.some(e => javaBlock.oneOf.has(e))) {
                   data.formatType = "java"
-                } else if (keys.includes("format_version") && keys.some(e => e.includes("geometry"))) {
-                  data.formatType = "bedrock"
+                  data.blockbenchImportable = () => Format.id === "java_block"
                 }
               } catch {}
-              return true
+              return data.blockbenchImportable?.() ?? data.blockbenchImportable
             },
             async openExternally(file) {
               const extension = PathModule.extname(file)
@@ -1704,8 +1709,7 @@
                   folder: dir === "." ? "" : dir,
                   type: isFolder ? "folder" : "file",
                   openable: isFolder || await this.blockbenchOpenable(path),
-                  importable: !isFolder && await this.blockbenchImportable(path),
-                  project: e.endsWith(".png")
+                  importable: !isFolder && await this.blockbenchImportable(path)
                 }
               }))
               return [
@@ -1752,15 +1756,21 @@
                   id: "import_to_project",
                   name: "Import to Project",
                   icon: "enable",
-                  condition: Project && selectionType === "file" && selected.some(e => e.project),
+                  condition: Project && selectionType === "file" && selected.some(e => e.importable),
                   click: async () => {
                     if (!(await this.openFilesCheck())) return
                     dialog.close()
-                    for (const file of selected) {
-                      if (file.project) {
+                    const filtered = selected.filter(e => e.importable)
+                    for (const file of filtered) {
+                      if (file.name.endsWith(".png")) {
                         new Texture({
                           name: PathModule.basename(file.name),
                         }).fromDataURL("data:image/png;base64," + (await this.getFileContent(file.path)).toString("base64")).add()
+                      } else {
+                        this.loadJavaBlockItemModel({
+                          content: JSON.parse(await this.getFileContent(file.path)),
+                          name: file.name
+                        }, filtered.length, true)
                       }
                     }
                   }
