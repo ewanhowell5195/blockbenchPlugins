@@ -1552,6 +1552,30 @@
               } catch {}
               return true
             },
+            async blockbenchImportable(file) {
+              const data = this.jar.files[file]
+              if (data.blockbenchImportable !== undefined) return data.blockbenchImportable
+              if (["png", "zip", "mcmeta", "txt", "cfg", "glsl", "vsh", "fsh", "properties"].includes(PathModule.extname(file).slice(1)) || !file.includes(".")) {
+                data.blockbenchOpenable = true
+                return true
+              }
+              if (!file.endsWith(".json")) {
+                data.blockbenchOpenable = false
+                return false
+              }
+              data.blockbenchOpenable = true
+              const content = await this.getFileContent(file)
+              try {
+                const fileData = JSON.parse(content)
+                const keys = Object.keys(fileData)
+                if (keys.every(e => javaBlock.items.has(e)) && keys.some(e => javaBlock.oneOf.has(e))) {
+                  data.formatType = "java"
+                } else if (keys.includes("format_version") && keys.some(e => e.includes("geometry"))) {
+                  data.formatType = "bedrock"
+                }
+              } catch {}
+              return true
+            },
             async openExternally(file) {
               const extension = PathModule.extname(file)
               const tempPath = PathModule.join(os.tmpdir(), `${PathModule.basename(file, extension)}_${Date.now()}${extension}`)
@@ -1577,7 +1601,7 @@
               for (const part of this.path) {
                 current = current[part]
               }
-              if (files.length === 1 && (typeof current[files[0]] === "string" || files[0].endsWith(".zip"))) {
+              if (files.length === 1 && (this.jar.files[this.path.concat(files[0]).join("/")] || files[0].endsWith(".zip"))) {
                 const ext = PathModule.extname(files[0]).slice(1) || "txt"
                 return Blockbench.export({
                   extensions: [ext],
@@ -1597,14 +1621,14 @@
               this.progressTotal = 0
               
               const folders = new Set()
-              const exportFiles = []
+              const exportFiles = new Set()
 
               async function traverse(node, currentPath) {
                 let hasFiles = false
                 for (const key of Object.keys(node)) {
                   const newPath = currentPath.concat(key)
                   if (typeof node[key] === "string" || key.endsWith(".zip")) {
-                    exportFiles.push(newPath.join("/"))
+                    exportFiles.add(newPath.join("/"))
                     hasFiles = true
                   } else {
                     if (await traverse(node[key], newPath)) {
@@ -1615,28 +1639,38 @@
                 return hasFiles
               }
 
+              const start = current
               for (const file of files) {
-                if (!current[file]) continue
-                if (typeof current[file] === "string" || file.endsWith(".zip")) {
-                  exportFiles.push(file)
+                current = start
+                const path = file.split("/")
+                const name = path.pop()
+                for (const part of path) {
+                  current = current[part]
+                }
+                if (typeof current[name] === "string" || name.endsWith(".zip")) {
+                  exportFiles.add(file)
+                  if (path.length) {
+                    folders.add(path.join("/"))
+                  }
                 } else {
                   folders.add(file)
-                  await traverse(current[file], [file])
+                  await traverse(current[name], path.concat(name))
                 }
               }
 
-              this.progressTotal = exportFiles.length
+              this.progressTotal = exportFiles.size
 
               await Promise.all(Array.from(folders).map(folder => fs.promises.mkdir(PathModule.join(dir, folder), { recursive: true })))
               
-              for (let i = 0; i < exportFiles.length; i += 256) {
-                await Promise.all(exportFiles.slice(i, i + 256).map(async filePath => {
+              const exportFilesArray = Array.from(exportFiles)
+              for (let i = 0; i < exportFiles.size; i += 256) {
+                await Promise.all(exportFilesArray.slice(i, i + 256).map(async filePath => {
                   await fs.promises.writeFile(PathModule.join(dir, filePath), await this.getFileContent(this.path.concat(filePath).join("/")))
                   this.progressDone++
                 }))
               }
 
-              Blockbench.showQuickMessage(`Exported ${exportFiles.length} files`)
+              Blockbench.showQuickMessage(`Exported ${exportFiles.size} files`)
 
               this.exporting = false
               this.loadingMessage = null
@@ -1659,14 +1693,18 @@
               return element.outerHTML
             },
             async getDetailedSelection() {
+              const currentFolder = this.path.join("/")
               const selected = await Promise.all(this.selected.map(async e => {
-                const path = this.path.concat(e).join("/")
+                const path = currentFolder ? currentFolder + "/" + e : e
                 const isFolder = !this.jar.files[path] || e.endsWith(".zip")
+                const dir = PathModule.dirname(path)
                 return {
                   name: e,
                   path: path,
+                  folder: dir === "." ? "" : dir,
                   type: isFolder ? "folder" : "file",
                   openable: isFolder || await this.blockbenchOpenable(path),
+                  importable: !isFolder && await this.blockbenchImportable(path),
                   project: e.endsWith(".png")
                 }
               }))
@@ -1681,6 +1719,7 @@
                 this.selected = [name]
               }
               const [selected, selectionType] = await this.getDetailedSelection()
+              const currentFolder = this.path.join("/")
               new Menu(`${id}_context_menu`, [
                 {
                   id: "open",
@@ -1700,6 +1739,13 @@
                       this.openExternally(file.path)
                     }
                   }
+                },
+                {
+                  id: "open_file_location",
+                  name: "Open File Location",
+                  icon: "drive_file_move",
+                  condition: selected.every(e => e.folder === selected[0].folder) && selected[0].folder !== currentFolder,
+                  click: () => this.openFolder(selected[0].folder.split("/"))
                 },
                 "_",
                 {
@@ -3027,10 +3073,8 @@
     if (!version) {
       const dataPath = loadedJars[id].files["version.json"]
       if (dataPath) {
-        try {
-          const data = JSON.parse(dataPath.content)
-          version = manifest.versions.find(e => e.id === data.id)
-        } catch {}
+        const data = JSON.parse(dataPath.content)
+        version = manifest.versions.find(e => e.id === data.id)
       }
     }
     return version
