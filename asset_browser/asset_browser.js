@@ -1560,7 +1560,9 @@
             },
             async blockbenchImportable(file) {
               const data = this.jar.files[file]
-              if (data.blockbenchImportable !== undefined) return data.blockbenchImportable?.() ?? data.blockbenchImportable
+              if (data.blockbenchImportable !== undefined) {
+                return typeof data.blockbenchImportable === "function" ? data.blockbenchImportable() : data.blockbenchImportable
+              }
               if (file.endsWith(".png")) {
                 data.blockbenchImportable = true
                 return true
@@ -1579,7 +1581,7 @@
                   data.blockbenchImportable = () => Format.id === "java_block"
                 }
               } catch {}
-              return data.blockbenchImportable?.() ?? data.blockbenchImportable
+              return typeof data.blockbenchImportable === "function" ? data.blockbenchImportable() : data.blockbenchImportable
             },
             async openExternally(file) {
               const extension = PathModule.extname(file)
@@ -2732,7 +2734,7 @@
       })
       MenuBar.addAction(action, "tools")
       Toolbars.texturelist.add(action2, 4)
-      dialog.show()
+      // dialog.show()
     },
     onunload() {
       dialog.close()
@@ -3214,12 +3216,12 @@
     if (as === bs) {
       return 0
     }
-    if (typeof as !== 'string') {
+    if (typeof as !== "string") {
       a = as.toString().toLowerCase().match(rx)
     } else {
       a = as.toLowerCase().match(rx)
     }
-    if (typeof bs !== 'string') {
+    if (typeof bs !== "string") {
       b = bs.toString().toLowerCase().match(rx)
     } else {
       b = bs.toLowerCase().match(rx)
