@@ -3549,7 +3549,10 @@
       if (file in newJar.files) {
         const newData = newJar.files[file]
         if (data.crc32 !== newData.crc32) {
-          jar.files["changed/" + file] = newData
+          const ext = PathModule.extname(file)
+          const name = file.slice(0, -ext.length)
+          jar.files[`changed/${name}.NEW${ext}`] = newData
+          jar.files[`changed/${name}.OLD${ext}`] = data
         }
       } else {
         jar.files["removed/" + file] = data
