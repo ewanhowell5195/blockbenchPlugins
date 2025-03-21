@@ -68,6 +68,7 @@
     onload() {
       storage = JSON.parse(localStorage.getItem(id) ?? "{}")
       storage.recents ??= []
+      storage.recentComparisons ??= []
       loadSidebar()
       let directory
       if (os.platform() === "win32") {
@@ -149,13 +150,17 @@
           #browser {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
             height: 100%;
             flex: 1;
           }
 
           #index {
-            padding: 16px;
+            padding: 12px 16px;
+          }
+
+          bb-select {
+            cursor: pointer;
           }
 
           hr {
@@ -173,6 +178,10 @@
             > hr {
               height: 100%;
               width: 1px;
+            }
+
+            > i {
+              align-self: flex-start;
             }
           }
 
@@ -192,11 +201,17 @@
 
             .version {
               cursor: pointer;
-              padding: 0 8px;
-              height: 30px;
+              padding: 6px 8px;
+              min-height: 30px;
               display: flex;
               align-items: center;
               gap: 4px;
+              flex-wrap: wrap;
+              line-height: 1;
+
+              * {
+                cursor: pointer;
+              }
 
               &:hover {
                 background-color: var(--color-selected);
@@ -207,6 +222,22 @@
                 display: flex;
                 align-items: center
               }
+
+              i {
+                height: 16px;
+                display: flex;
+                align-items: center;
+              }
+            }
+          }
+
+          .version-button-heading {
+            font-size: 14px;
+            font-weight: 600;
+            min-width: 100%;
+
+            &:not(:first-child) {
+              margin-top: 4px;
             }
           }
 
@@ -238,12 +269,17 @@
 
           .checkbox-row {
             display: flex;
-            gap: 4px;
+            gap: 8px;
             align-items: center;
             cursor: pointer;
+            line-height: 1;
 
             * {
               cursor: pointer;
+            }
+
+            input {
+              min-width: initial;
             }
           }
 
@@ -403,6 +439,9 @@
               position: relative;
               font-weight: 600;
               white-space: nowrap;
+              display: flex;
+              align-items: center;
+              gap: 5px;
 
               &::after {
                 font-family: "Material Icons";
@@ -474,6 +513,10 @@
           #breadcrumbs {
             border-left: none !important;
             margin: 0 54px 0 8px;
+
+            i {
+              font-size: 12px;
+            }
           }
 
           #browser-search {
@@ -822,6 +865,29 @@
               background-color: var(--color-back);
             }
           }
+
+          #mode-tabs {
+            display: flex;
+            padding: 4px 4px 0;
+            background-color: var(--color-frame);
+            gap: 2px;
+            margin: -12px -16px -8px;
+
+            > div {
+              flex: 1;
+              border-top: 2px solid transparent;
+              cursor: pointer;
+              background-color: var(--color-back);
+              text-align: center;
+              padding: 4px 12px;
+
+              &.active {
+                background-color: var(--color-ui);
+                border-top: 2px solid var(--color-accent);
+                cursor: default;
+              }
+            }
+          }
         }</style>`],
         component: {
           data: {
@@ -866,7 +932,13 @@
             lastOpenFormat: null,
             progressDone: 0,
             progressTotal: 0,
-            exporting: false
+            exporting: false,
+            mode: "assets",
+            compareType: storage.compareType ?? "release",
+            compareSelectedVersions: {},
+            compareVersion: null,
+            recentComparisons: storage.recentComparisons,
+            suggestedComparisons: []
           },
           components: {
             "animated-texture": animatedTexureComponent(),
@@ -1073,9 +1145,18 @@
                 storage.type = this.type
                 save()
               }
+              if (this.compareSelectedVersions[this.compareType]) {
+                this.compareVersion = this.compareSelectedVersions[this.compareType]
+                storage.compareType = this.compareType
+                save()
+              }
             },
             async loadVersion(path = []) {
-              this.loadingMessage = `Loading ${this.version}…`
+              if (this.mode === "assets") {
+                this.loadingMessage = `Loading ${this.version}…`
+              } else {
+                this.loadingMessage = `Loading ${this.compareVersion} and ${this.version}…`
+              }
               this.path = path
               this.navigationHistory = [[]]
               this.navigationFuture = []
@@ -1083,14 +1164,18 @@
               this.searchText = ""
               this.progressDone = 0
               this.progressTotal = 0
-              this.jar = await getVersionJar(this.version)
+              if (this.mode === "assets") {
+                this.jar = await getVersionJar(this.version)
+              } else {
+                this.jar = await getVersionComparison(this.compareVersion, this.version)
+              }
               if (!Object.keys(this.jar.files).length) {
                 this.jar = null
                 this.loadingMessage = null
                 Blockbench.showQuickMessage("Unable to load version. It may be corrupted")
                 return
               }
-              if (this.objects) {
+              if (this.mode === "assets" && this.objects) {
                 for (const [k, v] of Object.entries(await getVersionObjects(this, this.version))) {
                   if (k.endsWith(".png") || k.endsWith(".jpg") || k.endsWith(".jpeg")) {
                     v.content = await fs.promises.readFile(v.path)
@@ -1116,12 +1201,6 @@
               for (let [path, value] of Object.entries(this.jar.files)) {
                 const parts = path.split("/")
                 if (parts[0] === "optifine") continue
-                if (parts[0].startsWith("bedrock-samples")) {
-                  parts.splice(0, 1)
-                  this.$set(this.jar.files, parts.join("/"), value)
-                  delete this.jar.files[path]
-                  path = parts.join("/")
-                }
                 let current = this.tree
                 const zip = parts.some(e => e.endsWith(".zip"))
                 for (const [index, part] of parts.entries()) {
@@ -1137,12 +1216,23 @@
                   flipbook_texture: "textures/flame_atlas"
                 })
               }
-              if (storage.recents.includes(this.version)) {
-                storage.recents.splice(storage.recents.indexOf(this.version), 1)
-              }
-              storage.recents.unshift(this.version)
-              if (storage.length > 20) {
-                storage.recents.length = 20
+              if (this.mode === "assets") {
+                if (storage.recents.includes(this.version)) {
+                  storage.recents.splice(storage.recents.indexOf(this.version), 1)
+                }
+                storage.recents.unshift(this.version)
+                if (storage.length > 20) {
+                  storage.recents.length = 20
+                }
+              } else {
+                const index = storage.recentComparisons.findIndex(e => e[0] === this.compareVersion && e[1] === this.version)
+                if (index !== -1) {
+                  storage.recentComparisons.splice(index, 1)
+                }
+                storage.recentComparisons.unshift([this.compareVersion, this.version])
+                if (storage.length > 20) {
+                  storage.recentComparisons.length = 20
+                }
               }
               save()
               this.loadingMessage = null
@@ -1781,11 +1871,25 @@
                   id: "pin_to_sidebar",
                   name: "Pin to Sidebar",
                   icon: "push_pin",
-                  condition: selectionType === "folder" && selected.some(e => !this.savedFolders.some(saved => saved[0].join("/") === e.path)),
+                  condition: selectionType === "folder" && selected.some(e => {
+                    let path = e.path
+                    if (this.mode === "compare") {
+                      path = path.replace(/^[^\/]+\//, "")
+                    }
+                    return !this.savedFolders.some(saved => saved[0].join("/") === path)
+                  }),
                   click: () => {
+                    let path = this.path
+                    if (this.mode === "compare") {
+                      path = path.slice(1)
+                    }
                     for (const folder of selected) {
-                      if (!this.savedFolders.some(saved => saved[0].join("/") === folder.path)) {
-                        storage.savedFolders.push([this.path.slice().concat(folder.name)])
+                      let folderPath = folder.path
+                      if (this.mode === "compare") {
+                        folderPath = folderPath.replace(/^[^\/]+\//, "")
+                      }
+                      if (!this.savedFolders.some(saved => saved[0].join("/") === folderPath)) {
+                        storage.savedFolders.push([path.slice().concat(folder.name)])
                       }
                     }
                     save()
@@ -1795,10 +1899,20 @@
                   id: "unpin_from_sidebar",
                   name: "Unpin from Sidebar",
                   icon: "push_pin",
-                  condition: selectionType === "folder" && !selected.some(e => !this.savedFolders.some(saved => saved[0].join("/") === e.path)),
+                  condition: selectionType === "folder" && !selected.some(e => {
+                    let path = e.path
+                    if (this.mode === "compare") {
+                      path = path.replace(/^[^\/]+\//, "")
+                    }
+                    return !this.savedFolders.some(saved => saved[0].join("/") === path)
+                  }),
                   click: () => {
                     for (const folder of selected) {
-                      const index = this.savedFolders.findIndex(e => e[0].join("/") === folder.path)
+                      let folderPath = folder.path
+                      if (this.mode === "compare") {
+                        folderPath = folderPath.replace(/^[^\/]+\//, "")
+                      }
+                      const index = this.savedFolders.findIndex(e => e[0].join("/") === folderPath)
                       if (index !== -1) {
                         storage.savedFolders.splice(index, 1)
                       }
@@ -2046,6 +2160,7 @@
               this.searchOpen = false
               this.searchText = ""
               this.path = path.slice()
+              this.getValidSavedFolders()
               if (this.$refs.files) {
                 this.$refs.files.$el.scrollTop = 0
               }
@@ -2149,8 +2264,12 @@
               return current
             },
             async getValidSavedFolders() {
+              let start = this.tree
+              if (this.mode === "compare" && this.path.length) {
+                start = start[this.path[0]]
+              }
               this.validSavedFolders = (await Promise.all(this.savedFolders.map(async folder => {
-                let current = this.tree
+                let current = start
                 for (const segment of folder[0]) {
                   if (typeof current === "string" && current.endsWith(".zip")) {
                     current = await this.loadZip(current)
@@ -2261,6 +2380,9 @@
               this.$nextTick(() => this.$refs.files.onScroll())
             },
             getFileLabel(folder, file, value) {
+              if (this.mode === "compare") {
+                folder = folder.slice(1)
+              }
               const path = folder.concat(file).join("/")
               file = PathModule.basename(path)
               const ext = file.includes(".") ? file.split(".").pop() : null
@@ -2469,61 +2591,136 @@
                 }
               }
               return file.replace(/(_|\.|\/)/g, '$1​')
+            },
+            changeMode(mode) {
+              this.mode = mode
+              if (this.objects && mode === "compare") {
+                loadedJars = {}
+              }
+            },
+            openSavedFolder(folder) {
+              if (this.mode === "assets") {
+                this.openFolder(folder)
+              } else {
+                this.openFolder([this.path[0], ...folder])
+              }
             }
           },
           template: `
             <div id="${id}-container" tabindex="0" @keydown="keydownHandler" @click="event.target.tagName === 'INPUT' ? null : event.currentTarget.focus()">
               <div v-if="!jar && !loadingMessage" id="index">
-                <div class="index-row">
-                  <div class="index-column">
-                    <div class="index-heading">Release Type</div>
-                    <select-input v-model="type" :options="manifest.types" @input="updateVersion" />
-                  </div>
-                  <div class="index-column">
-                    <div class="index-heading">Minecraft Version</div>
-                    <template v-for="id in Object.keys(manifest.types)">
-                      <select-input v-if="type === id" v-model="selectedVersions[id]" :options="Object.fromEntries(manifest.versions.filter(e => e.type === id).map(e => [e.id, e.id]))" @input="updateVersion" />
-                    </template>
-                  </div>
+                <div id="mode-tabs">
+                  <div @click="changeMode('assets')" :class="{ active: mode === 'assets' }">View Assets</div>
+                  <div @click="changeMode('compare')" :class="{ active: mode === 'compare' }">Compare Assets</div>
                 </div>
-                <button @click="updateVersion(); loadVersion()">Load Assets</button>
-                <hr>
-                <div id="version-search">
-                  <input type="text" placeholder="Filter…" class="dark_bordered" v-model="versionSearch" ref="entry" @input="versionSearch = versionSearch.toLowerCase()">
-                  <i class="material-icons" :class="{ active: versionSearch }" @click="versionSearch = ''; setTimeout(() => $refs.entry.focus(), 0)">{{ versionSearch ? "clear" : "search" }}</i>
-                </div>
-                <div class="index-row" style="flex: 1;">
-                  <div class="index-column">
-                    <div class="index-heading">Recently Viewed</div>
-                    <div class="version-list">
-                      <template v-if="recentVersions.some(id => id.toLowerCase().includes(versionSearch))">
-                        <div v-for="id in recentVersions" v-if="id.toLowerCase().includes(versionSearch)" class="version" @click="version = id; loadVersion()">
-                          <span v-html="getVersionIcon(id)"></span>
-                          <span>{{ id }}</span>
-                        </div>
+                <template v-if="mode === 'assets'">
+                  <div class="index-row">
+                    <div class="index-column">
+                      <div class="index-heading">Release Type</div>
+                      <select-input v-model="type" :options="manifest.types" @input="updateVersion" />
+                    </div>
+                    <div class="index-column">
+                      <div class="index-heading">Minecraft Version</div>
+                      <template v-for="id in Object.keys(manifest.types)">
+                        <select-input v-if="type === id" v-model="selectedVersions[id]" :options="Object.fromEntries(manifest.versions.filter(e => e.type === id).map(e => [e.id, e.id]))" @input="updateVersion" />
                       </template>
-                      <div v-else class="no-results">No recently viewed versions</div>
+                    </div>
+                  </div>
+                  <button v-if="mode === 'assets'" @click="updateVersion(); loadVersion()">Load Assets</button>
+                  <hr>
+                  <div id="version-search">
+                    <input type="text" placeholder="Filter…" class="dark_bordered" v-model="versionSearch" ref="entry" @input="versionSearch = versionSearch.toLowerCase()">
+                    <i class="material-icons" :class="{ active: versionSearch }" @click="versionSearch = ''; setTimeout(() => $refs.entry.focus(), 0)">{{ versionSearch ? "clear" : "search" }}</i>
+                  </div>
+                  <div class="index-row" style="flex: 1;">
+                    <div class="index-column">
+                      <div class="index-heading">Recently Viewed</div>
+                      <div class="version-list">
+                        <template v-if="recentVersions.some(id => id.toLowerCase().includes(versionSearch))">
+                          <div v-for="id in recentVersions" v-if="id.toLowerCase().includes(versionSearch)" class="version" @click="version = id; loadVersion()">
+                            <span v-html="getVersionIcon(id)"></span>
+                            <span>{{ id }}</span>
+                          </div>
+                        </template>
+                        <div v-else class="no-results">No recently viewed versions</div>
+                      </div>
+                    </div>
+                    <hr>
+                    <div class="index-column">
+                      <div class="index-heading">Downloaded Versions</div>
+                      <div class="version-list">
+                        <template v-if="downloadedVersions.some(data => data.id.toLowerCase().includes(versionSearch))">
+                          <div v-for="data in downloadedVersions" v-if="data.id.toLowerCase().includes(versionSearch)" class="version" @click="version = data.id; loadVersion()">
+                            <span v-html="getVersionIcon(data.id)"></span>
+                            <span>{{ data.id }}</span>
+                          </div>
+                        </template>
+                        <div v-else class="no-results">No downloaded versions</div>
+                      </div>
                     </div>
                   </div>
                   <hr>
-                  <div class="index-column">
-                    <div class="index-heading">Downloaded Versions</div>
-                    <div class="version-list">
-                      <template v-if="downloadedVersions.some(data => data.id.toLowerCase().includes(versionSearch))">
-                        <div v-for="data in downloadedVersions" v-if="data.id.toLowerCase().includes(versionSearch)" class="version" @click="version = data.id; loadVersion()">
-                          <span v-html="getVersionIcon(data.id)"></span>
-                          <span>{{ data.id }}</span>
-                        </div>
+                  <label class="checkbox-row">
+                    <input type="checkbox" :checked="objects" @input="toggleObjects">
+                    <div>Include objects (sounds, languages, panorama, etc…)</div>
+                  </label>
+                </template>
+                <template v-else>
+                  <div class="index-row">
+                    <div class="index-column">
+                      <div class="index-heading">Old Version</div>
+                      <select-input v-model="compareType" :options="manifest.types" @input="updateVersion" />
+                      <template v-for="id in Object.keys(manifest.types)">
+                        <select-input v-if="compareType === id" v-model="compareSelectedVersions[id]" :options="Object.fromEntries(manifest.versions.filter(e => e.type === id).map(e => [e.id, e.id]))" @input="updateVersion" />
                       </template>
-                      <div v-else class="no-results">No downloaded versions</div>
+                    </div>
+                    <i class="material-icons" style="transform: translateY(62px); font-size: 32px; min-width: 32px;">arrow_forward</i>
+                    <div class="index-column">
+                      <div class="index-heading">New Version</div>
+                      <select-input v-model="type" :options="manifest.types" @input="updateVersion" />
+                      <template v-for="id in Object.keys(manifest.types)">
+                        <select-input v-if="type === id" v-model="selectedVersions[id]" :options="Object.fromEntries(manifest.versions.filter(e => e.type === id).map(e => [e.id, e.id]))" @input="updateVersion" />
+                      </template>
                     </div>
                   </div>
-                </div>
-                <hr>
-                <label class="checkbox-row">
-                  <input type="checkbox" :checked="objects" @input="toggleObjects">
-                  <div>Include objects (sounds, languages, panorama, etc…)</div>
-                </label>
+                  <button @click="updateVersion(); loadVersion()">Compare Assets</button>
+                  <hr>
+                  <div class="index-row" style="flex: 1;">
+                    <div class="index-column">
+                      <div class="index-heading">Suggested Comparisons</div>
+                      <div class="version-list">
+                        <div v-for="id in suggestedComparisons" class="version" @click="compareVersion = id[1]; version = id[2]; loadVersion()">
+                          <div class="version-button-heading">{{ id[0] }}</div>
+                          <span v-html="getVersionIcon(id[1])"></span>
+                          <span>{{ id[1] }}</span>
+                          <i class="material-icons">arrow_forward</i>
+                          <span v-html="getVersionIcon(id[2])"></span>
+                          <span>{{ id[2] }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <hr>
+                    <div class="index-column">
+                      <div class="index-heading">Recently Compared</div>
+                      <div id="version-search">
+                        <input type="text" placeholder="Filter…" class="dark_bordered" v-model="versionSearch" ref="entry" @input="versionSearch = versionSearch.toLowerCase()">
+                        <i class="material-icons" :class="{ active: versionSearch }" @click="versionSearch = ''; setTimeout(() => $refs.entry.focus(), 0)">{{ versionSearch ? "clear" : "search" }}</i>
+                      </div>
+                      <div class="version-list">
+                        <template v-if="recentComparisons.some(e => e[0].toLowerCase().includes(versionSearch) || e[1].toLowerCase().includes(versionSearch))">
+                          <div v-for="id in recentComparisons" v-if="id[0].toLowerCase().includes(versionSearch) || id[1].toLowerCase().includes(versionSearch)" class="version" @click="compareVersion = id[0]; version = id[1]; loadVersion()">
+                            <span v-html="getVersionIcon(id[0])"></span>
+                            <span>{{ id[0] }}</span>
+                            <i class="material-icons">arrow_forward</i>
+                            <span v-html="getVersionIcon(id[1])"></span>
+                            <span>{{ id[1] }}</span>
+                          </div>
+                        </template>
+                        <div v-else class="no-results">No recently compared versions</div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
               </div>
               <div v-else-if="loadingMessage" id="loading">
                 <div>{{ loadingMessage }}</div>
@@ -2555,7 +2752,12 @@
                     </div>
                   </div>
                   <div id="breadcrumbs" ref="breadcrumbs">
-                    <div @click="openFolder([])">{{ version }}</div>
+                    <div v-if="mode === 'assets'" @click="openFolder([])">{{ version }}</div>
+                    <div v-else @click="openFolder([])">
+                      <span>{{ compareVersion }}</span>
+                      <i class="material-icons">arrow_forward</i>
+                      <span>{{ version }}</span>
+                    </div>
                     <div v-for="[i, part] of path.entries()" @click="openFolder(path.slice(0, i + 1))">{{ part }}</div>
                   </div>
                   <div id="browser-search" :class="{ open: searchOpen }" :style="{ width: searchOpen ? 'calc(100% - 2px - ' + ($refs.navigation.clientWidth + $refs.homeButton.clientWidth) + 'px)' : '54px' }">
@@ -2564,7 +2766,7 @@
                   </div>
                 </div>
                 <div v-if="validSavedFolders.length" id="browser-sidebar" :class="{ open: sidebarVisible }" @contextmenu.self="sidebarContextMenu">
-                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openFolder(folder[0])" @contextmenu="sidebarItemContextMenu(folder, $event)" :class="{ active: folder === activeSavedFolder }" :title="folder[1] ? folder[1] + ' - ' + folder[0].join('/') : folder[0]?.join('/')">
+                  <div v-for="folder of validSavedFolders" :key="folder.join()" class="saved-folder" @click="openSavedFolder(folder[0])" @contextmenu="sidebarItemContextMenu(folder, $event)" :class="{ active: folder === activeSavedFolder }" :title="folder[1] ? folder[1] + ' - ' + folder[0].join('/') : folder[0]?.join('/')">
                     <span v-html="getFolderIcon(folder[0], folder[2])"></span>
                     <span>{{ folder[1] ?? folder[0][folder[0].length - 1] }}</span>
                   </div>
@@ -2659,10 +2861,28 @@
           }
           for (const type of Object.keys(manifest.types)) {
             this.content_vue.selectedVersions[type] = data.versions.find(e => e.type === type)?.id
+            this.content_vue.compareSelectedVersions[type] = data.versions.find(e => e.type === type && e.id !== this.content_vue.selectedVersions[type])?.id
           }
           manifest.latest = data.latest
           manifest.versions = data.versions
           this.content_vue.version = manifest.versions.find(e => e.type === "release").id
+          this.content_vue.compareVersion = manifest.versions.find((e, i) => e.type === "release" && e.id !== this.content_vue.version).id
+
+          const latestRelease = manifest.versions.find(e => e.type === "release")
+          const prevRelease = manifest.versions.slice(1).find(e => e.type === "release" && e.id !== latestRelease.id)
+          const currentMajorNum = manifest.versions.find(e => e.type === "release").id.split(".").slice(0, 2).join(".")
+          const currentMajorRelease = manifest.versions.slice(1).find(e => e.type === "release" && e.id === currentMajorNum)
+          const prevMajorRelease = manifest.versions.slice(1).find(e => e.type === "release" && !e.id.startsWith(currentMajorNum))
+
+          this.content_vue.suggestedComparisons.push(["Latest Version", manifest.versions[1].id, manifest.versions[0].id])
+          if (manifest.versions[0].type !== "release") {
+            this.content_vue.suggestedComparisons.push(["Since Release", latestRelease.id, manifest.versions[0].id])
+          }
+          this.content_vue.suggestedComparisons.push(
+            ["Latest Release", prevRelease.id, latestRelease.id],
+            ["Major Release", prevMajorRelease.id, latestRelease.id],
+            ["Release Patches", currentMajorRelease.id, latestRelease.id]
+          )
           this.content_vue.ready.resolve()
           loadDownloadedVersions()
         },
@@ -3155,6 +3375,13 @@
         loadDownloadedVersions()
       }
     }
+    if (getVersion(id).type.startsWith("bedrock")) {
+      const old = jar.files
+      jar.files = {}
+      for (const [file, data] of Object.entries(old)) {
+        jar.files[file.replace(/^[^\/]+\//, "")] = data
+      }
+    }
     loadedJars[id] = jar
     return jar
   }
@@ -3312,5 +3539,27 @@
         fulfil(false)
       }
     }))
+  }
+
+  async function getVersionComparison(oldVersion, newVersion) {
+    const oldJar = await getVersionJar(oldVersion)
+    const newJar = await getVersionJar(newVersion)
+    const jar = { files: {} }
+    for (const [file, data] of Object.entries(oldJar.files)) {
+      if (file in newJar.files) {
+        const newData = newJar.files[file]
+        if (data.crc32 !== newData.crc32) {
+          jar.files["changed/" + file] = newData
+        }
+      } else {
+        jar.files["removed/" + file] = data
+      }
+    }
+    for (const [file, data] of Object.entries(newJar.files)) {
+      if (!(file in oldJar.files)) {
+        jar.files["added/" + file] = data
+      }
+    }
+    return jar
   }
 })()
