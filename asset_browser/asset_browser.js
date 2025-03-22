@@ -636,10 +636,6 @@
                   cursor: pointer;
                 }
 
-                img {
-                  pointer-events: none;
-                }
-
                 > i, img, canvas {
                   min-width: 64px;
                   min-height: 64px;
@@ -651,6 +647,7 @@
                   justify-content: center;
                   margin: 8px 0 4px;
                   position: relative;
+                  pointer-events: none;
 
                   i, svg {
                     position: absolute;
@@ -674,7 +671,8 @@
 
                 img, canvas {
                   object-fit: contain;
-                  background: conic-gradient(var(--color-dark) .25turn, var(--color-back) .25turn .5turn, var(--color-dark) .5turn .75turn, var(--color-back) .75turn) top left/12px 12px;
+                  background-size: 16px 16px;
+                  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
                 }
 
                 > .fa {
@@ -885,6 +883,56 @@
                 background-color: var(--color-ui);
                 border-top: 2px solid var(--color-accent);
                 cursor: default;
+              }
+            }
+          }
+
+          #browser-comparison-sidebar {
+            border-left: 2px solid var(--color-back);
+            padding: 0 12px 12px;
+            overflow-y: auto;
+            height: calc(100% - 48px - 24px);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+
+            > :first-child {
+              text-align: center;
+              font-weight: 600;
+              font-size: 20px;
+              position: sticky;
+              top: 0;
+              background-color: var(--color-ui);
+              padding-top: 8px;
+              margin-bottom: -4px;
+            }
+
+            img, canvas {
+              min-width: 64px;
+              min-height: 64px;
+              max-width: 64px;
+              max-height: 64px;
+              object-fit: contain;
+              display: block;
+              background-size: 16px 16px;
+              background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+            }
+
+            > .comparison {
+              text-align: center;
+              cursor: pointer;
+              padding: 4px 8px 8px;
+
+              * {
+                cursor: pointer;
+              }
+
+              &:hover {
+                background-color: var(--color-selected);
+              }
+
+              > :nth-child(3) {
+                margin-top: 2px;
               }
             }
           }
@@ -2604,6 +2652,225 @@
               } else {
                 this.openFolder([this.path[0], ...folder])
               }
+            },
+            textureComparison(file) {
+              const red = [238, 85, 102, 255]
+              const green = [84, 255, 135, 255]
+              const blue = [85, 136, 255, 255]
+              const width = Math.max(file.oldFile.image.width, file.image.width)
+              const height = Math.max(file.oldFile.image.height, file.image.height)
+              const buff = new Uint8ClampedArray(width * height * 4)
+              const w1 = file.oldFile.image.width
+              const w2 = file.image.width
+              const h1 = file.oldFile.image.height
+              const h2 = file.image.height
+              const length = width * height * 4
+              const tolerance = 0
+
+              for (let i = 0; i < length; i += 4) {
+                const x = i / 4 % width
+                const y = Math.floor(i / 4 / width)
+                if (x >= w1 && y >= h2 || x >= w2 && y >= h1) continue
+                else if (x >= w2 && x <= w1 || y >= h2 && y <= h1) {
+                  const a = Math.floor((x + y) % 8 / 4)
+                  const b = Math.lerp(0.7, 1, a)
+                  buff.set([red[0] * b, red[1] * b, red[2] * b, red[3]], i)
+                }
+                else if (y >= h1 && y <= h2 || x >= w1 && x <= w2) {
+                  const a = Math.floor((x + y) % 8 / 4)
+                  const b = Math.lerp(0.7, 1, a)
+                  buff.set([green[0] * b, green[1] * b, green[2] * b, green[3]], i)
+                }
+                else {
+                  const i1 = (x + y * w1) * 4
+                  const i2 = (x + y * w2) * 4
+                  if (Math.max(Math.abs(file.oldFile.pixels[i1] - file.pixels[i2]), Math.abs(file.oldFile.pixels[i1 + 1] - file.pixels[i2 + 1]), Math.abs(file.oldFile.pixels[i1 + 2] - file.pixels[i2 + 2]), Math.abs(file.oldFile.pixels[i1 + 3] - file.pixels[i2 + 3])) < tolerance) {
+                    buff.set(pixels.slice(i1, i1 + 3), i)
+                    buff[i + 3] = file.oldFile.pixels[i1 + 3] / 4
+                  }
+                  else if (file.oldFile.pixels[i1 + 3] === 0 && file.pixels[i2 + 3] !== 0) buff.set(green, i)
+                  else if (file.oldFile.pixels[i1 + 3] !== 0 && file.pixels[i2 + 3] === 0) buff.set(red, i)
+                  else if (file.oldFile.pixels[i1] === file.pixels[i2] && file.oldFile.pixels[i1 + 1] === file.pixels[i2 + 1] && file.oldFile.pixels[i1 + 2] === file.pixels[i2 + 2] && file.oldFile.pixels[i1 + 3] === file.pixels[i2 + 3]) {
+                    buff.set(file.oldFile.pixels.slice(i1, i1 + 3), i)
+                    buff[i + 3] = file.oldFile.pixels[i1 + 3] / 4
+                  } else buff.set(blue, i)
+                }
+              }
+
+              new Dialog({
+                id: id + "_texture_comparison",
+                title: `${this.compareVersion} vs ${this.version} - ${file.path}`,
+                width: 816,
+                buttons: [],
+                lines: [`<style>
+                  #${id}_texture_comparison {
+                    .dialog_content {
+                      margin: 4px 16px 12px;
+                    }
+
+                    #${id}_texture_comparison_container {
+                      display: flex;
+                      gap: 16px;
+                    }
+
+                    .texture-comparison {
+                      width: calc(100% / 3 - (16px * 2) / 3);
+                    }
+
+                    .comparison-title {
+                      font-size: 32px;
+                      font-weight: 600;
+                    }
+
+                    .comparison-details {
+                      display: flex;
+                      justify-content: space-between;
+                      font-family: var(--font-code);
+                      margin-bottom: 8px;
+                    }
+
+                    .texture-comparison-image {
+                      width: 100%;
+                      cursor: pointer;
+                    }
+
+                    img, canvas {
+                      display: block;
+                      pointer-events: none;
+                      min-width: 100%;
+                      max-width: 100%;
+                      cursor: pointer;
+                    }
+
+                    .comparison-legend {
+                      display: flex;
+                      flex-direction: column;
+                      padding: 8px 8px 0;
+
+                      > div {
+                        display: flex;
+                        gap: 4px;
+                        align-items: center;
+
+                        > :first-child {
+                          width: 16px;
+                          height: 16px;
+                          border: 1px solid var(--color-border);
+                        }
+                      }
+                    }
+                  }
+
+                  #${id}-expanded-preview {
+                    position: absolute;
+                    inset: 26px 0 0;
+                    z-index: 29;
+                    background-color: #0004;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    backdrop-filter: blur(2px);
+                    cursor: pointer;
+
+                    > div {
+                      max-width: calc(100vw - 160px);
+                      max-height: calc(100vh - 160px);
+
+                      > canvas {
+                        box-shadow: 0 10px 10px #0004;
+                        max-width: 100%;
+                        width: 100vw;
+                      }
+                    }
+                  }
+                `],
+                component: {
+                  data: {
+                    file,
+                    version: this.version,
+                    oldVersion: this.compareVersion,
+                    red,
+                    green,
+                    blue
+                  },
+                  mounted() {
+                    this.$refs.canvas.width = width
+                    this.$refs.canvas.height = height
+                    this.$refs.canvas.getContext("2d").putImageData(new ImageData(buff, width, height), 0, 0)
+                  },
+                  methods: {
+                    formatBytes(bytes) {
+                      if (bytes === 0) return "0 B"
+                      const i = Math.floor(Math.log(bytes) / Math.log(1024))
+                      return parseFloat((bytes / Math.pow(1024, i)).toFixed(1)) + " " + ["B", "KB", "MB", "GB", "TB"][i]
+                    },
+                    expand(source) {
+                      const canvas = new CanvasFrame(source.width, source.height)
+                      canvas.canvas.classList.add("checkerboard")
+                      canvas.ctx.drawImage(source, 0, 0)
+                      const overlay = document.createElement("div")
+                      overlay.id = `${id}-expanded-preview`
+                      overlay.addEventListener("click", e => overlay.remove())
+                      const container = document.createElement("div")
+                      container.style.aspectRatio = `${source.width} / ${source.height}`
+                      container.append(canvas.canvas)
+                      overlay.append(container)
+                      document.body.append(overlay)
+                    }
+                  },
+                  template: `
+                    <div id="${id}_texture_comparison_container">
+                      <div class="texture-comparison">
+                        <div>
+                          <div class="comparison-title">{{ oldVersion }}</div>
+                          <div class="comparison-details" :style="{ color: \`rgb(\${red[0]}, \${red[1]}, \${red[2]})\` }">
+                            <span>{{ file.oldFile.image.width }} x {{ file.oldFile.image.height }}</span>
+                            <span>{{ formatBytes(file.oldFile.size) }}</span>
+                          </div>
+                        </div>
+                        <div class="texture-comparison-image" @click="expand(file.oldFile.image)">
+                          <img class="checkerboard" :src="file.oldFile.image.src">
+                        </div>
+                      </div>
+                      <div class="texture-comparison">
+                        <div>
+                          <div class="comparison-title">{{ version }}</div>
+                          <div class="comparison-details" :style="{ color: \`rgb(\${green[0]}, \${green[1]}, \${green[2]})\` }">
+                            <span>{{ file.image.width }} x {{ file.image.height }}</span>
+                            <span>{{ formatBytes(file.size) }}</span>
+                          </div>
+                        </div>
+                        <div class="texture-comparison-image" @click="expand(file.image)">
+                          <img class="checkerboard" :src="file.image.src">
+                        </div>
+                      </div>
+                      <div class="texture-comparison">
+                        <div>
+                          <div class="comparison-title">Comparison</div>
+                          <div class="comparison-details" style="height:24px;"></div>
+                        </div>
+                        <div @click="expand($refs.canvas)">
+                          <canvas ref="canvas" class="texture-comparison-image checkerboard"></canvas>
+                        </div>
+                        <div class="comparison-legend">
+                          <div>
+                            <div :style="{ backgroundColor: \`rgb(\${green[0]}, \${green[1]}, \${green[2]})\` }"></div>
+                            <div>Added Pixels</div>
+                          </div>
+                          <div>
+                            <div :style="{ backgroundColor: \`rgb(\${blue[0]}, \${blue[1]}, \${blue[2]})\` }"></div>
+                            <div>Changed Pixels</div>
+                          </div>
+                          <div>
+                            <div :style="{ backgroundColor: \`rgb(\${red[0]}, \${red[1]}, \${red[2]})\` }"></div>
+                            <div>Removed Pixels</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  `
+                }
+              }).show()
             }
           },
           template: `
@@ -2802,7 +3069,7 @@
                       </template>
                       <template v-else-if="file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg')">
                         <div>
-                          <img :src="jar.files[value].image?.src">
+                          <img class="checkerboard" :src="jar.files[value].image.src">
                         </div>
                       </template>
                       <template v-else>
@@ -2818,6 +3085,17 @@
                   </template>
                 </lazy-scroller>
                 <div v-else id="files" class="message">{{ filesMessage }}</div>
+                <div v-if="selected.some(e => jar.files[path.concat(e).join('/')]?.oldFile.image)" id="browser-comparison-sidebar">
+                  <div>Compare</div>
+                  <div v-for="file of selected" class="comparison" @click="textureComparison(jar.files[path.concat(file).join('/')])">
+                    <div>New</div>
+                    <animated-texture v-if="file.endsWith('.png') && jar.files[path.concat(file).join('/')].animation" :image="jar.files[path.concat(file).join('/')].image" :mcmeta="jar.files[path.concat(file).join('/')].animation" />
+                    <img v-else class="checkerboard" :src="jar.files[path.concat(file).join('/')].image.src">
+                    <div>Old</div>
+                    <animated-texture v-if="file.endsWith('.png') && jar.files[path.concat(file).join('/')].oldFile.animation" :image="jar.files[path.concat(file).join('/')].image" :mcmeta="jar.files[path.concat(file).join('/')].oldFile.animation" />
+                    <img v-else class="checkerboard" :src="jar.files[path.concat(file).join('/')].oldFile.image.src">
+                  </div>
+                </div>
                 <div id="browser-footer">
                   <div>{{ itemCount.toLocaleString() }} item{{ itemCount === 1 ? "" : "s" }}</div>
                   <template v-if="selected.length">
@@ -2954,7 +3232,7 @@
       })
       MenuBar.addAction(action, "tools")
       Toolbars.texturelist.add(action2, 4)
-      // dialog.show()
+      dialog.show()
     },
     onunload() {
       dialog.close()
@@ -2967,7 +3245,7 @@
     return {
       template: `
         <div ref="container" class="animated-texture">
-          <canvas ref="canvas"></canvas>
+          <canvas ref="canvas" class="checkerboard"></canvas>
         </div>
       `,
       props: {
@@ -3549,18 +3827,61 @@
       if (file in newJar.files) {
         const newData = newJar.files[file]
         if (data.crc32 !== newData.crc32) {
+          if (file.endsWith(".png") || file.endsWith(".jpg") || file.endsWith(".jpeg")) {
+            data.canvas = new CanvasFrame(data.image.width, data.image.height)
+            data.canvas.ctx.drawImage(data.image, 0, 0)
+            data.pixels = data.canvas.ctx.getImageData(0, 0, data.image.width, data.image.height).data
+            newData.canvas = new CanvasFrame(newData.image.width, newData.image.height)
+            newData.canvas.ctx.drawImage(newData.image, 0, 0)
+            newData.pixels = newData.canvas.ctx.getImageData(0, 0, newData.image.width, newData.image.height).data
+            if (data.pixels.length === newData.pixels.length && Buffer.from(data.pixels).equals(Buffer.from(newData.pixels))) {
+              continue
+            }
+          }
           const ext = PathModule.extname(file)
           const name = file.slice(0, -ext.length)
-          jar.files[`changed/${name}.NEW${ext}`] = newData
-          jar.files[`changed/${name}.OLD${ext}`] = data
+          jar.files["changed/" + file] = newData
+          newData.oldFile = data
+          if (newJar.files[file + ".mcmeta"]) {
+            try {
+              const anim = JSON.parse(newJar.files[file + ".mcmeta"].content)
+              if (anim.animation) {
+                newData.animation = anim
+              }
+            } catch {}
+          }
+          if (oldJar.files[file + ".mcmeta"]) {
+            try {
+              const anim = JSON.parse(oldJar.files[file + ".mcmeta"].content)
+              if (anim.animation) {
+                data.animation = anim
+              }
+            } catch {}
+          }
         }
       } else {
         jar.files["removed/" + file] = data
+        if (oldJar.files[file + ".mcmeta"]) {
+          try {
+            const anim = JSON.parse(oldJar.files[file + ".mcmeta"].content)
+            if (anim.animation) {
+              data.animation = anim
+            }
+          } catch {}
+        }
       }
     }
     for (const [file, data] of Object.entries(newJar.files)) {
       if (!(file in oldJar.files)) {
         jar.files["added/" + file] = data
+        if (newJar.files[file + ".mcmeta"]) {
+          try {
+            const anim = JSON.parse(newJar.files[file + ".mcmeta"].content)
+            if (anim.animation) {
+              data.animation = anim
+            }
+          } catch {}
+        }
       }
     }
     return jar
