@@ -3232,7 +3232,7 @@
       })
       MenuBar.addAction(action, "tools")
       Toolbars.texturelist.add(action2, 4)
-      dialog.show()
+      // dialog.show()
     },
     onunload() {
       dialog.close()
