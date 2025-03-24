@@ -50,7 +50,7 @@
     icon: "icon.png",
     author: "Godlander & Ewan Howell",
     description,
-    tags: ["Minecraft: Java Edition", "Rotation"],
+    tags: ["Minecraft: Java Edition", "Items", "Rotation"],
     version: "1.1.0",
     min_version: "4.11.2",
     variant: "desktop",
