@@ -27,13 +27,14 @@
   },
   "1.1.0": {
     "title": "1.1.0",
-    "date": "2025-03-15",
+    "date": "2025-03-25",
     "author": "Godlander & Ewan Howell",
     "categories": [
       {
         "title": "New Features",
         "list": [
-          "GUI Light is now supported"
+          "GUI Light is now supported",
+          "Changing namespace is now supported"
         ]
       }
     ]
