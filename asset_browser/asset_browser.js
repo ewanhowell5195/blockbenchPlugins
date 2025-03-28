@@ -3580,7 +3580,7 @@
 
   function getVersion(id) {
     let version = manifest.versions.find(e => e.id === id)
-    if (!version && loadedJars[id]) {
+    if (!version) {
       const dataPath = loadedJars[id].files["version.json"]
       if (dataPath) {
         const data = JSON.parse(dataPath.content)
@@ -3653,14 +3653,14 @@
         loadDownloadedVersions()
       }
     }
-    if (getVersion(id)?.type.startsWith("bedrock")) {
+    loadedJars[id] = jar
+    if (getVersion(id).type.startsWith("bedrock")) {
       const old = jar.files
       jar.files = {}
       for (const [file, data] of Object.entries(old)) {
         jar.files[file.replace(/^[^\/]+\//, "")] = data
       }
     }
-    loadedJars[id] = jar
     return jar
   }
 
