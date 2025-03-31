@@ -3471,7 +3471,7 @@
           title: "The cache directory was not found",
           lines: [`${name} requires a folder to cache downloaded content.<br><br>When prompted, please choose a folder to use for caching.`],
           width: 512,
-          buttons: ["dialog.ok", "dialog.cancel"],
+          buttons: allowCancel ? ["dialog.ok", "dialog.cancel"] : ["dialog.ok"],
           onClose(index) {
             if (index) {
               Blockbench.showQuickMessage("No folder was selected")
