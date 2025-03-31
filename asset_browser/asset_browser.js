@@ -3170,7 +3170,7 @@
             if (!await exists(settings.minecraft_directory.value)) {
               new Dialog({
                 title: "The .minecraft directory was not found",
-                lines: ['When prompted, please select your <code class="rpu-code">.minecraft</code> folder'],
+                lines: [`${name} can load assets from your Minecraft: Java Edition installation.<br><br>When prompted, please select your <code class="rpu-code">.minecraft</code> folder.<br><br>If you do not have Minecraft: Java Edition installed, select a random folder.`],
                 width: 450,
                 buttons: ["dialog.ok"],
                 onClose() {
@@ -3189,6 +3189,7 @@
                 }
               }).show()
             }
+            if (!await cacheDirectory(true)) return dialog.close()
           }, 0)
         }
       })
@@ -3463,26 +3464,36 @@
     }
   }
 
-  async function cacheDirectory() {
+  async function cacheDirectory(allowCancel) {
     if (!await exists(settings.cache_directory.value)) {
       return new Promise(fulfil => {
         new Dialog({
           title: "The cache directory was not found",
-          lines: ["When prompted, please select a folder to cache downloaded content"],
+          lines: [`${name} requires a folder to cache downloaded content.<br><br>When prompted, please choose a folder to use for caching.`],
           width: 512,
-          buttons: ["dialog.ok"],
-          onClose() {
+          buttons: ["dialog.ok", "dialog.cancel"],
+          onClose(index) {
+            if (index) {
+              Blockbench.showQuickMessage("No folder was selected")
+              fulfil(false)
+              return
+            }
             let dir
             while (!dir) {
               dir = Blockbench.pickDirectory({
                 title: "Select a folder to cache downloaded content",
                 startpath: settings.cache_directory.value
               })
+              if (allowCancel && !dir) {
+                Blockbench.showQuickMessage("No folder was selected")
+                fulfil(false)
+                return
+              }
             }
             settings.cache_directory.value = dir
             Settings.saveLocalStorages()
             loadDownloadedVersions()
-            fulfil()
+            fulfil(true)
           }
         }).show()
       })
