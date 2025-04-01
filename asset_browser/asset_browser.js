@@ -3497,6 +3497,8 @@
           }
         }).show()
       })
+    } else {
+      return true
     }
   }
 
