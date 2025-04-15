@@ -1921,19 +1921,19 @@
                   icon: "push_pin",
                   condition: selectionType === "folder" && selected.some(e => {
                     let path = e.path
-                    if (this.mode === "compare") {
+                    if (this.mode === "compare" && this.path.length) {
                       path = path.replace(/^[^\/]+\//, "")
                     }
                     return !this.savedFolders.some(saved => saved[0].join("/") === path)
                   }),
                   click: () => {
                     let path = this.path
-                    if (this.mode === "compare") {
+                    if (this.mode === "compare" && this.path.length) {
                       path = path.slice(1)
                     }
                     for (const folder of selected) {
                       let folderPath = folder.path
-                      if (this.mode === "compare") {
+                      if (this.mode === "compare" && this.path.length) {
                         folderPath = folderPath.replace(/^[^\/]+\//, "")
                       }
                       if (!this.savedFolders.some(saved => saved[0].join("/") === folderPath)) {
@@ -1949,7 +1949,7 @@
                   icon: "push_pin",
                   condition: selectionType === "folder" && !selected.some(e => {
                     let path = e.path
-                    if (this.mode === "compare") {
+                    if (this.mode === "compare" && this.path.length) {
                       path = path.replace(/^[^\/]+\//, "")
                     }
                     return !this.savedFolders.some(saved => saved[0].join("/") === path)
@@ -1957,7 +1957,7 @@
                   click: () => {
                     for (const folder of selected) {
                       let folderPath = folder.path
-                      if (this.mode === "compare") {
+                      if (this.mode === "compare" && this.path.length) {
                         folderPath = folderPath.replace(/^[^\/]+\//, "")
                       }
                       const index = this.savedFolders.findIndex(e => e[0].join("/") === folderPath)
@@ -2191,6 +2191,9 @@
                 else if (part === "fogs") icon = "foggy"
                 else if (part === "attachables") icon = "electrical_services"
                 else if (part === "ctm") icon = "extension"
+                else if (part === "added") icon = "add"
+                else if (part === "changed") icon = "edit"
+                else if (part === "removed") icon = "delete"
                 if (icon) break
               }
               if (icon in customIcons) return customIcons[icon]
@@ -2428,7 +2431,7 @@
               this.$nextTick(() => this.$refs.files.onScroll())
             },
             getFileLabel(folder, file, value) {
-              if (this.mode === "compare") {
+              if (this.mode === "compare" && this.path.length) {
                 folder = folder.slice(1)
               }
               const path = folder.concat(file).join("/")
@@ -2647,7 +2650,7 @@
               }
             },
             openSavedFolder(folder) {
-              if (this.mode === "assets") {
+              if (this.mode === "assets" || !this.path.length) {
                 this.openFolder(folder)
               } else {
                 this.openFolder([this.path[0], ...folder])
@@ -3161,6 +3164,18 @@
             ["Major Release", prevMajorRelease.id, latestRelease.id],
             ["Release Patches", currentMajorRelease.id, latestRelease.id]
           )
+
+          const latestBedrock = manifest.versions.find(e => e.type.startsWith("bedrock"))
+          const latestBedrockRelease = manifest.versions.find(e => e.type === "bedrock")
+
+          if (latestBedrockRelease) {
+            this.content_vue.suggestedComparisons.push(["Latest Bedrock Version", manifest.versions.filter(e => e.type.startsWith("bedrock"))[1].id, latestBedrock.id])
+            if (latestBedrock.type !== "bedrock") {
+              this.content_vue.suggestedComparisons.push(["Since Bedrock Release", latestBedrockRelease.id, latestBedrock.id])
+            }
+            this.content_vue.suggestedComparisons.push(["Latest Bedrock Release", manifest.versions.filter(e => e.type === "bedrock")[1].id, latestBedrockRelease.id])
+          }
+
           this.content_vue.ready.resolve()
           loadDownloadedVersions()
         },
@@ -3805,7 +3820,10 @@
       [["item"], "Item Textures"],
       [["mob"], "Entity Textures"],
       [["assets", "minecraft", "optifine"], "OptiFine"],
-      [["assets", "minecraft", "optifine", "ctm"], "CTM"]
+      [["assets", "minecraft", "optifine", "ctm"], "CTM"],
+      [["added"], "Added"],
+      [["changed"], "Changed"],
+      [["removed"], "Removed"]
     ]
     if (force) {
       if (await confirm("Reset Sidebar", "Are you sure you want to reset the sidebar?")) {
