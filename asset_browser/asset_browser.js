@@ -2901,19 +2901,6 @@
                   </div>
                   <div class="index-row" style="flex: 1;">
                     <div class="index-column">
-                      <div class="index-heading">Recently Viewed</div>
-                      <div class="version-list">
-                        <template v-if="recentVersions.some(id => id.toLowerCase().includes(versionSearch))">
-                          <div v-for="id in recentVersions" v-if="id.toLowerCase().includes(versionSearch)" class="version" @click="version = id; loadVersion()">
-                            <span v-html="getVersionIcon(id)"></span>
-                            <span>{{ id }}</span>
-                          </div>
-                        </template>
-                        <div v-else class="no-results">No recently viewed versions</div>
-                      </div>
-                    </div>
-                    <hr>
-                    <div class="index-column">
                       <div class="index-heading">Downloaded Versions</div>
                       <div class="version-list">
                         <template v-if="downloadedVersions.some(data => data.id.toLowerCase().includes(versionSearch))">
@@ -2923,6 +2910,19 @@
                           </div>
                         </template>
                         <div v-else class="no-results">No downloaded versions</div>
+                      </div>
+                    </div>
+                    <hr>
+                    <div class="index-column">
+                      <div class="index-heading">Recently Viewed</div>
+                      <div class="version-list">
+                        <template v-if="recentVersions.some(id => id.toLowerCase().includes(versionSearch))">
+                          <div v-for="id in recentVersions" v-if="id.toLowerCase().includes(versionSearch)" class="version" @click="version = id; loadVersion()">
+                            <span v-html="getVersionIcon(id)"></span>
+                            <span>{{ id }}</span>
+                          </div>
+                        </template>
+                        <div v-else class="no-results">No recently viewed versions</div>
                       </div>
                     </div>
                   </div>
