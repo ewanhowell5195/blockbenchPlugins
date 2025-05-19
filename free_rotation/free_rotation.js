@@ -119,6 +119,16 @@
       codec = new Codec("free_rotation_codec", {
         name: "Free Rotation Codec",
         remember: true,
+        export_options : {
+          thirdperson_lefthand: true,
+          thirdperson_righthand: true,
+          firstperson_lefthand: true,
+          firstperson_righthand: true,
+          head: true,
+          ground: true,
+          fixed: true,
+          gui: true
+        },
         export() {
           const project = Project
           for (const texture of Texture.all) {
@@ -338,8 +348,9 @@
             }
           }).show()
         },
-        async compile(project) {
+        async compile(project, exportOptions) {
           project ??= Project
+          exportOptions ??= project.free_rotation_display
 
           project.select()
 
@@ -420,7 +431,7 @@
             const rotation = new THREE.Quaternion()
 
             for (const slot of DisplayMode.slots) {
-              if (project.free_rotation_display[slot]) {
+              if (exportOptions[slot]) {
                 const scale = new THREE.Vector3(downscale, downscale, downscale)
                 const translation = cube.getWorldCenter()
                 translation.y -= 8
@@ -564,16 +575,7 @@
           exposed: false
         }),
         new Property(ModelProject, "object", "free_rotation_display", {
-          default: {
-            thirdperson_lefthand: true,
-            thirdperson_righthand: true,
-            firstperson_lefthand: true,
-            firstperson_righthand: true,
-            head: true,
-            ground: true,
-            fixed: true,
-            gui: true
-          },
+          default: codec.export_options,
           label: "Display Settings",
           condition: { formats: [format.id] },
           exposed: false
