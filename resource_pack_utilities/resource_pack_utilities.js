@@ -1066,7 +1066,7 @@
     type: e[1].codec?.extension
   }]))
 
-  const batchExporterSpecialFormats = ["gltf", "obj", "fbx", "collada"]
+  const batchExporterSpecialFormats = ["gltf", "obj", "fbx", "collada", "free_rotation_codec"]
 
   Object.assign(batchExporterFormats, {
     gltf: {
@@ -1084,6 +1084,10 @@
     collada: {
       name: "Collada (dae)",
       type: "dae"
+    },
+    free_rotation_codec: {
+      name: "Free Rotation Item (models only)",
+      type: "json"
     }
   })
 
@@ -3310,8 +3314,8 @@
               return
             }
 
-            let exportOptions = {}
             const codec = Formats[this.format]?.codec ?? Codecs[this.format]
+            let exportOptions = {}
             if (Object.keys(codec.export_options).length) {
               output.log("Getting export options…")
               newProject("")
@@ -3320,7 +3324,6 @@
               await Project.close()
               output.log("Export options loaded")
             }
-
             for (const file of files) {
               const name = file.slice(0, -8)
               let outputPath = ""
@@ -3356,14 +3359,30 @@
                 }, exportOptions))
                 compiled = obj.obj
                 mtl = obj.mtl
-              } else {
+              }
+              if (this.format == "free_rotation_codec") {
+                compiled = await Codecs.free_rotation_codec.compile(Project, exportOptions)
+              }
+              else {
                 compiled = await Codecs[this.format].compile(exportOptions)
               }
               if (fullOutputPath !== this.outputFolder) {
                 await fs.promises.mkdir(fullOutputPath, { recursive: true })
               }
-              await fs.promises.writeFile(saveName, Buffer.from(compiled), "utf-8")
-              output.log(`Exported \`${file}\` to \`${outputPath}${name}.${batchExporterFormats[this.format].type}\``)
+              if (this.format == "free_rotation_codec") {
+                for (const [i, model] of compiled.entries()) {
+                  if (await exists(path.join(fullOutputPath, `${i}.json`))) {
+                    output.warn(`Skipping \`${i}\` as \`${outputPath}${i}\`.json already exists`)
+                  }
+                  else {
+                    await fs.promises.writeFile(path.join(fullOutputPath, `${i}.json`), Buffer.from(model), "utf-8")
+                    output.log(`Exported \`${i}\` to \`${outputPath}${i}\`.json`)
+                  }
+                }
+              } else {
+                  await fs.promises.writeFile(saveName, Buffer.from(compiled), "utf-8")
+                  output.log(`Exported \`${file}\` to \`${outputPath}${name}.${batchExporterFormats[this.format].type}\``)
+              }
               if (this.format === "obj" && this.textures) {
                 if (await exists(saveName.slice(0, -3) + "mtl")) {
                   output.warn(`Skipping \`${file}\`'s material as \`${outputPath}${name}.mtl\` already exists`)
