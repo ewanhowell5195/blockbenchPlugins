@@ -3,12 +3,26 @@
   const crypto = require("node:crypto")
   const os = require("node:os")
 
-  let dialog, action, action2, storage
+  let dialog, action, action2, storage, loader, styles
 
   const id = "asset_browser"
   const name = "Asset Browser"
   const icon = "folder_zip"
   const description = "Browse the Minecraft assets from within Blockbench."
+  const links = {
+    website: {
+      text: "By Ewan Howell",
+      link: "https://ewanhowell.com/",
+      icon: "language",
+      colour: "#33E38E"
+    },
+    discord: {
+      text: "Discord Server",
+      link: "https://discord.ewanhowell.com/",
+      icon: "fab.fa-discord",
+      colour: "#727FFF"
+    }
+  }
 
   const manifest = {
     latest: {},
@@ -1344,7 +1358,7 @@
                 const selected = this.selected.includes(this.shiftStartItem)
                 const end = keys.indexOf(file)
                 const range = keys.slice(Math.min(start, end), Math.max(start, end) + 1)
-                if (event.ctrlKey) {
+                if (event.ctrlKey || event.metaKey) {
                   if (selected) {
                     this.selected = Array.from(new Set(this.selected.concat(range)))
                   } else {
@@ -1353,7 +1367,7 @@
                 } else {
                   this.selected = range
                 }
-              } else if (event.ctrlKey) {
+              } else if (event.ctrlKey || event.metaKey) {
                 const index = this.selected.indexOf(file)
                 if (index !== -1) {
                   this.selected.splice(index, 1)
@@ -1448,6 +1462,8 @@
                       resizable: true,
                       buttons: [],
                       lines: [`<style>#${id}_text_viewer {
+                        max-height: calc(100vh - 60px);
+
                         .dialog_wrapper {
                           height: calc(100% - 30px);
                         }
@@ -1456,23 +1472,40 @@
                           height: 100%;
                           margin: 0;
                           background-color: var(--color-back);
+                          max-height: calc(100vh - 90px);
+                        }
+
+                        #${id}_text_viewer_container {
+                          height: 100%;
+                        }
+
+                        #${id}_text_viewer_editor {
+                          height: calc(100% - 32px);
                         }
 
                         .prism-editor-wrapper {
-                          overflow: hidden;
                           border: none;
                           user-select: text !important;
                         }
 
                         .prism-editor__line-numbers {
                           min-height: 320px !important;
+                          user-select: none;
+                          position: sticky;
+                          left: 0;
+                          overflow: visible;
+
+                          &::before {
+                            content: "";
+                            position: absolute;
+                            inset: 0 -8px 0 -4px;
+                            background-color: var(--color-back);
+                            z-index: -1;
+                          }
                         }
 
                         #${id}_toolbar {
                           display: flex;
-                          position: sticky;
-                          top: 0;
-                          z-index: 1;
                           background-color: var(--color-ui);
 
                           > div {
@@ -1510,13 +1543,12 @@
                           },
                           contentContextMenu(event) {
                             const selection = window.getSelection().toString()
-                            if (!selection) return
                             new Menu(`${id}_context_menu`, [
                               {
                                 id: "copy",
                                 name: "Copy",
                                 icon: "content_copy",
-                                click: () => navigator.clipboard.writeText(selection)
+                                click: () => navigator.clipboard.writeText(selection || this.content)
                               }
                             ]).open(event)
                           },
@@ -1572,10 +1604,18 @@
                             } else {
                               menu.node.children[0].classList.add("enabled")
                             }
+                          },
+                          handleKeydown(event) {
+                            if ((event.ctrlKey || event.metaKey) && event.key === "c") {
+                              const selection = window.getSelection().toString()
+                              if (selection) {
+                                navigator.clipboard.writeText(selection)
+                              }
+                            }
                           }
                         },
                         template: `
-                          <div id="${id}_text_viewer_container">
+                          <div id="${id}_text_viewer_container" @keydown="handleKeydown" tabindex="0">
                             <div id="${id}_toolbar">
                               <div @click="fileContextMenu" @contextmenu="fileContextMenu" :class="{ active: activeToolbarItem === 'file' }">File</div>
                               <div @click="editContextMenu" @contextmenu="editContextMenu" :class="{ active: activeToolbarItem === 'edit' }">Edit</div>
@@ -1584,6 +1624,11 @@
                             <vue-prism-editor id="${id}_text_viewer_editor" v-model="content" :language="type" line-numbers readonly @contextmenu="contentContextMenu"/>
                           </div>
                         `
+                      },
+                      onBuild() {
+                        setTimeout(() => {
+                          this.object.style.height = this.object.clientHeight + "px"
+                        })
                       }
                     }).show()
                   }
@@ -2194,6 +2239,7 @@
                 else if (part === "added") icon = "add"
                 else if (part === "changed") icon = "edit"
                 else if (part === "removed") icon = "delete"
+                else if (part === "waypoint_style") icon = "flag"
                 if (icon) break
               }
               if (icon in customIcons) return customIcons[icon]
@@ -2338,7 +2384,7 @@
             async keydownHandler(event) {
               if (this.$refs.browserSearch === document.activeElement) return
               if (this.jar && !this.loadingMessage) {
-                if (event.ctrlKey && event.key === "a") {
+                if ((event.ctrlKey || event.metaKey) && event.key === "a") {
                   this.selected = this.currentFolderContents.map(e => e[0])
                 } else if (event.key === "Escape") {
                   event.stopPropagation()
@@ -2783,6 +2829,8 @@
                         box-shadow: 0 10px 10px #0004;
                         max-width: 100%;
                         width: 100vw;
+                        display: block;
+                        cursor: pointer;
                       }
                     }
                   }
@@ -3088,7 +3136,7 @@
                   </template>
                 </lazy-scroller>
                 <div v-else id="files" class="message">{{ filesMessage }}</div>
-                <div v-if="selected.some(e => jar.files[path.concat(e).join('/')]?.oldFile.image)" id="browser-comparison-sidebar">
+                <div v-if="mode === 'compare' && selected.some(e => jar.files[path.concat(e).join('/')]?.oldFile.image)" id="browser-comparison-sidebar">
                   <div>Compare</div>
                   <div v-for="file of selected" class="comparison" @click="textureComparison(jar.files[path.concat(file).join('/')])">
                     <div>New</div>
@@ -3248,12 +3296,113 @@
       })
       MenuBar.addAction(action, "tools")
       Toolbars.texturelist.add(action2, 4)
-      // dialog.show()
+      styles = Blockbench.addCSS(`
+        #format_page_${id} {
+          padding-bottom: 0;
+        }
+        #format_page_${id} .format_target {
+          margin-bottom: 6px;
+        }
+        #format_page_${id} div:nth-child(3), #format_page_${id} content {
+          overflow-y: auto;
+        }
+        .asset-browser-links {
+          display: flex;
+          justify-content: space-around;
+          margin: 20px 40px 0;
+        }
+        .asset-browser-links > a {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+          padding: 5px;
+          text-decoration: none;
+          flex-grow: 1;
+          flex-basis: 0;
+          color: var(--color-subtle_text);
+          text-align: center;
+        }
+        .asset-browser-links > a:hover {
+          background-color: var(--color-accent);
+          color: var(--color-light);
+        }
+        .asset-browser-links > a > i {
+          font-size: 32px;
+          width: 100%;
+          max-width: initial;
+          height: 32px;
+          text-align: center;
+        }
+        .asset-browser-links > a:hover > i {
+          color: var(--color-light) !important;
+        }
+        .asset-browser-links > a > p {
+          flex: 1;
+          display: flex;
+          align-items: center;
+        }
+      `)
+      loader = new ModelLoader(id, {
+        name,
+        description,
+        icon,
+        onStart: () => dialog.show(),
+        format_page: {
+          component: {
+            methods: {
+              open: () => dialog.show()
+            },
+            template: `
+              <div class="ewan-format-page" style="display:flex;flex-direction:column;height:100%">
+                <p class="format_description">${description}</p>
+                <p class="format_target"><b>Target</b> : <span>Minecraft: Java Edition</span> <span>Minecraft: Bedrock Edition</span></p>
+                <content>
+                  <p class="markdown">Asset browser is a browser that lets you view, modify, export, and compare the Minecraft vanilla assets. Both Java edition and Bedrock edition are supported, as well as their respective snapshots and beta versions.</p>
+                  <br>
+                  <h3 class="markdown">How to use:</h3>
+                  <p class="markdown">
+                    <ul>
+                      <li><p>Press <strong>Open Asset Browser</strong> and select version you want to load.</p></li>
+                      <li><p>If you want sound files, languages, the panorama, and other files that are not included by default, make sure to check the checkbox at the bottom.</p></li>
+                      <li><p>Use the <strong>Load Assets</strong> button to load the assets.</p></li>
+                      <li><p>Browse the assets like a normal folder directory. You can select files to open them, and right click for more options like exporting.</p></li>
+                    </ul>
+                  </p>
+                  <h3 class="markdown">Comparison mode:</h3>
+                  <p class="markdown">
+                    <ul>
+                      <li><p>Comparison mode provides a quick and easy way to compare two game versions to see what files have been added, changed, or removed.</p></li>
+                      <li><p>The changes will be shown in the same file structure that the assets will normally be found in. If you would like to instead see a flat list of all the changes, i recommend using <a href="https://cccode.pages.dev/version-diff/" target="_blank">Version Diff</a>.</p></li>
+                    </ul>
+                  </p>
+                </content>
+                <div class="spacer"></div>
+                <div class="asset-browser-links">${Object.values(links).map(e => `
+                  <a href="${e.link}">
+                    ${Blockbench.getIconNode(e.icon, e.colour).outerHTML}
+                    <p>${e.text}</p>
+                  </a>
+                `).join("")}</div>
+                <div class="button_bar">
+                  <button id="create_new_model_button" style="margin-top:20px;margin-bottom:24px;" @click="open()">
+                    <i class="material-icons">${icon}</i>
+                    Open Asset Browser
+                  </button>
+                </div>
+              </div>
+            `
+          }
+        }
+      })
+      dialog.show()
     },
     onunload() {
       dialog.close()
       action.delete()
       action2.delete()
+      loader.delete()
+      styles.delete()
     }
   })
 
@@ -3850,6 +3999,8 @@
     }))
   }
 
+  const jsonVersionPattern = /\d+\.\d+\.\d+\.\d+/
+  const htmlVersionPattern = /Version: \d+\.\d+\.\d+\.\d+/g
   async function getVersionComparison(oldVersion, newVersion) {
     const oldJar = await getVersionJar(oldVersion)
     const newJar = await getVersionJar(newVersion)
@@ -3868,7 +4019,24 @@
             if (data.pixels.length === newData.pixels.length && Buffer.from(data.pixels).equals(Buffer.from(newData.pixels))) {
               continue
             }
+          } else if (file.endsWith(".html")) {
+            if (data.content.toString().replace(htmlVersionPattern, "") === newData.content.toString().replace(htmlVersionPattern, "")) {
+              continue
+            }
           }
+          try {
+            const oldJSON = JSON.parse(data.content)
+            const newJSON = JSON.parse(newData.content)
+            delete oldJSON.minecraft_version
+            delete newJSON.minecraft_version
+            if (oldJSON.version && newJSON.version && jsonVersionPattern.test(oldJSON.version) && jsonVersionPattern.test(newJSON.version)) {
+              delete oldJSON.version
+              delete newJSON.version
+            }
+            if (JSON.stringify(oldJSON) === JSON.stringify(newJSON)) {
+              continue
+            }
+          } catch {}
           const ext = PathModule.extname(file)
           const name = file.slice(0, -ext.length)
           jar.files["changed/" + file] = newData
