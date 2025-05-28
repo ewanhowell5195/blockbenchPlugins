@@ -3395,7 +3395,7 @@
           }
         }
       })
-      dialog.show()
+      // dialog.show()
     },
     onunload() {
       dialog.close()
