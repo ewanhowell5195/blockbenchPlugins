@@ -3,7 +3,7 @@
   const crypto = require("node:crypto")
   const os = require("node:os")
 
-  let dialog, action, action2, storage, loader, styles
+  let dialog, action, storage, loader, styles
 
   const id = "asset_browser"
   const name = "Asset Browser"
@@ -3261,41 +3261,36 @@
         name,
         description,
         icon,
-        click: () => dialog.show()
-      })
-      action2 = new Action({
-        id: id + "_shortcut",
-        name,
-        description,
-        icon,
-        click() {
+        click(e) {
           dialog.show()
-          setTimeout(async () => {
-            if (dialog.content_vue.lastOpenFormat === Format.id && dialog.content_vue.jar) return
-            dialog.content_vue.lastOpenFormat = Format.id
-            await dialog.content_vue.ready.promise
-            let type, path
-            if (["java_block", "modded_entity", "optifine_entity"].includes(Format.id)) {
-              type = "release"
-              path = ["assets", "minecraft", "textures"]
-              if (Format.id !== "java_block") path.push("entity")
-            } else if (["bedrock", "bedrock_block"].includes(Format.id)) {
-              type = "bedrock"
-              path = ["resource_pack", "textures", Format.id === "bedrock" ? "entity" : "blocks"]
-            }
-            if (type) {
-              const latest = manifest.versions.find(e => e.type === type)
-              dialog.content_vue.type = type
-              dialog.content_vue.version = latest.id
-              dialog.content_vue.selectedVersions[type] = latest.id
-              dialog.content_vue.updateVersion()
-              dialog.content_vue.loadVersion(path)
-            }
-          }, 0)
+          if (e.currentTarget.parentElement.parentElement.getAttribute("toolbar_id") === "texturelist") {
+            setTimeout(async () => {
+              if (dialog.content_vue.lastOpenFormat === Format.id && dialog.content_vue.jar) return
+              dialog.content_vue.lastOpenFormat = Format.id
+              await dialog.content_vue.ready.promise
+              let type, path
+              if (["java_block", "modded_entity", "optifine_entity"].includes(Format.id)) {
+                type = "release"
+                path = ["assets", "minecraft", "textures"]
+                if (Format.id !== "java_block") path.push("entity")
+              } else if (["bedrock", "bedrock_block"].includes(Format.id)) {
+                type = "bedrock"
+                path = ["resource_pack", "textures", Format.id === "bedrock" ? "entity" : "blocks"]
+              }
+              if (type) {
+                const latest = manifest.versions.find(e => e.type === type)
+                dialog.content_vue.type = type
+                dialog.content_vue.version = latest.id
+                dialog.content_vue.selectedVersions[type] = latest.id
+                dialog.content_vue.updateVersion()
+                dialog.content_vue.loadVersion(path)
+              }
+            }, 0)
+          }
         }
       })
       MenuBar.addAction(action, "tools")
-      Toolbars.texturelist.add(action2, 4)
+      Toolbars.texturelist.add(action, 4)
       styles = Blockbench.addCSS(`
         #format_page_${id} {
           padding-bottom: 0;
@@ -3395,12 +3390,10 @@
           }
         }
       })
-      // dialog.show()
     },
     onunload() {
       dialog.close()
       action.delete()
-      action2.delete()
       loader.delete()
       styles.delete()
     }
