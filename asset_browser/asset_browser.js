@@ -2222,7 +2222,7 @@ Plugin.register(id, {
               else if (part === "painting") icon = "brush"
               else if (part === "gui" || part === "ui") icon = "call_to_action"
               else if (part === "environment") icon = "light_mode"
-              else if (part === "colormap") icon = "palette"
+              else if (part === "colormap" || part === "color_palettes") icon = "palette"
               else if (part === "misc") icon = "help"
               else if (part === "trims") icon = "fa-gem"
               else if (part === "effect" || part === "mob_effect") icon = "auto_fix"
