@@ -1,5 +1,4 @@
 const crypto = require("node:crypto")
-const path = require("node:path")
 const zlib = require("node:zlib")
 const os = require("node:os")
 
@@ -42,11 +41,11 @@ const setupPlugin = () => Plugin.register(id, {
     storage.favourites ??= []
     let directory
     if (os.platform() === "win32") {
-      directory = path.join(os.homedir(), "AppData", "Roaming", ".minecraft")
+      directory = PathModule.join(os.homedir(), "AppData", "Roaming", ".minecraft")
     } else if (os.platform() === "darwin") {
-      directory = path.join(os.homedir(), "Library", "Application Support", "minecraft")
+      directory = PathModule.join(os.homedir(), "Library", "Application Support", "minecraft")
     } else {
-      directory = path.join(os.homedir(), ".minecraft")
+      directory = PathModule.join(os.homedir(), ".minecraft")
     }
     new Setting("minecraft_directory", {
       value: directory,
@@ -88,7 +87,7 @@ const setupPlugin = () => Plugin.register(id, {
       selectFolder(title = "folder", key = "folder") {
         const dir = Blockbench.pickDirectory({
           title: `Select ${title}`,
-          startpath: path.join(settings.minecraft_directory.value, "resourcepacks")
+          startpath: PathModule.join(settings.minecraft_directory.value, "resourcepacks")
         })
         if (dir) {
           this[key] = dir
@@ -613,7 +612,7 @@ function save() {
 const getFiles = async function*(dir) {
   const dirents = await fs.promises.readdir(dir, { withFileTypes: true })
   for (const dirent of dirents) {
-    const res = path.resolve(dir, dirent.name)
+    const res = PathModule.resolve(dir, dirent.name)
     if (dirent.isDirectory()) {
       yield* getFiles(res)
     } else if (!res.match(/([\/\\]|^)\.git([\/\\]|$)/)) {
@@ -827,13 +826,13 @@ async function getVersionData(id) {
   if (version.data) {
     return version.data
   }
-  const vanillaDataPath = path.join(settings.minecraft_directory.value, "versions", id, id + ".json")
+  const vanillaDataPath = PathModule.join(settings.minecraft_directory.value, "versions", id, id + ".json")
   if (await exists(vanillaDataPath)) {
     version.data = JSON.parse(await fs.promises.readFile(vanillaDataPath))
     return version.data
   }
   await cacheDirectory()
-  const cacheDataPath = path.join(settings.cache_directory.value, `data_${id}.json`)
+  const cacheDataPath = PathModule.join(settings.cache_directory.value, `data_${id}.json`)
   if (await exists(cacheDataPath)) {
     version.data = JSON.parse(await fs.promises.readFile(cacheDataPath))
     return version.data
@@ -852,7 +851,7 @@ async function getVersionAssetsIndex(id) {
   if (version.assetsIndex) {
     return version.assetsIndex
   }
-  const vanillaAssetsIndexPath = path.join(settings.minecraft_directory.value, "assets", "indexes", version.assets + ".json")
+  const vanillaAssetsIndexPath = PathModule.join(settings.minecraft_directory.value, "assets", "indexes", version.assets + ".json")
   if (await exists(vanillaAssetsIndexPath)) {
     if (await shaCheck(vanillaAssetsIndexPath, version.assetIndex.sha1)) {
       version.assetsIndex = JSON.parse(await fs.promises.readFile(vanillaAssetsIndexPath))
@@ -863,7 +862,7 @@ async function getVersionAssetsIndex(id) {
     }
   }
   await cacheDirectory()
-  const cacheAssetsIndexPath = path.join(settings.cache_directory.value, `assets_index_${version.assets}.json`)
+  const cacheAssetsIndexPath = PathModule.join(settings.cache_directory.value, `assets_index_${version.assets}.json`)
   if (await exists(cacheAssetsIndexPath) && await shaCheck(cacheAssetsIndexPath, version.assetIndex.sha1)) {
     version.assetsIndex = JSON.parse(await fs.promises.readFile(cacheAssetsIndexPath))
     return version.assetsIndex
@@ -875,13 +874,13 @@ async function getVersionAssetsIndex(id) {
 
 async function getVersionJar(id) {
   let jar
-  const jarPath = path.join(settings.minecraft_directory.value, "versions", id, id + ".jar")
+  const jarPath = PathModule.join(settings.minecraft_directory.value, "versions", id, id + ".jar")
   if (await exists(jarPath)) {
     jar = parseZip((await fs.promises.readFile(jarPath)).buffer)
     output.log(`Using downloaded version of \`${id}\``)
   } else {
     await cacheDirectory()
-    const jarPath = path.join(settings.cache_directory.value, id + ".jar")
+    const jarPath = PathModule.join(settings.cache_directory.value, id + ".jar")
     if (await exists(jarPath)) {
       jar = parseZip((await fs.promises.readFile(jarPath)).buffer)
       output.log(`Using cached version of \`${id}\``)
@@ -1037,16 +1036,16 @@ async function getObject(filePath, version, assetsIndex) {
   const root = getRoot(version)
   const data = assetsIndex.objects[filePath.slice(root.length + 1)]
   const objectPath = `${data.hash.slice(0, 2)}/${data.hash}`
-  const vanillaObjectPath = path.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
+  const vanillaObjectPath = PathModule.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
   if (await exists(vanillaObjectPath)) {
     return fs.promises.readFile(vanillaObjectPath)
   }
-  const cacheObjectPath = path.join(settings.cache_directory.value, "objects", objectPath)
+  const cacheObjectPath = PathModule.join(settings.cache_directory.value, "objects", objectPath)
   if (await exists(cacheObjectPath)) {
     return fs.promises.readFile(cacheObjectPath)
   }
   const object = Buffer.from(await fetch(`https://resources.download.minecraft.net/${objectPath}`).then(e => e.arrayBuffer()))
-  await fs.promises.mkdir(path.dirname(cacheObjectPath), { recursive: true })
+  await fs.promises.mkdir(PathModule.dirname(cacheObjectPath), { recursive: true })
   await fs.promises.writeFile(cacheObjectPath, object)
   output.log(`Downloaded \`${filePath}\` to the cache`)
   return object
@@ -1108,7 +1107,7 @@ const components = {
       selectFolder(title = "folder") {
         const dir = Blockbench.pickDirectory({
           title: `Select the ${title}`,
-          startpath: this.folder || path.join(settings.minecraft_directory.value, "resourcepacks")
+          startpath: this.folder || PathModule.join(settings.minecraft_directory.value, "resourcepacks")
         })
         if (dir) {
           this.folder = dir
@@ -2575,7 +2574,7 @@ const utilities = {
         total: null
       },
       created() {
-        this.folder = formatPath(path.join(settings.minecraft_directory.value, "resourcepacks"))
+        this.folder = formatPath(PathModule.join(settings.minecraft_directory.value, "resourcepacks"))
       },
       methods: {
         async execute() {
@@ -2602,7 +2601,7 @@ const utilities = {
             this.total = 0
             return
           }
-          const folder = path.join(this.folder, this.name)
+          const folder = PathModule.join(this.folder, this.name)
           if (await exists(folder)) {
             output.error(`The resource pack \`${formatPath(this.folder)}/${this.name}\` already exists`)
             this.status.finished = true
@@ -2626,7 +2625,7 @@ const utilities = {
             this.total = totalAssets + Object.values(this.create).filter(e => e).length + 3
             const paths = new Set
             for (const [file, data] of entries) {
-              paths.add(path.join(folder, path.dirname(file)))
+              paths.add(PathModule.join(folder, PathModule.dirname(file)))
             }
             for (const path of paths) {
               await fs.promises.mkdir(path, { recursive: true })
@@ -2646,7 +2645,7 @@ const utilities = {
                   continue
                 }
                 files.push(new Promise(async fulfil => {
-                  await fs.promises.writeFile(path.join(folder, file), data.content)
+                  await fs.promises.writeFile(PathModule.join(folder, file), data.content)
                   output.log(`Extracted \`${file}\``)
                   this.done++
                   fulfil()
@@ -2661,7 +2660,7 @@ const utilities = {
               const paths = new Set
               for (const [file, data] of objectsEntries) {
                 if (file.startsWith("icons/")) continue
-                paths.add(path.join(folder, root, path.dirname(file)))
+                paths.add(PathModule.join(folder, root, PathModule.dirname(file)))
               }
               for (const path of paths) {
                 await fs.promises.mkdir(path, { recursive: true })
@@ -2683,19 +2682,19 @@ const utilities = {
                   }
                   files.push(new Promise(async fulfil => {
                     const objectPath = `${data.hash.slice(0, 2)}/${data.hash}`
-                    const packPath = path.join(this.folder, this.name, root, file)
-                    const vanillaObjectPath = path.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
+                    const packPath = PathModule.join(this.folder, this.name, root, file)
+                    const vanillaObjectPath = PathModule.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
                     if (await exists(vanillaObjectPath)) {
                       await fs.promises.copyFile(vanillaObjectPath, packPath)
                       output.log(`Extracted \`${root}/${file}\``)
                     } else {
-                      const cacheObjectPath = path.join(settings.cache_directory.value, "objects", objectPath)
+                      const cacheObjectPath = PathModule.join(settings.cache_directory.value, "objects", objectPath)
                       if (await exists(cacheObjectPath)) {
                         await fs.promises.copyFile(cacheObjectPath, packPath)
                         output.log(`Extracted \`${root}/${file}\``)
                       } else {
                         const object = new Uint8Array(await fetch(`https://resources.download.minecraft.net/${objectPath}`).then(e => e.arrayBuffer()))
-                        await fs.promises.mkdir(path.dirname(cacheObjectPath), { recursive: true })
+                        await fs.promises.mkdir(PathModule.dirname(cacheObjectPath), { recursive: true })
                         await fs.promises.writeFile(cacheObjectPath, object)
                         await fs.promises.writeFile(packPath, object)
                         output.log(`Downloaded \`${root}/${file}\``)
@@ -2713,46 +2712,46 @@ const utilities = {
           if (this.total === null) {
             this.total = Object.values(this.create).filter(e => e).length + 3
           }
-          if (!await exists(path.join(folder, "assets/minecraft"))) {
-            await fs.promises.mkdir(path.join(folder, "assets/minecraft"), { recursive: true })
+          if (!await exists(PathModule.join(folder, "assets/minecraft"))) {
+            await fs.promises.mkdir(PathModule.join(folder, "assets/minecraft"), { recursive: true })
             output.log(`Created pack directory \`${formatPath(folder)}\``)
           }
           this.done++
           if (this.create.blockstates) {
-            if (!await exists(path.join(folder, "assets/minecraft/blockstates"))) {
-              await fs.promises.mkdir(path.join(folder, "assets/minecraft/blockstates"), { recursive: true })
+            if (!await exists(PathModule.join(folder, "assets/minecraft/blockstates"))) {
+              await fs.promises.mkdir(PathModule.join(folder, "assets/minecraft/blockstates"), { recursive: true })
               output.log("Created folder `assets/minecraft/blockstates`")
             }
             this.done++
           }
           if (this.create.models) {
-            if (!await exists(path.join(folder, "assets/minecraft/models"))) {
-              await fs.promises.mkdir(path.join(folder, "assets/minecraft/models"), { recursive: true })
+            if (!await exists(PathModule.join(folder, "assets/minecraft/models"))) {
+              await fs.promises.mkdir(PathModule.join(folder, "assets/minecraft/models"), { recursive: true })
               output.log("Created folder `assets/minecraft/models`")
             }
             this.done++
           }
           if (this.create.optifine) {
-            await fs.promises.mkdir(path.join(folder, "assets/minecraft/optifine"), { recursive: true })
+            await fs.promises.mkdir(PathModule.join(folder, "assets/minecraft/optifine"), { recursive: true })
             output.log("Created folder `assets/minecraft/optifine`")
             this.done++
           }
           if (this.create.textures) {
-            if (!await exists(path.join(folder, "assets/minecraft/textures"))) {
-              await fs.promises.mkdir(path.join(folder, "assets/minecraft/textures"), { recursive: true })
+            if (!await exists(PathModule.join(folder, "assets/minecraft/textures"))) {
+              await fs.promises.mkdir(PathModule.join(folder, "assets/minecraft/textures"), { recursive: true })
               output.log("Created folder `assets/minecraft/textures`")
             }
             this.done++
           }
           if (this.create.sounds) {
-            if (!await exists(path.join(folder, "assets/minecraft/sounds"))) {
-              await fs.promises.mkdir(path.join(folder, "assets/minecraft/sounds"), { recursive: true })
+            if (!await exists(PathModule.join(folder, "assets/minecraft/sounds"))) {
+              await fs.promises.mkdir(PathModule.join(folder, "assets/minecraft/sounds"), { recursive: true })
               output.log("Created folder `assets/minecraft/sounds`")
             }
             this.done++
           }
           if (this.create.emissive) {
-            await fs.promises.writeFile(path.join(folder, "assets/minecraft/optifine/emissive.properties"), "suffix.emissive=_e", "utf-8")
+            await fs.promises.writeFile(PathModule.join(folder, "assets/minecraft/optifine/emissive.properties"), "suffix.emissive=_e", "utf-8")
             output.log("Created file `assets/minecraft/optifine/emissive.properties`")
             this.done++
           }
@@ -2773,7 +2772,7 @@ const utilities = {
           } else {
             packFormat = 1
           }
-          await fs.promises.writeFile(path.join(folder, "pack.mcmeta"), JSON.stringify({
+          await fs.promises.writeFile(PathModule.join(folder, "pack.mcmeta"), JSON.stringify({
             "pack": {
               "pack_format": packFormat,
               "description": this.description || "Template Resource Pack"
@@ -2781,8 +2780,8 @@ const utilities = {
           }, null, 2), "utf-8")
           output.log("Created file `pack.mcmeta`")
           this.done++
-          if (!await exists(path.join(folder, "pack.png"))) {
-            await fs.promises.writeFile(path.join(folder, "pack.png"), "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", { encoding: "base64" })
+          if (!await exists(PathModule.join(folder, "pack.png"))) {
+            await fs.promises.writeFile(PathModule.join(folder, "pack.png"), "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", { encoding: "base64" })
             output.log("Created `pack.png`")
           }
           this.done++
@@ -2998,14 +2997,14 @@ const utilities = {
                 downloads.push(new Promise(async fulfil => {
                   const objectPath = `${data.hash.slice(0, 2)}/${data.hash}`
                   const assetPath = `${root}/${file}`
-                  const vanillaObjectPath = path.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
+                  const vanillaObjectPath = PathModule.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
                   if (await exists(vanillaObjectPath)) {
                     objectsFiles[assetPath] = vanillaObjectPath
                   } else {
-                    const cacheObjectPath = path.join(settings.cache_directory.value, "objects", objectPath)
+                    const cacheObjectPath = PathModule.join(settings.cache_directory.value, "objects", objectPath)
                     if (!await exists(cacheObjectPath)) {
                       const object = new Uint8Array(await fetch(`https://resources.download.minecraft.net/${objectPath}`).then(e => e.arrayBuffer()))
-                      await fs.promises.mkdir(path.dirname(cacheObjectPath), { recursive: true })
+                      await fs.promises.mkdir(PathModule.dirname(cacheObjectPath), { recursive: true })
                       await fs.promises.writeFile(cacheObjectPath, object)
                       output.log(`Downloaded \`${root}/${file}\` to the cache`)
                     }
@@ -3033,7 +3032,7 @@ const utilities = {
             try {
               const entries = await fs.promises.readdir(folderPath, { withFileTypes: true })
               for (const entry of entries) {
-                const fullPath = path.join(folderPath, entry.name)
+                const fullPath = PathModule.join(folderPath, entry.name)
                 if (entry.isDirectory()) {
                   await deleteEmptyFolders(fullPath)
                   if ((await fs.promises.readdir(fullPath)).length === 0) {
@@ -3109,7 +3108,7 @@ const utilities = {
             return
           }
 
-          const langPath = path.join(this.folder, "assets", "minecraft", "lang")
+          const langPath = PathModule.join(this.folder, "assets", "minecraft", "lang")
           if (!await exists(langPath)) {
             this.status.finished = true
             this.status.processing = false
@@ -3163,7 +3162,7 @@ const utilities = {
             assetsIndex = await getVersionAssetsIndex(this.version)
             const files = await listFiles(langPath)
             root = getRoot(this.version)
-            const extension = path.extname(Object.keys(assetsIndex.objects).find(e => e.startsWith("assets/minecraft/lang/".slice(root.length + 1))))
+            const extension = PathModule.extname(Object.keys(assetsIndex.objects).find(e => e.startsWith("assets/minecraft/lang/".slice(root.length + 1))))
             langs = files.filter(e => assetsIndex.objects[`assets/minecraft/lang/${e}`.slice(root.length + 1)] || (e.toLowerCase().startsWith("en_us.") && e.endsWith(extension)))
             if (langs.length === 0) {
               this.status.finished = true
@@ -3177,10 +3176,10 @@ const utilities = {
 
           const enUS = "assets/minecraft/lang/en_us.json" in jar.files ? "assets/minecraft/lang/en_us.json" : "assets/minecraft/lang/en_us.lang" in jar.files ? "assets/minecraft/lang/en_us.lang" : "assets/minecraft/lang/en_US.lang"
 
-          const enUSFile = path.join(this.folder, enUS)
+          const enUSFile = PathModule.join(this.folder, enUS)
 
           if (await exists(enUSFile)) {
-            await processFile(path.extname(enUS), enUSFile, enUS, jar.files[enUS].content)
+            await processFile(PathModule.extname(enUS), enUSFile, enUS, jar.files[enUS].content)
           } else if (this.mode === "default") {
             this.status.finished = true
             this.status.processing = false
@@ -3193,16 +3192,16 @@ const utilities = {
             async function getLang(lang, langPath) {
               const data = assetsIndex.objects[langPath.slice(root.length + 1)]
               const objectPath = `${data.hash.slice(0, 2)}/${data.hash}`
-              const vanillaObjectPath = path.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
+              const vanillaObjectPath = PathModule.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
               if (await exists(vanillaObjectPath)) {
                 return fs.promises.readFile(vanillaObjectPath)
               }
-              const cacheObjectPath = path.join(settings.cache_directory.value, "objects", objectPath)
+              const cacheObjectPath = PathModule.join(settings.cache_directory.value, "objects", objectPath)
               if (await exists(cacheObjectPath)) {
                 return fs.promises.readFile(cacheObjectPath)
               }
               const object = Buffer.from(await fetch(`https://resources.download.minecraft.net/${objectPath}`).then(e => e.arrayBuffer()))
-              await fs.promises.mkdir(path.dirname(cacheObjectPath), { recursive: true })
+              await fs.promises.mkdir(PathModule.dirname(cacheObjectPath), { recursive: true })
               await fs.promises.writeFile(cacheObjectPath, object)
               output.log(`Downloaded \`${langPath}\` to the cache`)
               return object
@@ -3218,7 +3217,7 @@ const utilities = {
               }
               if (lang.toLowerCase().startsWith("en_us.")) continue
               const langPath = `assets/minecraft/lang/${lang}`
-              await processFile(path.extname(lang), path.join(this.folder, langPath), langPath, await getLang(lang, langPath))
+              await processFile(PathModule.extname(lang), PathModule.join(this.folder, langPath), langPath, await getLang(lang, langPath))
             }
           }
 
@@ -3326,15 +3325,15 @@ const utilities = {
             let fullOutputPath = this.outputFolder
             if (this.subfolders) {
               outputPath = name + "/"
-              fullOutputPath = path.join(fullOutputPath, name)
+              fullOutputPath = PathModule.join(fullOutputPath, name)
             }
-            const saveName = path.join(fullOutputPath, `${name}.${batchExporterFormats[this.format].type}`)
+            const saveName = PathModule.join(fullOutputPath, `${name}.${batchExporterFormats[this.format].type}`)
             if (await exists(saveName)) {
               output.warn(`Skipping \`${file}\` as \`${outputPath}${name}.${batchExporterFormats[this.format].type}\` already exists`)
               this.done++
               continue
             }
-            const data = autoParseJSON(await fs.promises.readFile(path.join(this.inputFolder, file), "utf-8"), false)
+            const data = autoParseJSON(await fs.promises.readFile(PathModule.join(this.inputFolder, file), "utf-8"), false)
             if (!data) {
               output.error(`Skipping \`${file}\` as it could not be read`)
               this.done++
@@ -3376,12 +3375,12 @@ const utilities = {
                 const name = texture.name.endsWith(".png") ? texture.name : texture.name + ".png"
                 let saveName
                 if (this.textureFolders && !batchExporterSpecialFormats.includes(this.format)) {
-                  await fs.promises.mkdir(path.join(this.outputFolder, outputPath, "textures", texture.folder), { recursive: true })
-                  saveName = formatPath(path.join(outputPath, "textures", texture.folder, name))
+                  await fs.promises.mkdir(PathModule.join(this.outputFolder, outputPath, "textures", texture.folder), { recursive: true })
+                  saveName = formatPath(PathModule.join(outputPath, "textures", texture.folder, name))
                 } else {
                   saveName = `${outputPath}${name}`
                 }
-                const savePath = path.join(this.outputFolder, saveName)
+                const savePath = PathModule.join(this.outputFolder, saveName)
                 if (await exists(savePath)) {
                   output.warn(`Skipping texture \`${name}\` from \`${file}\` as \`${saveName}\` already exists`)
                   continue
@@ -3473,7 +3472,7 @@ const utilities = {
           const str = `Missing ${missing.length} of ${this.total} textures (${!this.total ? 0 : ((missing.length / this.total) * 100).toFixed(2).replace(/\.?0+$/, "")}%)`
 
           if (this.exportLog) {
-            const name = path.join(this.folder, `missing_textures_${getDate()}.txt`)
+            const name = PathModule.join(this.folder, `missing_textures_${getDate()}.txt`)
             await fs.promises.writeFile(name, `${header}${str}\n\nMissing Textures\n――――――――――――――――\n${formatFilePaths(missing)}`, "utf-8")
             output.log(`Saved missing textures list to \`${name}\``)
           }
@@ -4206,7 +4205,7 @@ const utilities = {
           for (let h = 0; h < img.height; h += tileSize) {
             for (let w = 0; w < img.width; w += tileSize) {
               canvas.ctx.drawImage(img, w, h, tileSize, tileSize, 0, 0, tileSize, tileSize)
-              await fs.promises.writeFile(path.join(dir, tile + ".png"), Buffer.from(await (await new Promise(fulfil => canvas.toBlob(fulfil))).arrayBuffer()))
+              await fs.promises.writeFile(PathModule.join(dir, tile + ".png"), Buffer.from(await (await new Promise(fulfil => canvas.toBlob(fulfil))).arrayBuffer()))
               canvas.ctx.clearRect(0, 0, tileSize, tileSize)
               tile++
               if (tile >= tileCount) {
@@ -4603,7 +4602,7 @@ const utilities = {
         async save() {
           const dir = Blockbench.pickDirectory()
           if (!dir) return
-          await Promise.all(this.frames.map(async (frame, i) => fs.promises.writeFile(path.join(dir, `clock_${i.toString().padStart(2, 0)}.png`), Buffer.from(await (await new Promise(fulfil => frame.toBlob(fulfil))).arrayBuffer()))))
+          await Promise.all(this.frames.map(async (frame, i) => fs.promises.writeFile(PathModule.join(dir, `clock_${i.toString().padStart(2, 0)}.png`), Buffer.from(await (await new Promise(fulfil => frame.toBlob(fulfil))).arrayBuffer()))))
           Blockbench.showQuickMessage("Exported clock")
         }
       },
@@ -4690,7 +4689,7 @@ const utilities = {
             if (this.cancelled) break
             let img
             try {
-              img = await loadImage(path.join(this.folder, file))
+              img = await loadImage(PathModule.join(this.folder, file))
             } catch {
               output.error(`Skipping \`${shortened}\` as it could not be read`)
               this.done++

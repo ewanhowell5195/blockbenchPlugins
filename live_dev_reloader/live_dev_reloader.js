@@ -1,4 +1,3 @@
-const path = require("node:path")
 let actions, watching, message, styles, unwatchAction, rewatchAction
 const id = "live_dev_reloader"
 const name = "Live Dev Reloader"
@@ -9,7 +8,7 @@ Plugin.register(id, {
   author: "Ewan Howell",
   description: "Edit plugins and themes live in any text editor and have them automatically update in Blockbench.",
   tags: ["Plugins", "Themes", "Blockbench"],
-  version: "1.0.1",
+  version: "1.0.2",
   min_version: "4.10.0",
   variant: "desktop",
   website: "https://ewanhowell.com/plugins/live-dev-reloader/",
@@ -42,12 +41,14 @@ Plugin.register(id, {
         }
       })
     ]
-    const file = localStorage.getItem("live_dev_reloader_file")
-    if (localStorage.getItem("live_dev_reloader_file") && localStorage.getItem("live_dev_reloader_persist") === "true") {
-      toggle.set(true)
-      if (localStorage.getItem("live_dev_reloader_stopped") === "true") rewatch()
-      else watch(file, true)
-    } else if (localStorage.getItem("live_dev_reloader_stopped") === "true") rewatch()
+    setTimeout(() => {
+      const file = localStorage.getItem("live_dev_reloader_file")
+      if (localStorage.getItem("live_dev_reloader_file") && localStorage.getItem("live_dev_reloader_persist") === "true") {
+        toggle.set(true)
+        if (localStorage.getItem("live_dev_reloader_stopped") === "true") rewatch()
+        else watch(file, true)
+      } else if (localStorage.getItem("live_dev_reloader_stopped") === "true") rewatch()
+    }, 0)
     MenuBar.addAction({
       name,
       id,
@@ -66,14 +67,14 @@ function watch(file, first) {
   if (!fs.existsSync(file)) {
     localStorage.removeItem("live_dev_reloader_file")
     unwatch("force")
-    return Blockbench.showQuickMessage(`Stopped watching. File not found: ${path.basename(file)}`, 3000)
+    return Blockbench.showQuickMessage(`Stopped watching. File not found: ${PathModule.basename(file)}`, 3000)
   }
   fs.watchFile(file, { interval: 100 }, (...args) => update(...args, true))
-  fs.watchFile(path.join(path.dirname(file), "about.md"), { interval: 100 }, update)
+  fs.watchFile(PathModule.join(PathModule.dirname(file), "about.md"), { interval: 100 }, update)
   watching = file
   update({ mtime: 1 }, { mtime: 0 }, true, true)
   localStorage.setItem("live_dev_reloader_file", file)
-  Blockbench.showQuickMessage(`Watching file: ${path.basename(file)}`, 3000)
+  Blockbench.showQuickMessage(`Watching file: ${PathModule.basename(file)}`, 3000)
   if (unwatchAction) {
     unwatchAction.delete()
     actions.splice(actions.indexOf(unwatchAction), 1)
@@ -93,7 +94,7 @@ function watch(file, first) {
 function unwatch(type) {
   if (watching) {
     fs.unwatchFile(watching)
-    fs.unwatchFile(path.join(path.dirname(watching), "about.md"))
+    fs.unwatchFile(PathModule.join(PathModule.dirname(watching), "about.md"))
   }
   styles?.delete()
   message?.close()
@@ -101,7 +102,7 @@ function unwatch(type) {
   else if (type === "manual") {
     localStorage.setItem("live_dev_reloader_stopped", true)
     rewatch()
-    Blockbench.showQuickMessage(`Stopped watching ${path.basename(watching)}`, 3000)
+    Blockbench.showQuickMessage(`Stopped watching ${PathModule.basename(watching)}`, 3000)
   } else if (type === "reload") {
     if (watching && localStorage.getItem("live_dev_reloader_persist") === "true") localStorage.setItem("live_dev_reloader_stopped", false)
     else localStorage.setItem("live_dev_reloader_stopped", true)
@@ -118,7 +119,7 @@ function rewatch() {
   if (fs.existsSync(file)) {
     rewatchAction = new Action("live_dev_reloader_rewatch", {
       plugin: id,
-      name: `Rewatch ${path.basename(file)}`,
+      name: `Rewatch ${PathModule.basename(file)}`,
       description: `Rewatch the file: ${file}`,
       icon,
       condition: () => !watching && localStorage.getItem("live_dev_reloader_stopped") === "true" && localStorage.getItem("live_dev_reloader_file"),
@@ -130,13 +131,13 @@ function rewatch() {
 
 async function update(curr, prev, main, first) {
   if (main && curr.mtimeMs === 0) {
-    Blockbench.showQuickMessage(`Stopped watching. File not found: ${path.basename(watching)}`, 3000)
+    Blockbench.showQuickMessage(`Stopped watching. File not found: ${PathModule.basename(watching)}`, 3000)
     return unwatch("force")
   } else if (curr.mtime > prev.mtime) {
     message?.close()
     styles?.delete()
     if (watching.endsWith(".js")) {
-      const id = path.basename(watching, ".js")
+      const id = PathModule.basename(watching, ".js")
       const plugin = Plugins.all.find(e => e.id === id && e.source === "file")
       if (!plugin) return message = Blockbench.showMessageBox({
         title: "Plugin not installed",
@@ -173,7 +174,7 @@ async function update(curr, prev, main, first) {
         } catch (err) {
           return message = Blockbench.showMessageBox({
             title: "Invalid JSON",
-            message: `Invalid JSON in theme <code>${path.basename(watching)}</code>:\n<code>${err.message}</code>\n\nTheme location: <code>${watching}</code>`,
+            message: `Invalid JSON in theme <code>${PathModule.basename(watching)}</code>:\n<code>${err.message}</code>\n\nTheme location: <code>${watching}</code>`,
             buttons: ["Stop Watching", "dialog.close"]
           }, button => {
             if (button === 0) unwatch("force")
@@ -182,7 +183,7 @@ async function update(curr, prev, main, first) {
       }
       styles = Blockbench.addCSS(css)
       resizeWindow()
-      console.log(`Theme reloaded: ${name ?? path.basename(watching).split(".").slice(0, -1).join(".")}`)
+      console.log(`Theme reloaded: ${name ?? PathModule.basename(watching).split(".").slice(0, -1).join(".")}`)
     }
   }
 }
