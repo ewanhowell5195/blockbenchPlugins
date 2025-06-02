@@ -2,7 +2,7 @@ const crypto = require("node:crypto")
 const zlib = require("node:zlib")
 const os = require("node:os")
 
-let dialog, action, action2, styles, storage
+let dialog, action, action2, styles, storage, cacheDir
 
 const id = "resource_pack_utilities"
 const name = "Resource Pack Utilities"
@@ -28,7 +28,7 @@ const setupPlugin = () => Plugin.register(id, {
   author: "Ewan Howell",
   description,
   tags: ["Minecraft: Java Edition", "Resource Packs", "Utilities"],
-  version: "1.6.2",
+  version: "1.7.0",
   min_version: "4.10.0",
   variant: "desktop",
   website: `https://ewanhowell.com/plugins/${id.replace(/_/g, "-")}/`,
@@ -37,6 +37,10 @@ const setupPlugin = () => Plugin.register(id, {
   creation_date: "2024-07-01",
   has_changelog: true,
   async onload() {
+    cacheDir = PathModule.join(app.getPath("userData"), "minecraft_assets_cache")
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true })
+    }
     storage = JSON.parse(localStorage.getItem(id) ?? "{}")
     storage.favourites ??= []
     let directory
@@ -47,7 +51,7 @@ const setupPlugin = () => Plugin.register(id, {
     } else {
       directory = PathModule.join(os.homedir(), ".minecraft")
     }
-    new Setting("minecraft_directory", {
+    new Setting("ewan_minecraft_directory", {
       value: directory,
       category: "defaults",
       type: "click",
@@ -57,28 +61,10 @@ const setupPlugin = () => Plugin.register(id, {
       click() {
         const dir = Blockbench.pickDirectory({
           title: "Select your .minecraft folder",
-          startpath: settings.minecraft_directory.value
+          startpath: settings.ewan_minecraft_directory.value
         })
         if (dir) {
-          settings.minecraft_directory.value = dir
-          Settings.saveLocalStorages()
-        }
-      }
-    })
-    new Setting("cache_directory", {
-      value: "",
-      category: "defaults",
-      type: "click",
-      name: "Ewan's Plugins - Cache Directory",
-      description: "The location to cache downloaded content",
-      icon: "database",
-      click() {
-        const dir = Blockbench.pickDirectory({
-          title: "Select a folder to cache downloaded content",
-          startpath: settings.cache_directory.value
-        })
-        if (dir) {
-          settings.cache_directory.value = dir
+          settings.ewan_minecraft_directory.value = dir
           Settings.saveLocalStorages()
         }
       }
@@ -87,7 +73,7 @@ const setupPlugin = () => Plugin.register(id, {
       selectFolder(title = "folder", key = "folder") {
         const dir = Blockbench.pickDirectory({
           title: `Select ${title}`,
-          startpath: PathModule.join(settings.minecraft_directory.value, "resourcepacks")
+          startpath: PathModule.join(settings.ewan_minecraft_directory.value, "resourcepacks")
         })
         if (dir) {
           this[key] = dir
@@ -526,7 +512,7 @@ const setupPlugin = () => Plugin.register(id, {
         manifest.versions = data.versions.slice(0, data.versions.findIndex(e => e.id === "13w24a") + 1)
       },
       async onOpen() {
-        if (!await exists(settings.minecraft_directory.value)) {
+        if (!await exists(settings.ewan_minecraft_directory.value)) {
           new Dialog({
             title: "The .minecraft directory was not found",
             lines: ['When prompted, please select your <code class="rpu-code">.minecraft</code> folder'],
@@ -535,10 +521,10 @@ const setupPlugin = () => Plugin.register(id, {
             onClose() {
               const dir = Blockbench.pickDirectory({
                 title: "Select your .minecraft folder",
-                startpath: settings.minecraft_directory.value
+                startpath: settings.ewan_minecraft_directory.value
               })
               if (dir) {
-                settings.minecraft_directory.value = dir
+                settings.ewan_minecraft_directory.value = dir
                 Settings.saveLocalStorages()
               } else {
                 dialog.close()
@@ -790,33 +776,6 @@ function parseZip(zip) {
   return parsedZip
 }
 
-async function cacheDirectory() {
-  if (!await exists(settings.cache_directory.value)) {
-    output.info("Cache directory not found. Please set a new one")
-    return new Promise(fulfil => {
-      new Dialog({
-        title: "The cache directory was not found",
-        lines: ["When prompted, please select a folder to cache downloaded content"],
-        width: 512,
-        buttons: ["dialog.ok"],
-        onClose() {
-          let dir
-          while (!dir) {
-            dir = Blockbench.pickDirectory({
-              title: "Select a folder to cache downloaded content",
-              startpath: settings.cache_directory.value
-            })
-          }
-          settings.cache_directory.value = dir
-          Settings.saveLocalStorages()
-          output.log(`Cache directory set to \`${formatPath(settings.cache_directory.value)}\``)
-          fulfil()
-        }
-      }).show()
-    })
-  }
-}
-
 function getVersion(id) {
   return manifest.versions.find(e => e.id === id)
 }
@@ -826,13 +785,12 @@ async function getVersionData(id) {
   if (version.data) {
     return version.data
   }
-  const vanillaDataPath = PathModule.join(settings.minecraft_directory.value, "versions", id, id + ".json")
+  const vanillaDataPath = PathModule.join(settings.ewan_minecraft_directory.value, "versions", id, id + ".json")
   if (await exists(vanillaDataPath)) {
     version.data = JSON.parse(await fs.promises.readFile(vanillaDataPath))
     return version.data
   }
-  await cacheDirectory()
-  const cacheDataPath = PathModule.join(settings.cache_directory.value, `data_${id}.json`)
+  const cacheDataPath = PathModule.join(cacheDir, `data_${id}.json`)
   if (await exists(cacheDataPath)) {
     version.data = JSON.parse(await fs.promises.readFile(cacheDataPath))
     return version.data
@@ -851,7 +809,7 @@ async function getVersionAssetsIndex(id) {
   if (version.assetsIndex) {
     return version.assetsIndex
   }
-  const vanillaAssetsIndexPath = PathModule.join(settings.minecraft_directory.value, "assets", "indexes", version.assets + ".json")
+  const vanillaAssetsIndexPath = PathModule.join(settings.ewan_minecraft_directory.value, "assets", "indexes", version.assets + ".json")
   if (await exists(vanillaAssetsIndexPath)) {
     if (await shaCheck(vanillaAssetsIndexPath, version.assetIndex.sha1)) {
       version.assetsIndex = JSON.parse(await fs.promises.readFile(vanillaAssetsIndexPath))
@@ -861,8 +819,7 @@ async function getVersionAssetsIndex(id) {
       await fs.promises.writeFile(vanillaAssetsIndexPath, JSON.stringify(version.assetsIndex), "utf-8")
     }
   }
-  await cacheDirectory()
-  const cacheAssetsIndexPath = PathModule.join(settings.cache_directory.value, `assets_index_${version.assets}.json`)
+  const cacheAssetsIndexPath = PathModule.join(cacheDir, `assets_index_${version.assets}.json`)
   if (await exists(cacheAssetsIndexPath) && await shaCheck(cacheAssetsIndexPath, version.assetIndex.sha1)) {
     version.assetsIndex = JSON.parse(await fs.promises.readFile(cacheAssetsIndexPath))
     return version.assetsIndex
@@ -874,13 +831,12 @@ async function getVersionAssetsIndex(id) {
 
 async function getVersionJar(id) {
   let jar
-  const jarPath = PathModule.join(settings.minecraft_directory.value, "versions", id, id + ".jar")
+  const jarPath = PathModule.join(settings.ewan_minecraft_directory.value, "versions", id, id + ".jar")
   if (await exists(jarPath)) {
     jar = parseZip((await fs.promises.readFile(jarPath)).buffer)
     output.log(`Using downloaded version of \`${id}\``)
   } else {
-    await cacheDirectory()
-    const jarPath = PathModule.join(settings.cache_directory.value, id + ".jar")
+    const jarPath = PathModule.join(cacheDir, id + ".jar")
     if (await exists(jarPath)) {
       jar = parseZip((await fs.promises.readFile(jarPath)).buffer)
       output.log(`Using cached version of \`${id}\``)
@@ -1036,11 +992,11 @@ async function getObject(filePath, version, assetsIndex) {
   const root = getRoot(version)
   const data = assetsIndex.objects[filePath.slice(root.length + 1)]
   const objectPath = `${data.hash.slice(0, 2)}/${data.hash}`
-  const vanillaObjectPath = PathModule.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
+  const vanillaObjectPath = PathModule.join(settings.ewan_minecraft_directory.value, "assets", "objects", objectPath)
   if (await exists(vanillaObjectPath)) {
     return fs.promises.readFile(vanillaObjectPath)
   }
-  const cacheObjectPath = PathModule.join(settings.cache_directory.value, "objects", objectPath)
+  const cacheObjectPath = PathModule.join(cacheDir, "objects", objectPath)
   if (await exists(cacheObjectPath)) {
     return fs.promises.readFile(cacheObjectPath)
   }
@@ -1107,7 +1063,7 @@ const components = {
       selectFolder(title = "folder") {
         const dir = Blockbench.pickDirectory({
           title: `Select the ${title}`,
-          startpath: this.folder || PathModule.join(settings.minecraft_directory.value, "resourcepacks")
+          startpath: this.folder || PathModule.join(settings.ewan_minecraft_directory.value, "resourcepacks")
         })
         if (dir) {
           this.folder = dir
@@ -2574,7 +2530,7 @@ const utilities = {
         total: null
       },
       created() {
-        this.folder = formatPath(PathModule.join(settings.minecraft_directory.value, "resourcepacks"))
+        this.folder = formatPath(PathModule.join(settings.ewan_minecraft_directory.value, "resourcepacks"))
       },
       methods: {
         async execute() {
@@ -2665,7 +2621,6 @@ const utilities = {
               for (const path of paths) {
                 await fs.promises.mkdir(path, { recursive: true })
               }
-              await cacheDirectory()
               for (let i = 0; i < objectsEntries.length; i += 256) {
                 if (this.cancelled) {
                   this.status.finished = true
@@ -2683,12 +2638,12 @@ const utilities = {
                   files.push(new Promise(async fulfil => {
                     const objectPath = `${data.hash.slice(0, 2)}/${data.hash}`
                     const packPath = PathModule.join(this.folder, this.name, root, file)
-                    const vanillaObjectPath = PathModule.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
+                    const vanillaObjectPath = PathModule.join(settings.ewan_minecraft_directory.value, "assets", "objects", objectPath)
                     if (await exists(vanillaObjectPath)) {
                       await fs.promises.copyFile(vanillaObjectPath, packPath)
                       output.log(`Extracted \`${root}/${file}\``)
                     } else {
-                      const cacheObjectPath = PathModule.join(settings.cache_directory.value, "objects", objectPath)
+                      const cacheObjectPath = PathModule.join(cacheDir, "objects", objectPath)
                       if (await exists(cacheObjectPath)) {
                         await fs.promises.copyFile(cacheObjectPath, packPath)
                         output.log(`Extracted \`${root}/${file}\``)
@@ -2973,7 +2928,6 @@ const utilities = {
 
           const objectsFiles = {}
           if (this.objects) {
-            await cacheDirectory()
             const assetsIndex = await getVersionAssetsIndex(this.version)
             const entries = Object.entries(assetsIndex.objects)
             const version = getVersion(this.version)
@@ -2997,11 +2951,11 @@ const utilities = {
                 downloads.push(new Promise(async fulfil => {
                   const objectPath = `${data.hash.slice(0, 2)}/${data.hash}`
                   const assetPath = `${root}/${file}`
-                  const vanillaObjectPath = PathModule.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
+                  const vanillaObjectPath = PathModule.join(settings.ewan_minecraft_directory.value, "assets", "objects", objectPath)
                   if (await exists(vanillaObjectPath)) {
                     objectsFiles[assetPath] = vanillaObjectPath
                   } else {
-                    const cacheObjectPath = PathModule.join(settings.cache_directory.value, "objects", objectPath)
+                    const cacheObjectPath = PathModule.join(cacheDir, "objects", objectPath)
                     if (!await exists(cacheObjectPath)) {
                       const object = new Uint8Array(await fetch(`https://resources.download.minecraft.net/${objectPath}`).then(e => e.arrayBuffer()))
                       await fs.promises.mkdir(PathModule.dirname(cacheObjectPath), { recursive: true })
@@ -3158,7 +3112,6 @@ const utilities = {
           if (this.mode === "default") {
             this.total = 1
           } else {
-            await cacheDirectory()
             assetsIndex = await getVersionAssetsIndex(this.version)
             const files = await listFiles(langPath)
             root = getRoot(this.version)
@@ -3192,11 +3145,11 @@ const utilities = {
             async function getLang(lang, langPath) {
               const data = assetsIndex.objects[langPath.slice(root.length + 1)]
               const objectPath = `${data.hash.slice(0, 2)}/${data.hash}`
-              const vanillaObjectPath = PathModule.join(settings.minecraft_directory.value, "assets", "objects", objectPath)
+              const vanillaObjectPath = PathModule.join(settings.ewan_minecraft_directory.value, "assets", "objects", objectPath)
               if (await exists(vanillaObjectPath)) {
                 return fs.promises.readFile(vanillaObjectPath)
               }
-              const cacheObjectPath = PathModule.join(settings.cache_directory.value, "objects", objectPath)
+              const cacheObjectPath = PathModule.join(cacheDir, "objects", objectPath)
               if (await exists(cacheObjectPath)) {
                 return fs.promises.readFile(cacheObjectPath)
               }
@@ -4875,8 +4828,6 @@ const utilities = {
           this.status.processing = true
           this.done = 0
           this.total = 1
-
-          await cacheDirectory()
 
           const vanilla = JSON.parse(await getObject("assets/minecraft/sounds.json", this.version))
           const sounds = JSON.parse(this.file.content)
