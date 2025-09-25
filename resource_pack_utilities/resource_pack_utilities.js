@@ -2830,8 +2830,8 @@ const utilities = {
           }
           await fs.promises.writeFile(PathModule.join(folder, "pack.mcmeta"), JSON.stringify({
             "pack": {
-              "pack_format": packFormat,
-              "description": this.description || "Template Resource Pack"
+              "description": this.description || "Template Resource Pack",
+              "pack_format": packFormat
             }
           }, null, 2), "utf-8")
           output.log("Created file `pack.mcmeta`")
@@ -5033,7 +5033,7 @@ const utilities = {
     name: "Lang Builder",
     icon: "glyphs",
     tagline: "Easily make language file changes that support every language.",
-    description: "Lang Builder lets you define language key modifications using replacement, prefix, or suffix modes. Changes are applied to all vanilla language files, with support for per-language overrides.",
+    description: "Lang Builder lets you define language key modifications using replacement, prefix, or suffix modes. Changes are applied to all vanilla language files.",
     info: `
       <h3>What is Lang Builder?</h3>
       <p>

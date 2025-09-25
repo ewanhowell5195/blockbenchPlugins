@@ -39,7 +39,7 @@
     </li>
     <li>
       <h3>Lang Builder</h3>
-      <p>Lang Builder lets you define language key modifications using replacement, prefix, or suffix modes. Changes are applied to all vanilla language files, with support for per-language overrides.</p>
+      <p>Lang Builder lets you define language key modifications using replacement, prefix, or suffix modes. Changes are applied to all vanilla language files.</p>
     </li>
     <li>
       <h3>Lang Stripper</h3>
