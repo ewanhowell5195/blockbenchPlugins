@@ -18,6 +18,7 @@
     version: "1.1.3",
     min_version: "4.12.0",
     variant: "both",
+    creation_date: "2022-11-08",
     onload() {
       if (!Blockbench.flags.after_update) setSplashArt()
       styles = Blockbench.addCSS(`
