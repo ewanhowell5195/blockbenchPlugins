@@ -15,8 +15,8 @@
     author: "Ewan Howell",
     description: "Generate hue shifted gradient palettes from a single colour.",
     tags: ["Paint", "Palette", "Color"],
-    version: "2.0.0",
-    min_version: "4.10.0",
+    version: "2.1.0",
+    min_version: "5.0.0",
     variant: "both",
     website: "https://ewanhowell.com/plugins/colour-gradient-generator/",
     repository: "https://github.com/ewanhowell5195/blockbenchPlugins/tree/main/colour_gradient_generator",
@@ -217,7 +217,7 @@
           },
           template: `
             <div>
-              <div title="Reset values back to their defaults" class="dialog_close_button" style="right: 30px; z-index: 3;" @click="reset"><i class="material-icons">replay</i></div>
+              <div title="Reset values back to their defaults" class="dialog_close_button" style="right: 33px; z-index: 3; border-radius: 6px;" @click="reset"><i class="material-icons">replay</i></div>
               <h2>Colour</h2>
               <input ref="colour" />
               <br>

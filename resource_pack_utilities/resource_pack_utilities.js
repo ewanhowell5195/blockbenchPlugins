@@ -1,8 +1,7 @@
 const crypto = require("node:crypto")
 const zlib = require("node:zlib")
-const os = require("node:os")
 
-let dialog, action, action2, styles, storage, cacheDir
+let fs, dialog, action, action2, styles, storage, cacheDir
 
 const id = "resource_pack_utilities"
 const name = "Resource Pack Utilities"
@@ -28,8 +27,8 @@ const setupPlugin = () => Plugin.register(id, {
   author: "Ewan Howell",
   description,
   tags: ["Minecraft: Java Edition", "Resource Packs", "Utilities"],
-  version: "1.8.0",
-  min_version: "4.10.0",
+  version: "1.9.0",
+  min_version: "5.0.0",
   variant: "desktop",
   website: `https://ewanhowell.com/plugins/${id.replace(/_/g, "-")}/`,
   repository: `https://github.com/ewanhowell5195/blockbenchPlugins/tree/main/${id}`,
@@ -37,19 +36,28 @@ const setupPlugin = () => Plugin.register(id, {
   creation_date: "2024-07-01",
   has_changelog: true,
   async onload() {
-    cacheDir = PathModule.join(app.getPath("userData"), "minecraft_assets_cache")
+    fs = require("fs", {
+      message: "This permission is required to access your downloaded Minecraft versions, cache versions you open that aren’t already downloaded, and export assets to folders.",
+      optional: false
+    })
+
+    if (!fs) {
+      throw new Error("fs access denied")
+    }
+
+    cacheDir = PathModule.join(SystemInfo.user_data_directory, "minecraft_assets_cache")
     if (!fs.existsSync(cacheDir)) {
       fs.mkdirSync(cacheDir, { recursive: true })
     }
     storage = JSON.parse(localStorage.getItem(id) ?? "{}")
     storage.favourites ??= []
     let directory
-    if (os.platform() === "win32") {
-      directory = PathModule.join(os.homedir(), "AppData", "Roaming", ".minecraft")
-    } else if (os.platform() === "darwin") {
-      directory = PathModule.join(os.homedir(), "Library", "Application Support", "minecraft")
+    if (SystemInfo.platform === "win32") {
+      directory = PathModule.join(SystemInfo.appdata_directory, ".minecraft")
+    } else if (SystemInfo.platform === "darwin") {
+      directory = PathModule.join(SystemInfo.home_directory, "Library", "Application Support", "minecraft")
     } else {
-      directory = PathModule.join(os.homedir(), ".minecraft")
+      directory = PathModule.join(SystemInfo.home_directory, ".minecraft")
     }
     new Setting("ewan_minecraft_directory", {
       value: directory,
@@ -620,19 +628,19 @@ const setupPlugin = () => Plugin.register(id, {
     MenuBar.addAction(action, "tools")
     MenuBar.addAction(action2, "tools")
     document.addEventListener("keydown", copyText)
-    const utility = electron.getGlobal("process").argv.find(e => e.startsWith("--resource-pack-utility="))?.split("=")[1]
-    if (utility && utilities[utility]) {
-      dialog.show()
-      dialog.content_vue.utility = utility
-    }
+    // const utility = electron.getGlobal("process").argv.find(e => e.startsWith("--resource-pack-utility="))?.split("=")[1]
+    // if (utility && utilities[utility]) {
+    //   dialog.show()
+    //   dialog.content_vue.utility = utility
+    // }
   },
   onunload() {
     document.removeEventListener("keydown", copyText)
-    dialog.close()
-    action.delete()
-    action2.delete()
-    Object.keys(utilities).forEach(e => BarItems[e].delete())
-    styles.delete()
+    dialog?.close()
+    action?.delete()
+    action2?.delete()
+    Object.keys(utilities).forEach(e => BarItems[e]?.delete())
+    styles?.delete()
     document.getElementById(`${id}-processing-styles`)?.remove()
   }
 })
@@ -728,7 +736,7 @@ function formatPath(path) {
 function exists(path) {
   return new Promise(async fulfil => {
     try {
-      await fs.promises.access(path)
+      await fs.promises.stat(path)
       fulfil(true)
     } catch {
       fulfil(false)
@@ -5750,7 +5758,7 @@ const utilities = {
               </div>
               <select-input class="mode-select" v-model="entry.mode" :options="modes" @input="changeMode(entry)" />
               <input class="entry-value" type="text" :placeholder="valuePlaceholder(entry)" v-model="entry.value" :style="{ visibility: entry.mode === 'blank' ? 'hidden' : 'initial' }">
-              <input class="entry-value" v-if="entry.mode === 'prefixSuffix'" class="entry-value" type="text" placeholder="Suffix" v-model="entry.value2">
+              <input class="entry-value" v-if="entry.mode === 'prefixSuffix'" type="text" placeholder="Suffix" v-model="entry.value2">
               <button class="material-icons" @click="entryOptions($event, index)">menu</button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 const crypto = require("node:crypto")
-const os = require("node:os")
+const zlib = require("node:zlib")
 
-let dialog, action, storage, loader, styles, cacheDir
+let fs, dialog, action, storage, loader, styles, cacheDir
 
 const id = "asset_browser"
 const name = "Asset Browser"
@@ -69,8 +69,8 @@ Plugin.register(id, {
   author: "Ewan Howell",
   description,
   tags: ["Minecraft", "Assets", "Browser"],
-  version: "1.1.0",
-  min_version: "4.12.0",
+  version: "1.2.0",
+  min_version: "5.0.0",
   variant: "desktop",
   creation_date: "2025-05-30",
   type: "module",
@@ -79,7 +79,16 @@ Plugin.register(id, {
   bug_tracker: "https://github.com/ewanhowell5195/blockbenchPlugins/issues/new?title=[Asset Browser]",
   has_changelog: true,
   onload() {
-    cacheDir = PathModule.join(app.getPath("userData"), "minecraft_assets_cache")
+    fs = require("fs", {
+      message: "This permission is required to access your downloaded Minecraft versions, cache versions you open that aren’t already downloaded, and export assets to folders.",
+      optional: false
+    })
+
+    if (!fs) {
+      throw new Error("fs access denied")
+    }
+
+    cacheDir = PathModule.join(SystemInfo.user_data_directory, "minecraft_assets_cache")
     if (!fs.existsSync(cacheDir)) {
       fs.mkdirSync(cacheDir, { recursive: true })
     }
@@ -88,12 +97,12 @@ Plugin.register(id, {
     storage.recentComparisons ??= []
     loadSidebar()
     let directory
-    if (os.platform() === "win32") {
-      directory = PathModule.join(os.homedir(), "AppData", "Roaming", ".minecraft")
-    } else if (os.platform() === "darwin") {
-      directory = PathModule.join(os.homedir(), "Library", "Application Support", "minecraft")
+    if (SystemInfo.platform === "win32") {
+      directory = PathModule.join(SystemInfo.appdata_directory, ".minecraft")
+    } else if (SystemInfo.platform === "darwin") {
+      directory = PathModule.join(SystemInfo.home_directory, "Library", "Application Support", "minecraft")
     } else {
-      directory = PathModule.join(os.homedir(), ".minecraft")
+      directory = PathModule.join(SystemInfo.home_directory, ".minecraft")
     }
     new Setting("ewan_minecraft_directory", {
       value: directory,
@@ -1712,23 +1721,26 @@ Plugin.register(id, {
             return typeof data.blockbenchImportable === "function" ? data.blockbenchImportable() : data.blockbenchImportable
           },
           async openExternally(file) {
-            const extension = PathModule.extname(file)
-            const tempPath = PathModule.join(os.tmpdir(), `${PathModule.basename(file, extension)}_${Date.now()}${extension}`)
-            fs.writeFileSync(tempPath, await this.getFileContent(file))
-            if (extension) {
-              if (os.platform() === "win32") {
-                exec(`"${tempPath}"`)
-              } else if (os.platform() === "darwin") {
-                exec(`open "${tempPath}"`)
+            const { exec } = require("child_process")
+            if (exec) {
+              const extension = PathModule.extname(file)
+              const tempPath = PathModule.join(SystemInfo.temp_directory, `${PathModule.basename(file, extension)}_${Date.now()}${extension}`)
+              fs.writeFileSync(tempPath, await this.getFileContent(file))
+              if (extension) {
+                if (SystemInfo.platform === "win32") {
+                  exec(`"${tempPath}"`)
+                } else if (SystemInfo.platform === "darwin") {
+                  exec(`open "${tempPath}"`)
+                } else {
+                  exec(`xdg-open "${tempPath}"`)
+                }
+              } else if (SystemInfo.platform === "win32") {
+                exec(`notepad.exe "${tempPath}"`)
+              } else if (SystemInfo.platform === "darwin") {
+                exec(`open -a "TextEdit" "${tempPath}"`)
               } else {
                 exec(`xdg-open "${tempPath}"`)
               }
-            } else if (os.platform() === "win32") {
-              exec(`notepad.exe "${tempPath}"`)
-            } else if (os.platform() === "darwin") {
-              exec(`open -a "TextEdit" "${tempPath}"`)
-            } else {
-              exec(`xdg-open "${tempPath}"`)
             }
           },
           async exportFiles(files) {
@@ -3336,10 +3348,10 @@ Plugin.register(id, {
     })
   },
   onunload() {
-    dialog.close()
-    action.delete()
-    loader.delete()
-    styles.delete()
+    dialog?.close()
+    action?.delete()
+    loader?.delete()
+    styles?.delete()
   }
 })
 
@@ -3568,7 +3580,7 @@ function lazyScrollerComponent() {
 function exists(path) {
   return new Promise(async fulfil => {
     try {
-      await fs.promises.access(path)
+      await fs.promises.stat(path)
       fulfil(true)
     } catch {
       fulfil(false)
