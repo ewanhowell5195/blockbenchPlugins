@@ -41,7 +41,7 @@
       author: "Ewan Howell",
       description: description + " Also includes an animation editor, so that you can create custom entity animations.",
       tags: ["Minecraft: Java Edition", "OptiFine", "Templates"],
-      version: "8.5.0",
+      version: "8.5.1",
       min_version: "4.12.0",
       variant: "both",
       creation_date: "2020-02-02",
@@ -2235,7 +2235,8 @@
         evt.stopImmediatePropagation()
       }
     }
-    $("#cem_animation_editor_container > div")[0].addEventListener("keydown", editorKeybinds, true)
+    console.log(animationEditorPanel.node.querySelector("#cem_animation_editor_container > div"))
+    animationEditorPanel.node.querySelector("#cem_animation_editor_container > div").addEventListener("keydown", editorKeybinds, true)
     resizeWindow()
     function addAnimationToggles() {
       if (Project.format?.id === "optifine_entity") {
@@ -2473,7 +2474,7 @@
     Blockbench.removeListener("update_selection", updateSelection)
     Blockbench.removeListener("select_project", tabChange)
     Blockbench.removeListener("finished_edit", renameGroup)
-    $("#cem_animation_editor_container > div")[0].removeEventListener("keydown", editorKeybinds)
+    animationEditorPanel.node.querySelector("#cem_animation_editor_container > div").removeEventListener("keydown", editorKeybinds)
     groupObserver.disconnect()
     $("[toggle='cem_animation_disable_rotations']").remove()
     animationEditorPanel.delete()
