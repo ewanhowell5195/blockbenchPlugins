@@ -42,7 +42,7 @@
     author,
     description,
     tags: ["Preview Scenes", "Blockbench"],
-    version: "1.2.0",
+    version: "1.2.1",
     min_version: "5.0.0",
     variant: "both",
     creation_date: "2022-10-14",
@@ -753,50 +753,40 @@
       `]
     }).show()
     $("dialog#preview_scene_settings_dialog #preview_scene_texture").on("click", async e => {
-      let newTexture
-      try {
-        if (isApp) {
-          const file = electron.dialog.showOpenDialogSync({
-            filters: [
-              {
-                name: "PNG Texture",
-                extensions: ["png"]
-              }
-            ]
-          })
-          if (!file) return
-          newTexture = await new Promise(fulfill => new THREE.TextureLoader().load(file[0], fulfill, null, fulfill))
-        } else {
-          const input = document.createElement("input")
-          let file
-          input.type = "file"
-          input.accept = ".png"
-          await new Promise(fulfil => {
-            input.onchange = () => {
-              file = Array.from(input.files)
-              fulfil()
+      Filesystem.importFile({
+        title: "Select Minecraft title texture",
+        type: "PNG Texture",
+        readtype: "buffer",
+        extensions: ["png"]
+      }, async files => {
+        const newTexture = await new Promise(resolve => {
+          const url = URL.createObjectURL(new Blob([files[0].content], { type: "image/png" }))
+          new THREE.TextureLoader().load(
+            url,
+            texture => {
+              URL.revokeObjectURL(url)
+              resolve(texture)
+            },
+            null,
+            () => {
+              URL.revokeObjectURL(url)
+              resolve(undefined)
             }
-            input.click()
-          })
-          const data = await new Promise(fulfil => {
-            const fr = new FileReader()
-            fr.onload = () => fulfil(fr.result)
-            fr.readAsDataURL(file[0])
-          })
-          newTexture = await new Promise(fulfill => new THREE.TextureLoader().load(data, fulfill, null, fulfill))
+          )
+        })
+        if (!newTexture) {
+          return Blockbench.showQuickMessage("Unable to load texture")
         }
-      } catch {
-        return Blockbench.showQuickMessage("Unable to load texture")
-      }
-      if (texture.image.width !== newTexture.image.width || texture.image.height !== newTexture.image.height) return Blockbench.showQuickMessage(`Selected texture does not match required dimentions of ${texture.image.width} ⨉ ${texture.image.height}`, 2000)
-      texture = newTexture
-      const canvas = document.createElement("canvas")
-      canvas.width = texture.image.width
-      canvas.height = texture.image.height
-      canvas.getContext("2d").drawImage(texture.image, 0, 0)
-      const data = canvas.toDataURL()
-      $("dialog#preview_scene_settings_dialog #preview_scene_texture").attr("src", data)
-      model.texture = data
+        if (texture.image.width !== newTexture.image.width || texture.image.height !== newTexture.image.height) return Blockbench.showQuickMessage(`Selected texture does not match required dimentions of ${texture.image.width} ⨉ ${texture.image.height}`, 2000)
+        texture = newTexture
+        const canvas = document.createElement("canvas")
+        canvas.width = texture.image.width
+        canvas.height = texture.image.height
+        canvas.getContext("2d").drawImage(texture.image, 0, 0)
+        const data = canvas.toDataURL()
+        $("dialog#preview_scene_settings_dialog #preview_scene_texture").attr("src", data)
+        model.texture = data
+      })
     })
     $("dialog#preview_scene_settings_dialog #save").on("click", e => Blockbench.export({
       type: "PNG Texture",
