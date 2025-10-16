@@ -16,7 +16,7 @@
     description: "Customise the start screen's splash art, by adding your own!",
     tags: ["Splash art", "Start screen", "Blockbench"],
     version: "1.1.4",
-    min_version: "4.12.0",
+    min_version: "5.0.0",
     variant: "both",
     creation_date: "2022-11-08",
     onload() {
