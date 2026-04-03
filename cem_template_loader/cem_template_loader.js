@@ -1083,7 +1083,7 @@
     hurt_time: [10, false],
     death_time: [0, false],
     swing_progress: [0, false],
-    anger_time: [0, false, 0]
+    anger_time: [0, false, 0, 0]
   }
   const boolList = new Set([
     "is_aggressive",
@@ -2011,7 +2011,8 @@
             title: 'Simulate the entity becoming angry. Runs "anger_time"'
           }).text("Anger entity").on("click", evt => {
             const start = Math.floor(Math.random() * 381) + 400
-            specials.set("anger_time", [start, true, start])
+            const delay = (Math.random() * 2 + 1) * 20
+            specials.set("anger_time", [start, true, start, delay])
             button.children().first().removeClass("cem_animation_button_disabled")
             const aggressiveBool = $("#cem_animation_is_aggressive_bool")
             if (aggressiveBool) {
@@ -2157,8 +2158,8 @@
           document.getElementById("cem_animation_swing_progress_button")?.style.setProperty("--progress", progress + "%")
         }
         if (specials.has("anger_time")) {
-          const start = specials.get("anger_time")[2]
-          const progress = specials.get("anger_time")[1] && start ? (1 - specials.get("anger_time")[0] / start) * 100 : 100
+          const a = specials.get("anger_time")
+          const progress = a[1] && a[2] ? (a[3] > 0 ? 0 : (1 - a[0] / a[2]) * 100) : 100
           document.getElementById("cem_animation_anger_time_button")?.style.setProperty("--progress", progress + "%")
         }
         if (frameCount === 1) {
@@ -2187,7 +2188,7 @@
           hurt_time: specials.get("hurt_time")?.[1] ? specials.get("hurt_time")[0] -= difference : 0,
           death_time: specials.get("death_time")?.[1] ? specials.get("death_time")[0] += difference : 0,
           swing_progress: specials.get("swing_progress")?.[1] ? specials.get("swing_progress")[0] += difference / 4 : 0,
-          anger_time: specials.get("anger_time")?.[1] ? specials.get("anger_time")[0] -= difference : 0,
+          anger_time: specials.get("anger_time")?.[1] ? (specials.get("anger_time")[3] > 0 ? (specials.get("anger_time")[3] -= difference, specials.get("anger_time")[0]) : specials.get("anger_time")[0] -= difference) : 0,
           anger_time_start: specials.get("anger_time")?.[2] ?? 0,
           frame_counter: frameCount % 720719,
           render: Object.fromEntries(renderVars.map(e => [e, 0]))
