@@ -63,10 +63,10 @@
   }
 
   async function fetchData(path, fallback) {
-    if (path === "json/cem_template_models.json") {
-      const fs = require("fs")
-      return JSON.parse(fs.readFileSync("E:/Programming/GitHub/wynem/src/assets/json/cem_template_models.json"))
-    }
+    // if (path === "json/cem_template_models.json") {
+    //   const fs = require("fs")
+    //   return JSON.parse(fs.readFileSync("E:/Programming/GitHub/wynem/src/assets/json/cem_template_models.json"))
+    // }
     try {
       const r = await fetch(`${root}/${path}`)
       if (!r.ok) throw new Error
@@ -1082,7 +1082,8 @@
     limb_swing: [0, false],
     hurt_time: [10, false],
     death_time: [0, false],
-    swing_progress: [0, false]
+    swing_progress: [0, false],
+    anger_time: [0, false, 0]
   }
   const boolList = new Set([
     "is_aggressive",
@@ -1119,6 +1120,8 @@
     "true",
     "false",
     "time",
+    "day_time",
+    "day_count",
     "limb_swing",
     "limb_speed",
     "age",
@@ -1137,6 +1140,7 @@
     "hurt_time",
     "death_time",
     "anger_time",
+    "anger_time_start",
     "max_health",
     "pos_x",
     "pos_y",
@@ -1348,7 +1352,29 @@
         overflow-y: auto;
 
         .cem_animation_button {
-          height: initial
+          height: initial;
+          min-width: max-content;
+          flex: 1;
+
+          button {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+
+            &::before {
+              content: "";
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: var(--progress, 100%);
+              height: 3px;
+              background-color: var(--color-accent);
+            }
+
+            &:not(.cem_animation_button_disabled):hover::before {
+              background-color: var(--color-light);
+            }
+          }
         }
       }
       #cem_animation_editor {
@@ -1435,7 +1461,7 @@
         border-bottom: 12px solid transparent;
         border-left: 12px solid var(--color-error);
       }
-      .spacer, .cem_animation_range input {
+      .spacer {
         flex: 1;
       }
       .cem_animation_bool {
@@ -1463,6 +1489,7 @@
         width: 2em;
         margin-left: 2px;
         cursor: text;
+        min-width: 44px;
       }
       .cem_animation_button {
         height: 25px;
@@ -1502,9 +1529,6 @@
       #panel_cem_animation > h3 > label, #panel_cem_animation_controller > h3 > label {
         white-space: nowrap;
         text-overflow: ellipsis;
-      }
-      .cem_animation_range_number {
-        min-width: 60px;
       }
       #cem_animation_controller_variables {
         position: relative;
@@ -1562,7 +1586,9 @@
         modes: ["edit"]
       },
       default_position: {
-        folded: true
+        folded: true,
+        slot: "left_bar",
+        sidebar_index: 99
       },
       component: {
         template: `
@@ -1976,6 +2002,25 @@
         ).appendTo(container)
         if (specials.get("swing_progress")[1] === true) button.children().first().addClass("cem_animation_button_disabled")
       }
+      if (specials.has("anger_time")) {
+        let container = $("#cem_animation_buttons")
+        if (!container.length) container = E("div").attr("id", "cem_animation_buttons").appendTo(controller)
+        const button = E("div").addClass("cem_animation_button").append(
+          E("button").attr({
+            id: "cem_animation_anger_time_button",
+            title: 'Simulate the entity becoming angry. Runs "anger_time"'
+          }).text("Anger entity").on("click", evt => {
+            const start = Math.floor(Math.random() * 381) + 400
+            specials.set("anger_time", [start, true, start])
+            button.children().first().removeClass("cem_animation_button_disabled")
+            const aggressiveBool = $("#cem_animation_is_aggressive_bool")
+            if (aggressiveBool) {
+              aggressiveBool.prop("checked", true)
+              bools.set("is_aggressive", true)
+            }
+          })
+        ).appendTo(container)
+      }
       prevTime = Date.now()
       Blockbench.on("render_frame", playAnimations)
     }
@@ -2091,6 +2136,31 @@
           specials.set("swing_progress", [0, false])
           $("#cem_animation_swing_progress_button").removeClass("cem_animation_button_disabled")
         }
+        if (specials.get("anger_time")?.[1] && specials.get("anger_time")[0] <= 0) {
+          specials.set("anger_time", [0, false, 0])
+          const aggressiveBool = $("#cem_animation_is_aggressive_bool")
+          if (aggressiveBool) {
+            aggressiveBool.prop("checked", false)
+            bools.set("is_aggressive", false)
+          }
+        }
+        if (specials.has("hurt_time")) {
+          const progress = specials.get("hurt_time")[1] ? (1 - specials.get("hurt_time")[0] / 10) * 100 : 100
+          document.getElementById("cem_animation_hurt_time_button")?.style.setProperty("--progress", progress + "%")
+        }
+        if (specials.has("death_time")) {
+          const progress = specials.get("death_time")[1] ? (specials.get("death_time")[0] / 20) * 100 : 100
+          document.getElementById("cem_animation_death_time_button")?.style.setProperty("--progress", progress + "%")
+        }
+        if (specials.has("swing_progress")) {
+          const progress = specials.get("swing_progress")[1] ? specials.get("swing_progress")[0] * 100 : 100
+          document.getElementById("cem_animation_swing_progress_button")?.style.setProperty("--progress", progress + "%")
+        }
+        if (specials.has("anger_time")) {
+          const start = specials.get("anger_time")[2]
+          const progress = specials.get("anger_time")[1] && start ? (1 - specials.get("anger_time")[0] / start) * 100 : 100
+          document.getElementById("cem_animation_anger_time_button")?.style.setProperty("--progress", progress + "%")
+        }
         if (frameCount === 1) {
           parents = {}
           for (const part of Group.all.filter(e => e.parent === "root")) {
@@ -2110,11 +2180,15 @@
         }
         context = Object.assign({
           time: time,
+          day_time: time % 24000,
+          day_count: Math.floor(time / 24000),
           age: time,
           limb_swing: specials.get("limb_swing")?.[1] ? specials.get("limb_swing")[0] += difference / 1.666 : specials.get("limb_swing")?.[0] ?? 0,
           hurt_time: specials.get("hurt_time")?.[1] ? specials.get("hurt_time")[0] -= difference : 0,
           death_time: specials.get("death_time")?.[1] ? specials.get("death_time")[0] += difference : 0,
           swing_progress: specials.get("swing_progress")?.[1] ? specials.get("swing_progress")[0] += difference / 4 : 0,
+          anger_time: specials.get("anger_time")?.[1] ? specials.get("anger_time")[0] -= difference : 0,
+          anger_time_start: specials.get("anger_time")?.[2] ?? 0,
           frame_counter: frameCount % 720719,
           render: Object.fromEntries(renderVars.map(e => [e, 0]))
         }, constants, Object.fromEntries(bools), Object.fromEntries(Array.from(ranges.entries()).map(e => [e[0], e[1][1]])))
