@@ -2277,9 +2277,24 @@
       playButton.css("display", "flex")
       stopButton.css("display", "none")
       pauseButton.text("pause").attr("title", "Pause the animations")
-      $("#cem_animation_hurt_time_button").addClass("cem_animation_button_disabled")
-      $("#cem_animation_death_time_button").addClass("cem_animation_button_disabled")
-      $("#cem_animation_swing_progress_button").addClass("cem_animation_button_disabled")
+      if (specials.has("hurt_time")) specials.set("hurt_time", [10, false])
+      if (specials.has("death_time")) specials.set("death_time", [0, false])
+      if (specials.has("swing_progress")) specials.set("swing_progress", [0, false])
+      if (specials.has("anger_time")) specials.set("anger_time", [0, false, 0])
+      $("#cem_animation_hurt_time_button").removeClass("cem_animation_button_disabled").css("--progress", "100%")
+      $("#cem_animation_death_time_button").removeClass("cem_animation_button_disabled").css("--progress", "100%")
+      $("#cem_animation_swing_progress_button").removeClass("cem_animation_button_disabled").css("--progress", "100%")
+      $("#cem_animation_anger_time_button").css("--progress", "100%")
+      const aggressiveBool = $("#cem_animation_is_aggressive_bool")
+      if (aggressiveBool.length) {
+        aggressiveBool.prop("checked", false)
+        bools.set("is_aggressive", false)
+      }
+      const hurtBool = $("#cem_animation_is_hurt_bool")
+      if (hurtBool.length) {
+        hurtBool.prop("checked", false)
+        bools.set("is_hurt", false)
+      }
       playing = false
       paused = false
     }
