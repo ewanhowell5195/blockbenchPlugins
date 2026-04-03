@@ -1532,17 +1532,19 @@
       }
       #cem_animation_controller_variables {
         position: relative;
-        margin-top: 24px;
         display: flex;
         flex-direction: column;
         gap: 8px;
+      }
+      #cem_animation_controller_variables:not(:empty) {
+        margin-top: 24px;
       }
       #cem_animation_controller_variables:not(:empty)::before {
         content: "";
         position: absolute;
         bottom: calc(100% + 10px);
-        left: 8px;
-        right: 8px;
+        left: 0;
+        right: 0;
         height: 1px;
         background-color: var(--color-border);
       }
@@ -1580,7 +1582,6 @@
     `)
     animationControlPanel = new Panel("cem_animation_controller", {
       name: "Animation Controller",
-      growable: true,
       condition: {
         formats: ["optifine_entity"],
         modes: ["edit"]
