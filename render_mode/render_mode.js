@@ -321,10 +321,10 @@ Plugin.register(id, {
         }
         const circleGeometry = new THREE.BufferGeometry().setFromPoints(circlePoints)
 
-        const outerCircle = new THREE.Line(circleGeometry.clone(), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }))
+        const outerCircle = new THREE.Line(circleGeometry.clone(), new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
         mesh.add(outerCircle)
 
-        const innerCircle = new THREE.Line(circleGeometry.clone(), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }))
+        const innerCircle = new THREE.Line(circleGeometry.clone(), new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
         mesh.add(innerCircle)
 
         mesh.outerCircle = outerCircle
@@ -426,7 +426,7 @@ Plugin.register(id, {
           new THREE.Vector3(0, 0, 0),
           new THREE.Vector3(0, -Number.MAX_SAFE_INTEGER, 0)
         ])
-        const line = new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }))
+        const line = new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
         mesh.add(line)
         mesh.directionLine = line
 
@@ -504,7 +504,7 @@ Plugin.register(id, {
           new THREE.Vector3(-0.5, -0.5, 0),
           new THREE.Vector3(-0.5, 0.5, 0)
         ])
-        const rect = new THREE.Line(rectGeometry, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }))
+        const rect = new THREE.Line(rectGeometry, new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
         mesh.add(rect)
         mesh.rect = rect
 
@@ -513,7 +513,7 @@ Plugin.register(id, {
           new THREE.Vector3(0, 0, 0),
           new THREE.Vector3(0, 0, Number.MAX_SAFE_INTEGER)
         ])
-        const arrow = new THREE.Line(arrowGeometry, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }))
+        const arrow = new THREE.Line(arrowGeometry, new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
         mesh.add(arrow)
         mesh.arrow = arrow
 
