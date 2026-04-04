@@ -88,7 +88,7 @@ class PointLightElement extends LightElement {
         this.temp_data.old_decay = this.light_decay
       }
       const decayBefore = this.temp_data.old_decay
-      const delta = (newVal - before) * 0.1
+      const delta = (newVal - before) * 0.25
       this.light_decay = Math.max(0, decayBefore - delta)
     } else {
       this.light_distance = Math.max(0, newVal)
