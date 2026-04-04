@@ -112,10 +112,26 @@ class AreaLightElement extends LightElement {
     this.preview_controller.updateTransform(this)
     return this
   }
+  size(axis) {
+    const s = [this.light_width, this.light_height, 0]
+    return axis !== undefined ? s[axis] : s
+  }
+  getSize(axis) {
+    return this.size(axis)
+  }
+  resize(val, axis, negative, allow_negative, bidirectional) {
+    if (axis === 2) return
+    const prop = axis === 0 ? "light_width" : "light_height"
+    const before = this.temp_data.old_size?.[axis] ?? this[prop]
+    const modify = val instanceof Function ? val : n => n + val
+    this[prop] = Math.max(0.1, modify(before))
+    this.preview_controller.updateTransform(this)
+  }
   static behavior = {
     unique_name: true,
     movable: true,
-    rotatable: true
+    rotatable: true,
+    resizable: true
   }
 }
 AreaLightElement.prototype.title = "Area Light"
