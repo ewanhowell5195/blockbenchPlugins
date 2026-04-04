@@ -77,11 +77,17 @@ class PointLightElement extends LightElement {
     return this.size(axis)
   }
   resize(val, axis, negative, allow_negative, bidirectional) {
-    const before = this.temp_data.old_size?.[axis] ?? this.light_distance
     const modify = val instanceof Function ? val : n => n + val
-    let newSize = modify(before)
-    if (negative) newSize = before - (newSize - before)
-    this.light_distance = Math.max(0, newSize)
+    if (bidirectional) {
+      // Alt held: change decay
+      let delta = modify(0) * 0.1
+      if (negative) delta = -delta
+      this.light_decay = Math.max(0, this.light_decay - delta)
+    } else {
+      let delta = modify(0)
+      if (negative) delta = -delta
+      this.light_distance = Math.max(0, this.light_distance + delta)
+    }
     this.preview_controller.updateTransform(this)
   }
   static behavior = {
