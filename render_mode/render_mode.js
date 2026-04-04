@@ -2,7 +2,7 @@ const id = "render_mode"
 const name = "Render Mode"
 const icon = "lightbulb"
 
-let pointLightAction, sunLightAction, areaLightAction, ambientAction, cameraListener, changeViewModeListener, ambientLight
+let pointLightAction, sunLightAction, areaLightAction, ambientAction, cameraListener, changeViewModeListener, reapplyListener, ambientLight
 
 const lightMenu = new Menu([
   ...Outliner.control_menu_group,
@@ -69,8 +69,19 @@ LightElement.prototype.buttons = [
 LightElement.prototype.menu = lightMenu
 
 class PointLightElement extends LightElement {
+  getSize(axis) {
+    const d = this.light_distance
+    return axis !== undefined ? d : [d, d, d]
+  }
+  resize(val, axis, negative, allow_negative, bidirectional) {
+    const before = this.temp_data.old_size?.[axis] ?? this.light_distance
+    const modify = val instanceof Function ? val : n => n + val
+    this.light_distance = Math.max(0, modify(before))
+    this.preview_controller.updateTransform(this)
+  }
   static behavior = {
     movable: true,
+    resizable: true,
     hide_in_screenshot: true
   }
 }
@@ -715,10 +726,12 @@ Plugin.register(id, {
     }
     Blockbench.on("change_view_mode", changeViewModeListener)
 
-    // Re-apply rendered mode after Canvas.updateViewMode resets materials
-    Blockbench.on("update_view", () => {
+    // Re-apply rendered mode after materials get reset
+    reapplyListener = () => {
       if (Project?.view_mode === "rendered") applyRenderedMode()
-    })
+    }
+    Blockbench.on("update_view", reapplyListener)
+    Blockbench.on("finished_edit", reapplyListener)
 
     cameraListener = () => {
       if (!Preview.selected) return
@@ -826,8 +839,9 @@ Plugin.register(id, {
     }
     if (changeViewModeListener) {
       Blockbench.removeListener("change_view_mode", changeViewModeListener)
-      changeViewModeListener = null
     }
+    Blockbench.removeListener("update_view", reapplyListener)
+    Blockbench.removeListener("finished_edit", reapplyListener)
     delete BarItems.view_mode.options.rendered
     BarItems.view_mode.nodes.forEach(node => {
       node.querySelector('div.select_option[key="rendered"]')?.remove()
