@@ -433,6 +433,14 @@
         }
       })
 
+      BarItems.add_element.side_menu.structure.push({
+        id: "add_point_light",
+        name: "Add Point Light",
+        icon: "lightbulb",
+        condition: () => Format.id === "free",
+        click: () => BarItems.add_point_light.click()
+      })
+
       styles = Blockbench.addCSS(`
         .outliner_node[node_type="point_light"] .outliner_icon {
           color: var(--color-light);
@@ -442,7 +450,7 @@
     onunload() {
       action?.delete()
       ambientAction?.delete()
-      projectProperties?.forEach(p => p.delete())
+      BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_point_light"))
       styles?.delete()
       scene.remove(ambientLight)
       if (cameraListener) {
