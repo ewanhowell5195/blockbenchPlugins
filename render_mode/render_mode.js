@@ -3,7 +3,7 @@
   const name = "Render Mode"
   const icon = "lightbulb"
 
-  let action, properties, styles, previewController, lightIconTexture, cameraListener
+  let action, properties, styles, previewController, lightIconTexture, cameraListener, changeViewModeListener
 
   const lightTypes = {
     point: {
@@ -149,7 +149,7 @@
           }
         }),
         new Property(LightElement, "number", "light_intensity", {
-          default: 1,
+          default: 4,
           inputs: {
             element_panel: {
               input: { label: "Intensity", type: "number", min: 0, step: 0.1 },
@@ -268,7 +268,7 @@
             const decay = element.light_decay
             mesh.innerCircle.visible = decay > 0
             if (decay > 0) {
-              const innerD = d * Math.pow(0.5, 1 / decay)
+              const innerD = d * Math.pow(0.5, decay)
               mesh.innerCircle.scale.set(innerD, innerD, innerD)
             }
             mesh.innerCircle.quaternion.copy(quat)
@@ -286,8 +286,14 @@
             mesh.sprite.material.depthTest = !element.selected
             mesh.renderOrder = element.selected ? 100 : 0
           }
-          if (mesh.outerCircle) mesh.outerCircle.material.color.set(color)
-          if (mesh.innerCircle) mesh.innerCircle.material.color.set(color)
+          if (mesh.outerCircle) {
+            mesh.outerCircle.visible = element.selected && (element.light_distance > 0)
+            mesh.outerCircle.material.color.set(color)
+          }
+          if (mesh.innerCircle) {
+            mesh.innerCircle.visible = element.selected && (element.light_distance > 0) && (element.light_decay > 0)
+            mesh.innerCircle.material.color.set(color)
+          }
           this.dispatchEvent("update_selection", { element })
         },
         updateWindowSize(element) {
@@ -297,6 +303,84 @@
       })
 
       OutlinerElement.registerType(LightElement, "light")
+
+      // Add "Rendered" view mode
+      BarItems.view_mode.options.rendered = {
+        name: "Rendered",
+        icon: "lightbulb",
+        condition: () => (!Toolbox.selected.allowed_view_modes || Toolbox.selected.allowed_view_modes.includes("rendered"))
+      }
+      // Add DOM button for icon_mode BarSelect
+      const viewModeSelect = BarItems.view_mode
+      viewModeSelect.nodes.forEach(node => {
+        const button = document.createElement("div")
+        button.className = "select_option"
+        button.setAttribute("key", "rendered")
+        button.append(Blockbench.getIconNode("lightbulb"))
+        node.append(button)
+        button.addEventListener("click", event => {
+          viewModeSelect.set("rendered")
+          if (viewModeSelect.onChange) {
+            viewModeSelect.onChange(viewModeSelect, event)
+          }
+        })
+        button.title = "Rendered"
+      })
+
+      // Cache for rendered-mode MeshStandardMaterials per texture
+      const renderedMaterials = new Map()
+
+      function getRenderedMaterial(tex) {
+        if (!tex) return new THREE.MeshStandardMaterial({ color: 0x808080 })
+        if (renderedMaterials.has(tex.uuid)) return renderedMaterials.get(tex.uuid)
+        const mat = new THREE.MeshStandardMaterial({
+          map: tex.getMaterial().map || null,
+          alphaTest: 0.05,
+          side: THREE.FrontSide
+        })
+        renderedMaterials.set(tex.uuid, mat)
+        return mat
+      }
+
+      changeViewModeListener = (data) => {
+        if (data.view_mode === "rendered") {
+          // Remove default shader lights
+          scene.remove(lights)
+          scene.remove(Sun)
+          if (Canvas.material_light) scene.remove(Canvas.material_light)
+          // Swap all element materials to MeshStandardMaterial
+          Outliner.elements.forEach(el => {
+            if (!el.mesh) return
+            if (el.faces) {
+              // Store original material for restoration
+              el.mesh._originalMaterial = el.mesh.material
+              if (Format.single_texture) {
+                el.mesh.material = getRenderedMaterial(Texture.getDefault())
+              } else if (el.mesh.material instanceof Array) {
+                el.mesh.material = el.mesh.material.map((mat, i) => {
+                  const face = Canvas.face_order[i]
+                  const tex = el.faces[face]?.getTexture()
+                  return getRenderedMaterial(tex)
+                })
+              } else {
+                const tex = Object.values(el.faces).find(f => f.getTexture())?.getTexture()
+                el.mesh.material = getRenderedMaterial(tex)
+              }
+            }
+          })
+        } else if (data.previous_view_mode === "rendered") {
+          // Restore original materials
+          Outliner.elements.forEach(el => {
+            if (el.mesh?._originalMaterial) {
+              el.mesh.material = el.mesh._originalMaterial
+              delete el.mesh._originalMaterial
+            }
+          })
+          // Restore default lights
+          updateShading()
+        }
+      }
+      Blockbench.on("change_view_mode", changeViewModeListener)
 
       cameraListener = () => {
         if (!Preview.selected) return
@@ -340,6 +424,20 @@
       if (cameraListener) {
         Blockbench.removeListener("update_camera_position", cameraListener)
         cameraListener = null
+      }
+      if (changeViewModeListener) {
+        Blockbench.removeListener("change_view_mode", changeViewModeListener)
+        changeViewModeListener = null
+      }
+      delete BarItems.view_mode.options.rendered
+      BarItems.view_mode.nodes.forEach(node => {
+        node.querySelector('div.select_option[key="rendered"]')?.remove()
+      })
+      if (Project?.view_mode === "rendered") {
+        BarItems.view_mode.set("textured")
+        Project.view_mode = "textured"
+        updateShading()
+        Canvas.updateViewMode()
       }
     }
   })
