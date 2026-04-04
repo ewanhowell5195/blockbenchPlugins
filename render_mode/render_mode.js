@@ -2,7 +2,7 @@ const id = "render_mode"
 const name = "Render Mode"
 const icon = "lightbulb"
 
-let pointLightAction, sunLightAction, areaLightAction, ambientAction, styles, cameraListener, changeViewModeListener, ambientLight
+let pointLightAction, sunLightAction, areaLightAction, ambientAction, cameraListener, changeViewModeListener, ambientLight
 
 const lightMenu = new Menu([
   ...Outliner.control_menu_group,
@@ -806,13 +806,6 @@ Plugin.register(id, {
       click: () => BarItems.add_area_light.click()
     })
 
-    styles = Blockbench.addCSS(`
-      .outliner_node[node_type="point_light"] .outliner_icon,
-      .outliner_node[node_type="sun_light"] .outliner_icon,
-      .outliner_node[node_type="area_light"] .outliner_icon {
-        color: var(--color-light);
-      }
-    `)
   },
   onunload() {
     pointLightAction?.delete()
@@ -822,7 +815,6 @@ Plugin.register(id, {
     BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_point_light"))
     BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_sun_light"))
     BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_area_light"))
-    styles?.delete()
     scene.remove(ambientLight)
     if (cameraListener) {
       Blockbench.removeListener("render_frame", cameraListener)
