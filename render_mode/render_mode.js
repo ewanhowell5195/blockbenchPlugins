@@ -5,56 +5,34 @@
 
   let action, ambientAction, properties, projectProperties, styles, previewController, lightIconTexture, cameraListener, changeViewModeListener, ambientLight
 
-  const lightTypes = {
-    point: {
-      name: "Point Light",
-      icon: "lightbulb",
-      default_name: "point_light",
-      create(element) {
-        const light = new THREE.PointLight(
-          element.light_color,
-          element.light_intensity,
-          element.light_distance,
-          element.light_decay
-        )
-        return light
-      },
-      update(light, element) {
-        light.color.set(element.light_color)
-        light.intensity = element.light_intensity
-        light.distance = element.light_distance
-        light.decay = element.light_decay
-      },
-    }
-  }
+  const lightMenu = new Menu([
+    ...Outliner.control_menu_group,
+    new MenuSeparator("manage"),
+    "rename",
+    "toggle_visibility",
+    "delete"
+  ])
 
   class LightElement extends OutlinerElement {
     constructor(data, uuid) {
       super(data, uuid)
-
-      for (const key in LightElement.properties) {
-        LightElement.properties[key].reset(this)
+      for (const key in this.constructor.properties) {
+        this.constructor.properties[key].reset(this)
       }
-
-      if (data) {
-        this.extend(data)
-      }
+      if (data) this.extend(data)
     }
-
     get origin() {
       return this.position
     }
-
     extend(object) {
       if (object.from) this.position.V3_set(object.from)
-      for (const key in LightElement.properties) {
-        LightElement.properties[key].merge(this, object)
+      for (const key in this.constructor.properties) {
+        this.constructor.properties[key].merge(this, object)
       }
       this.sanitizeName()
       Merge.boolean(this, object, "export")
       return this
     }
-
     init() {
       if (this.parent instanceof Group === false) {
         this.addTo(Group.first_selected)
@@ -62,7 +40,6 @@
       super.init()
       return this
     }
-
     flip(axis, center) {
       const offset = this.position[axis] - center
       this.position[axis] = center - offset
@@ -71,7 +48,6 @@
       this.preview_controller.updateTransform(this)
       return this
     }
-
     getWorldCenter() {
       const pos = new THREE.Vector3()
       const q = Reusable.quat1.set(0, 0, 0, 1)
@@ -85,28 +61,23 @@
       pos.add(offset)
       return pos
     }
-
-    static behavior = {
-      unique_name: true,
-      movable: true
-    }
   }
-
-  LightElement.prototype.title = "Light"
-  LightElement.prototype.type = "light"
-  LightElement.prototype.icon = "lightbulb"
   LightElement.prototype.visibility = true
   LightElement.prototype.buttons = [
     Outliner.buttons.locked,
     Outliner.buttons.visibility
   ]
-  LightElement.prototype.menu = new Menu([
-    ...Outliner.control_menu_group,
-    new MenuSeparator("manage"),
-    "rename",
-    "toggle_visibility",
-    "delete"
-  ])
+  LightElement.prototype.menu = lightMenu
+
+  class PointLightElement extends LightElement {
+    static behavior = {
+      unique_name: true,
+      movable: true
+    }
+  }
+  PointLightElement.prototype.title = "Point Light"
+  PointLightElement.prototype.type = "point_light"
+  PointLightElement.prototype.icon = "lightbulb"
 
   Plugin.register(id, {
     title: name,
@@ -134,49 +105,15 @@
       lightIconTexture.minFilter = THREE.LinearFilter
 
       properties = [
-        new Property(LightElement, "string", "name", { default: "point_light" }),
+        // Shared light properties (on base LightElement)
         new Property(LightElement, "vector", "position"),
-        new Property(LightElement, "enum", "light_type", {
-          default: "point",
-          values: Object.keys(lightTypes),
-          inputs: {
-            element_panel: {
-              input: { label: "Light Type", type: "select", options: Object.fromEntries(Object.entries(lightTypes).map(([k, v]) => [k, v.name])) },
-              onChange(value, nodes) {
-                Canvas.updateView({ elements: LightElement.selected, element_aspects: { transform: true } })
-              }
-            }
-          }
-        }),
         new Property(LightElement, "number", "light_intensity", {
           default: 4,
           inputs: {
             element_panel: {
               input: { label: "Intensity", type: "number", min: 0, step: 0.1 },
               onChange() {
-                Canvas.updateView({ elements: LightElement.selected, element_aspects: { transform: true } })
-              }
-            }
-          }
-        }),
-        new Property(LightElement, "number", "light_distance", {
-          default: 8,
-          inputs: {
-            element_panel: {
-              input: { label: "Distance", description: "Maximum range of the light. 0 = unlimited.", type: "number", min: 0, step: 1 },
-              onChange() {
-                Canvas.updateView({ elements: LightElement.selected, element_aspects: { transform: true } })
-              }
-            }
-          }
-        }),
-        new Property(LightElement, "number", "light_decay", {
-          default: 2,
-          inputs: {
-            element_panel: {
-              input: { label: "Decay", description: "The amount the light dims along the distance.", type: "number", min: 0, step: 0.1 },
-              onChange() {
-                Canvas.updateView({ elements: LightElement.selected, element_aspects: { transform: true } })
+                Canvas.updateView({ elements: Outliner.selected, element_aspects: { transform: true } })
               }
             }
           }
@@ -187,16 +124,41 @@
             element_panel: {
               input: { label: "Color", type: "color" },
               onChange() {
-                Canvas.updateView({ elements: LightElement.selected, element_aspects: { transform: true } })
+                Canvas.updateView({ elements: Outliner.selected, element_aspects: { transform: true } })
               }
             }
           }
         }),
         new Property(LightElement, "boolean", "visibility", { default: true }),
-        new Property(LightElement, "boolean", "locked")
+        new Property(LightElement, "boolean", "locked"),
+
+        // Point light specific
+        new Property(PointLightElement, "string", "name", { default: "point_light" }),
+        new Property(PointLightElement, "number", "light_distance", {
+          default: 8,
+          inputs: {
+            element_panel: {
+              input: { label: "Distance", description: "Maximum range of the light. 0 = unlimited.", type: "number", min: 0, step: 1 },
+              onChange() {
+                Canvas.updateView({ elements: PointLightElement.selected, element_aspects: { transform: true } })
+              }
+            }
+          }
+        }),
+        new Property(PointLightElement, "number", "light_decay", {
+          default: 2,
+          inputs: {
+            element_panel: {
+              input: { label: "Decay", description: "The amount the light dims along the distance.", type: "number", min: 0, step: 0.1 },
+              onChange() {
+                Canvas.updateView({ elements: PointLightElement.selected, element_aspects: { transform: true } })
+              }
+            }
+          }
+        })
       ]
 
-      previewController = new NodePreviewController(LightElement, {
+      previewController = new NodePreviewController(PointLightElement, {
         setup(element) {
           const mesh = new THREE.Mesh(
             new THREE.SphereGeometry(1, 8, 6),
@@ -209,8 +171,12 @@
           mesh.visible = element.visibility
           mesh.rotation.order = Format.euler_order
 
-          const config = lightTypes[element.light_type] ?? lightTypes.point
-          const light = config.create(element)
+          const light = new THREE.PointLight(
+            element.light_color,
+            element.light_intensity,
+            element.light_distance,
+            element.light_decay
+          )
           mesh.add(light)
           mesh.light = light
 
@@ -253,9 +219,11 @@
           const { mesh } = element
           if (!mesh) return
 
-          const config = lightTypes[element.light_type] ?? lightTypes.point
           if (mesh.light) {
-            config.update(mesh.light, element)
+            mesh.light.color.set(element.light_color)
+            mesh.light.intensity = element.light_intensity
+            mesh.light.distance = element.light_distance
+            mesh.light.decay = element.light_decay
           }
           const d = element.light_distance || 0
           const visible = d > 0
@@ -302,7 +270,7 @@
         }
       })
 
-      OutlinerElement.registerType(LightElement, "light")
+      OutlinerElement.registerType(PointLightElement, "point_light")
 
       // Project-level ambient light properties
       projectProperties = [
@@ -440,7 +408,7 @@
       cameraListener = () => {
         if (!Preview.selected) return
         const quat = Preview.selected.camera.quaternion
-        for (const element of LightElement.all) {
+        for (const element of PointLightElement.all) {
           if (element.mesh?.outerCircle) element.mesh.outerCircle.quaternion.copy(quat)
           if (element.mesh?.innerCircle) element.mesh.innerCircle.quaternion.copy(quat)
         }
@@ -455,7 +423,7 @@
         click() {
           const objs = []
           Undo.initEdit({ elements: objs, outliner: true })
-          const light = new LightElement({ light_type: "point" }).addTo(Group.first_selected || Outliner.selected[0]).init()
+          const light = new PointLightElement().addTo(Group.first_selected || Outliner.selected[0]).init()
           light.select().createUniqueName()
           objs.push(light)
           Undo.finishEdit("Add point light")
@@ -468,7 +436,7 @@
       })
 
       styles = Blockbench.addCSS(`
-        .outliner_node[node_type="light"] .outliner_icon {
+        .outliner_node[node_type="point_light"] .outliner_icon {
           color: var(--color-light);
         }
       `)
