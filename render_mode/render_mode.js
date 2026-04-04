@@ -3,7 +3,7 @@
   const name = "Render Mode"
   const icon = "lightbulb"
 
-  let action, ambientAction, properties, projectProperties, styles, previewController, lightIconTexture, cameraListener, changeViewModeListener, ambientLight
+  let pointLightAction, sunLightAction, ambientAction, styles, cameraListener, changeViewModeListener, ambientLight
 
   const lightMenu = new Menu([
     ...Outliner.control_menu_group,
@@ -79,6 +79,28 @@
   PointLightElement.prototype.type = "point_light"
   PointLightElement.prototype.icon = "lightbulb"
 
+  class SunLightElement extends LightElement {
+    flip(axis, center) {
+      const offset = this.position[axis] - center
+      this.position[axis] = center - offset
+      this.rotation.forEach((n, i) => {
+        if (i != axis) this.rotation[i] = -n
+      })
+      flipNameOnAxis(this, axis)
+      this.createUniqueName()
+      this.preview_controller.updateTransform(this)
+      return this
+    }
+    static behavior = {
+      unique_name: true,
+      movable: true,
+      rotatable: true
+    }
+  }
+  SunLightElement.prototype.title = "Sun Light"
+  SunLightElement.prototype.type = "sun_light"
+  SunLightElement.prototype.icon = "wb_sunny"
+
   Plugin.register(id, {
     title: name,
     icon,
@@ -100,14 +122,29 @@
       ctx.textAlign = "center"
       ctx.textBaseline = "middle"
       ctx.fillText("lightbulb", 24, 24)
-      lightIconTexture = new THREE.CanvasTexture(canvas)
+      const lightIconTexture = new THREE.CanvasTexture(canvas)
       lightIconTexture.magFilter = THREE.LinearFilter
       lightIconTexture.minFilter = THREE.LinearFilter
 
-      properties = [
-        // Shared light properties (on base LightElement)
-        new Property(LightElement, "vector", "position"),
-        new Property(LightElement, "number", "light_intensity", {
+      // Generate sun icon texture
+      const sunCanvas = document.createElement("canvas")
+      sunCanvas.width = 48
+      sunCanvas.height = 48
+      const sunCtx = sunCanvas.getContext("2d")
+      sunCtx.clearRect(0, 0, 48, 48)
+      sunCtx.fillStyle = "#ffffff"
+      sunCtx.font = "48px 'Material Icons'"
+      sunCtx.textAlign = "center"
+      sunCtx.textBaseline = "middle"
+      sunCtx.fillText("wb_sunny", 24, 24)
+      const sunIconTexture = new THREE.CanvasTexture(sunCanvas)
+      sunIconTexture.magFilter = THREE.LinearFilter
+      sunIconTexture.minFilter = THREE.LinearFilter
+
+      // Shared properties on each subclass
+      function registerSharedProperties(Type) {
+        new Property(Type, "vector", "position")
+        new Property(Type, "number", "light_intensity", {
           default: 4,
           inputs: {
             element_panel: {
@@ -117,8 +154,8 @@
               }
             }
           }
-        }),
-        new Property(LightElement, "string", "light_color", {
+        })
+        new Property(Type, "string", "light_color", {
           default: "#ffffff",
           inputs: {
             element_panel: {
@@ -128,37 +165,44 @@
               }
             }
           }
-        }),
-        new Property(LightElement, "boolean", "visibility", { default: true }),
-        new Property(LightElement, "boolean", "locked"),
-
-        // Point light specific
-        new Property(PointLightElement, "string", "name", { default: "point_light" }),
-        new Property(PointLightElement, "number", "light_distance", {
-          default: 8,
-          inputs: {
-            element_panel: {
-              input: { label: "Distance", description: "Maximum range of the light. 0 = unlimited.", type: "number", min: 0, step: 1 },
-              onChange() {
-                Canvas.updateView({ elements: PointLightElement.selected, element_aspects: { transform: true } })
-              }
-            }
-          }
-        }),
-        new Property(PointLightElement, "number", "light_decay", {
-          default: 2,
-          inputs: {
-            element_panel: {
-              input: { label: "Decay", description: "The amount the light dims along the distance.", type: "number", min: 0, step: 0.1 },
-              onChange() {
-                Canvas.updateView({ elements: PointLightElement.selected, element_aspects: { transform: true } })
-              }
-            }
-          }
         })
-      ]
+        new Property(Type, "boolean", "visibility", { default: true })
+        new Property(Type, "boolean", "locked")
+      }
 
-      previewController = new NodePreviewController(PointLightElement, {
+      // Point light properties
+      registerSharedProperties(PointLightElement)
+      new Property(PointLightElement, "string", "name", { default: "point_light" })
+      new Property(PointLightElement, "number", "light_distance", {
+        default: 8,
+        inputs: {
+          element_panel: {
+            input: { label: "Distance", description: "Maximum range of the light. 0 = unlimited.", type: "number", min: 0, step: 1 },
+            onChange() {
+              Canvas.updateView({ elements: PointLightElement.selected, element_aspects: { transform: true } })
+            }
+          }
+        }
+      })
+      new Property(PointLightElement, "number", "light_decay", {
+        default: 2,
+        inputs: {
+          element_panel: {
+            input: { label: "Decay", description: "The amount the light dims along the distance.", type: "number", min: 0, step: 0.1 },
+            onChange() {
+              Canvas.updateView({ elements: PointLightElement.selected, element_aspects: { transform: true } })
+            }
+          }
+        }
+      })
+
+      // Sun light properties
+      registerSharedProperties(SunLightElement)
+      new Property(SunLightElement, "string", "name", { default: "sun_light" })
+      new Property(SunLightElement, "vector", "rotation")
+
+      // ---- Point Light Preview Controller ----
+      new NodePreviewController(PointLightElement, {
         setup(element) {
           const mesh = new THREE.Mesh(
             new THREE.SphereGeometry(1, 8, 6),
@@ -270,21 +314,98 @@
         }
       })
 
+      // ---- Sun Light Preview Controller ----
+      new NodePreviewController(SunLightElement, {
+        setup(element) {
+          const mesh = new THREE.Mesh(
+            new THREE.SphereGeometry(1, 8, 6),
+            Canvas.transparentMaterial
+          )
+          Project.nodes_3d[element.uuid] = mesh
+          mesh.name = element.uuid
+          mesh.type = element.type
+          mesh.isElement = true
+          mesh.visible = element.visibility
+          mesh.rotation.order = Format.euler_order
+
+          const light = new THREE.DirectionalLight(element.light_color, element.light_intensity)
+          light.target = new THREE.Object3D()
+          light.target.position.set(0, -1, 0)
+          light.add(light.target)
+          mesh.add(light)
+          mesh.light = light
+
+          const spriteMaterial = new THREE.SpriteMaterial({
+            map: sunIconTexture,
+            alphaTest: 0.1,
+            sizeAttenuation: false
+          })
+          const sprite = new THREE.Sprite(spriteMaterial)
+          sprite.name = element.uuid
+          sprite.type = element.type
+          sprite.isElement = true
+          mesh.add(sprite)
+          mesh.sprite = sprite
+
+          // Direction line
+          const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, -Number.MAX_SAFE_INTEGER, 0)
+          ])
+          const line = new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }))
+          mesh.add(line)
+          mesh.directionLine = line
+
+          this.updateTransform(element)
+          this.dispatchEvent("setup", { element })
+        },
+        updateTransform(element) {
+          NodePreviewController.prototype.updateTransform.call(this, element)
+          const { mesh } = element
+          if (!mesh) return
+
+          mesh.light.color.set(element.light_color)
+          mesh.light.intensity = element.light_intensity
+
+          const size = 0.4 * Preview.selected.camera.fov / Preview.selected.height
+          mesh.sprite.scale.set(size, size, size)
+          this.dispatchEvent("update_transform", { element })
+        },
+        updateSelection(element) {
+          const { mesh } = element
+          if (!mesh) return
+          const color = element.selected ? gizmo_colors.outline : CustomTheme.data.colors.text
+          if (mesh.sprite) {
+            mesh.sprite.material.color.set(color)
+            mesh.sprite.material.depthTest = !element.selected
+            mesh.renderOrder = element.selected ? 100 : 0
+          }
+          if (mesh.directionLine) {
+            mesh.directionLine.visible = element.selected
+            mesh.directionLine.material.color.set(color)
+          }
+          this.dispatchEvent("update_selection", { element })
+        },
+        updateWindowSize(element) {
+          const size = 0.4 * Preview.selected.camera.fov / Preview.selected.height
+          element.mesh.sprite.scale.set(size, size, size)
+        }
+      })
+
       OutlinerElement.registerType(PointLightElement, "point_light")
+      OutlinerElement.registerType(SunLightElement, "sun_light")
 
       // Project-level ambient light properties
-      projectProperties = [
-        new Property(ModelProject, "number", "render_ambient_intensity", {
-          default: 0.5,
+      new Property(ModelProject, "number", "render_ambient_intensity", {
+          default: 0.15,
           exposed: false
         }),
         new Property(ModelProject, "string", "render_ambient_color", {
           default: "#ffffff",
           exposed: false
         })
-      ]
 
-      ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+      ambientLight = new THREE.AmbientLight(0xffffff, 0.15)
 
       ambientAction = new Action("render_ambient_settings", {
         icon: "wb_twilight",
@@ -413,7 +534,7 @@
       }
       Blockbench.on("render_frame", cameraListener)
 
-      action = new Action("add_point_light", {
+      pointLightAction = new Action("add_point_light", {
         icon: "lightbulb",
         category: "edit",
         name: "Add Point Light",
@@ -433,24 +554,53 @@
         }
       })
 
+      sunLightAction = new Action("add_sun_light", {
+        icon: "wb_sunny",
+        category: "edit",
+        name: "Add Sun Light",
+        condition: () => Modes.edit,
+        click() {
+          const objs = []
+          Undo.initEdit({ elements: objs, outliner: true })
+          const light = new SunLightElement().addTo(Group.first_selected || Outliner.selected[0]).init()
+          light.select().createUniqueName()
+          objs.push(light)
+          Undo.finishEdit("Add sun light")
+          Vue.nextTick(() => {
+            if (settings.create_rename.value) {
+              light.rename()
+            }
+          })
+        }
+      })
+
       BarItems.add_element.side_menu.structure.push({
         id: "add_point_light",
         name: "Add Point Light",
         icon: "lightbulb",
         condition: () => Format.id === "free",
         click: () => BarItems.add_point_light.click()
+      }, {
+        id: "add_sun_light",
+        name: "Add Sun Light",
+        icon: "wb_sunny",
+        condition: () => Format.id === "free",
+        click: () => BarItems.add_sun_light.click()
       })
 
       styles = Blockbench.addCSS(`
-        .outliner_node[node_type="point_light"] .outliner_icon {
+        .outliner_node[node_type="point_light"] .outliner_icon,
+        .outliner_node[node_type="sun_light"] .outliner_icon {
           color: var(--color-light);
         }
       `)
     },
     onunload() {
-      action?.delete()
+      pointLightAction?.delete()
+      sunLightAction?.delete()
       ambientAction?.delete()
       BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_point_light"))
+      BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_sun_light"))
       styles?.delete()
       scene.remove(ambientLight)
       if (cameraListener) {
