@@ -70,8 +70,8 @@ LightElement.prototype.menu = lightMenu
 
 class PointLightElement extends LightElement {
   static behavior = {
-    unique_name: true,
-    movable: true
+    movable: true,
+    hide_in_screenshot: true
   }
 }
 PointLightElement.prototype.title = "Point Light"
@@ -91,9 +91,9 @@ class SunLightElement extends LightElement {
     return this
   }
   static behavior = {
-    unique_name: true,
     movable: true,
-    rotatable: true
+    rotatable: true,
+    hide_in_screenshot: true
   }
 }
 SunLightElement.prototype.title = "Sun Light"
@@ -154,10 +154,10 @@ class AreaLightElement extends LightElement {
     this.preview_controller.updateTransform(this)
   }
   static behavior = {
-    unique_name: true,
     movable: true,
     rotatable: true,
-    resizable: true
+    resizable: true,
+    hide_in_screenshot: true
   }
 }
 AreaLightElement.prototype.title = "Area Light"
