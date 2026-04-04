@@ -151,8 +151,8 @@ class SpotLightElement extends LightElement {
     const modify = val instanceof Function ? val : n => n + val
     let newVal = modify(before)
     if (negative) newVal = before - (newVal - before)
-    if (bidirectional) {
-      // Alt held: change decay
+    if (bidirectional && axis === 1) {
+      // Alt + Y: change decay
       if (this.temp_data._decay_ref !== this.temp_data.old_size) {
         this.temp_data._decay_ref = this.temp_data.old_size
         this.temp_data.old_decay = this.light_decay
@@ -160,6 +160,15 @@ class SpotLightElement extends LightElement {
       const decayBefore = this.temp_data.old_decay
       const delta = (newVal - before) * 0.25
       this.light_decay = Math.max(0, decayBefore - delta)
+    } else if (bidirectional) {
+      // Alt + X/Z: change penumbra
+      if (this.temp_data._penumbra_ref !== this.temp_data.old_size) {
+        this.temp_data._penumbra_ref = this.temp_data.old_size
+        this.temp_data.old_penumbra = this.light_penumbra
+      }
+      const penumbraBefore = this.temp_data.old_penumbra
+      const delta = (newVal - before) * 0.05
+      this.light_penumbra = Math.min(1, Math.max(0, penumbraBefore + delta))
     } else if (axis === 1) {
       this.light_distance = Math.max(1, newVal)
     } else {
@@ -588,7 +597,7 @@ Plugin.register(id, {
         // Direction line
         const lineGeometry = new THREE.BufferGeometry().setFromPoints([
           new THREE.Vector3(0, 0, 0),
-          new THREE.Vector3(0, -Number.MAX_SAFE_INTEGER, 0)
+          new THREE.Vector3(0, -48, 0)
         ])
         const line = new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
         mesh.add(line)
@@ -651,6 +660,7 @@ Plugin.register(id, {
           element.light_penumbra,
           element.light_decay
         )
+        light.position.set(0, 0, 0)
         light.target = new THREE.Object3D()
         light.target.position.set(0, -1, 0)
         light.add(light.target)
@@ -675,6 +685,27 @@ Plugin.register(id, {
         mesh.add(cone)
         mesh.cone = cone
 
+        // Penumbra circle (at cone base, shows inner hard cone)
+        const circlePoints = []
+        for (let i = 0; i <= 64; i++) {
+          const a = (i / 64) * Math.PI * 2
+          circlePoints.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a)))
+        }
+        const circleGeometry = new THREE.BufferGeometry().setFromPoints(circlePoints)
+
+        const penumbraCircle = new THREE.Line(circleGeometry.clone(), new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
+        mesh.add(penumbraCircle)
+        mesh.penumbraCircle = penumbraCircle
+
+        // Decay circle (moves along center line)
+        const decayCircle = new THREE.Line(circleGeometry.clone(), new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
+        mesh.add(decayCircle)
+        mesh.decayCircle = decayCircle
+
+        // Penumbra circle at decay position
+        const decayPenumbraCircle = new THREE.Line(circleGeometry.clone(), new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
+        mesh.add(decayPenumbraCircle)
+        mesh.decayPenumbraCircle = decayPenumbraCircle
 
         this.updateTransform(element)
         this.dispatchEvent("setup", { element })
@@ -692,11 +723,26 @@ Plugin.register(id, {
         mesh.light.decay = element.light_decay
 
         // Store cone params for render_frame update
-        mesh.coneParams = {
-          d: element.light_distance || 8,
-          r: (element.light_distance || 8) * Math.tan(Math.degToRad(element.light_angle))
-        }
+        const d = element.light_distance || 8
+        const angle = Math.degToRad(element.light_angle)
+        const r = d * Math.tan(angle)
+        mesh.coneParams = { d, r }
 
+        // Penumbra circle: inner cone radius at base
+        const penumbraR = r * (1 - element.light_penumbra)
+        mesh.penumbraCircle.scale.set(penumbraR, 1, penumbraR)
+        mesh.penumbraCircle.position.set(0, -d, 0)
+
+        // Decay circle: position along center line based on decay
+        const decayPos = element.light_decay > 0 ? d * Math.pow(0.5, element.light_decay) : d
+        const decayR = decayPos * Math.tan(angle)
+        mesh.decayCircle.scale.set(decayR, 1, decayR)
+        mesh.decayCircle.position.set(0, -decayPos, 0)
+
+        // Penumbra circle at decay position
+        const decayPenumbraR = decayR * (1 - element.light_penumbra)
+        mesh.decayPenumbraCircle.scale.set(decayPenumbraR, 1, decayPenumbraR)
+        mesh.decayPenumbraCircle.position.set(0, -decayPos, 0)
 
         const size = 0.4 * Preview.selected.camera.fov / Preview.selected.height
         mesh.sprite.scale.set(size, size, size)
@@ -712,6 +758,9 @@ Plugin.register(id, {
           mesh.renderOrder = element.selected ? 100 : 0
         }
         if (mesh.cone) mesh.cone.visible = element.selected
+        if (mesh.penumbraCircle) mesh.penumbraCircle.visible = element.selected && element.light_penumbra > 0
+        if (mesh.decayCircle) mesh.decayCircle.visible = element.selected && element.light_decay > 0
+        if (mesh.decayPenumbraCircle) mesh.decayPenumbraCircle.visible = element.selected && element.light_decay > 0 && element.light_penumbra > 0
         this.dispatchEvent("update_selection", { element })
       },
       updateWindowSize(element) {
@@ -766,7 +815,7 @@ Plugin.register(id, {
         // Direction arrow
         const arrowGeometry = new THREE.BufferGeometry().setFromPoints([
           new THREE.Vector3(0, 0, 0),
-          new THREE.Vector3(0, 0, Number.MAX_SAFE_INTEGER)
+          new THREE.Vector3(0, 0, 48)
         ])
         const arrow = new THREE.Line(arrowGeometry, new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
         mesh.add(arrow)
@@ -981,7 +1030,7 @@ Plugin.register(id, {
         }
         // Center line
         points.push(0, 0, 0)
-        points.push(0, -d, 0)
+        points.push(0, -(d + 48), 0)
         // Circle at cone base
         const segments = 32
         for (let i = 0; i < segments; i++) {
