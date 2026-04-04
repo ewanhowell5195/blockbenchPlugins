@@ -305,10 +305,8 @@
               ambientLight.color.set(form.color.toHexString())
             },
             onConfirm(form) {
-              Undo.initEdit({ uv_mode: true })
               Project.render_ambient_intensity = form.intensity
               Project.render_ambient_color = form.color.toHexString()
-              Undo.finishEdit("Change ambient light")
             },
             onCancel() {
               ambientLight.intensity = prevIntensity
