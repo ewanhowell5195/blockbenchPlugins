@@ -511,6 +511,15 @@ Plugin.register(id, {
         mesh.add(rect)
         mesh.rect = rect
 
+        // Direction arrow
+        const arrowGeometry = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, Number.MAX_SAFE_INTEGER)
+        ])
+        const arrow = new THREE.Line(arrowGeometry, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }))
+        mesh.add(arrow)
+        mesh.arrow = arrow
+
         this.updateTransform(element)
         this.dispatchEvent("setup", { element })
       },
@@ -544,6 +553,10 @@ Plugin.register(id, {
         if (mesh.rect) {
           mesh.rect.visible = element.selected
           mesh.rect.material.color.set(color)
+        }
+        if (mesh.arrow) {
+          mesh.arrow.visible = element.selected
+          mesh.arrow.material.color.set(color)
         }
         this.dispatchEvent("update_selection", { element })
       },
