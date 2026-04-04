@@ -121,10 +121,36 @@ class AreaLightElement extends LightElement {
   }
   resize(val, axis, negative, allow_negative, bidirectional) {
     if (axis === 2) return
+    // old_size is set by onStart and deleted by onEnd, so use it to detect new drag
+    if (this.temp_data._old_size_ref !== this.temp_data.old_size) {
+      this.temp_data._old_size_ref = this.temp_data.old_size
+      this.temp_data.old_position = this.position.slice()
+    }
     const prop = axis === 0 ? "light_width" : "light_height"
     const before = this.temp_data.old_size?.[axis] ?? this[prop]
     const modify = val instanceof Function ? val : n => n + val
-    this[prop] = Math.max(0.1, modify(before))
+    let newSize = modify(before)
+    if (negative) newSize = before - (newSize - before)
+    newSize = Math.max(0.1, newSize)
+    const difference = newSize - before
+
+    this[prop] = newSize
+
+    if (!bidirectional) {
+      const sign = negative ? -1 : 1
+      const offset = difference / 2 * sign
+      const dir = new THREE.Vector3(axis === 0 ? offset : 0, axis === 1 ? offset : 0, 0)
+      const euler = new THREE.Euler(
+        Math.degToRad(this.rotation[0]),
+        Math.degToRad(this.rotation[1]),
+        Math.degToRad(this.rotation[2]),
+        "ZYX"
+      )
+      dir.applyEuler(euler)
+      this.position[0] = this.temp_data.old_position[0] + dir.x
+      this.position[1] = this.temp_data.old_position[1] + dir.y
+      this.position[2] = this.temp_data.old_position[2] + dir.z
+    }
     this.preview_controller.updateTransform(this)
   }
   static behavior = {
