@@ -670,51 +670,55 @@ Plugin.register(id, {
       return mat
     }
 
+    function applyRenderedMode() {
+      scene.remove(lights)
+      scene.remove(Sun)
+      if (Canvas.material_light) scene.remove(Canvas.material_light)
+      ambientLight.intensity = Project.render_ambient_intensity
+      ambientLight.color.set(Project.render_ambient_color)
+      scene.add(ambientLight)
+      Outliner.elements.forEach(el => {
+        if (!el.mesh || !el.faces) return
+        el.mesh._originalMaterial = el.mesh.material
+        if (Format.single_texture) {
+          el.mesh.material = getRenderedMaterial(Texture.getDefault())
+        } else if (el.mesh.material instanceof Array) {
+          el.mesh.material = el.mesh.material.map((mat, i) => {
+            const face = Canvas.face_order[i]
+            const tex = el.faces[face]?.getTexture()
+            return getRenderedMaterial(tex)
+          })
+        } else {
+          const tex = Object.values(el.faces).find(f => f.getTexture())?.getTexture()
+          el.mesh.material = getRenderedMaterial(tex)
+        }
+      })
+    }
+
+    function exitRenderedMode() {
+      scene.remove(ambientLight)
+      Outliner.elements.forEach(el => {
+        if (el.mesh?._originalMaterial) {
+          el.mesh.material = el.mesh._originalMaterial
+          delete el.mesh._originalMaterial
+        }
+      })
+      updateShading()
+    }
+
     changeViewModeListener = (data) => {
       if (data.view_mode === "rendered") {
-        // Remove default shader lights
-        scene.remove(lights)
-        scene.remove(Sun)
-        if (Canvas.material_light) scene.remove(Canvas.material_light)
-        // Add ambient light
-        ambientLight.intensity = Project.render_ambient_intensity
-        ambientLight.color.set(Project.render_ambient_color)
-        scene.add(ambientLight)
-        // Swap all element materials to MeshPhysicalMaterial
-        Outliner.elements.forEach(el => {
-          if (!el.mesh) return
-          if (el.faces) {
-            // Store original material for restoration
-            el.mesh._originalMaterial = el.mesh.material
-            if (Format.single_texture) {
-              el.mesh.material = getRenderedMaterial(Texture.getDefault())
-            } else if (el.mesh.material instanceof Array) {
-              el.mesh.material = el.mesh.material.map((mat, i) => {
-                const face = Canvas.face_order[i]
-                const tex = el.faces[face]?.getTexture()
-                return getRenderedMaterial(tex)
-              })
-            } else {
-              const tex = Object.values(el.faces).find(f => f.getTexture())?.getTexture()
-              el.mesh.material = getRenderedMaterial(tex)
-            }
-          }
-        })
+        applyRenderedMode()
       } else if (data.previous_view_mode === "rendered") {
-        // Remove ambient light
-        scene.remove(ambientLight)
-        // Restore original materials
-        Outliner.elements.forEach(el => {
-          if (el.mesh?._originalMaterial) {
-            el.mesh.material = el.mesh._originalMaterial
-            delete el.mesh._originalMaterial
-          }
-        })
-        // Restore default lights
-        updateShading()
+        exitRenderedMode()
       }
     }
     Blockbench.on("change_view_mode", changeViewModeListener)
+
+    // Re-apply rendered mode after Canvas.updateViewMode resets materials
+    Blockbench.on("update_view", () => {
+      if (Project?.view_mode === "rendered") applyRenderedMode()
+    })
 
     cameraListener = () => {
       if (!Preview.selected) return
