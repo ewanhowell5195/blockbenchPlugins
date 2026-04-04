@@ -83,8 +83,11 @@ class PointLightElement extends LightElement {
     if (negative) newVal = before - (newVal - before)
     if (bidirectional) {
       // Alt held: change decay
-      const decayBefore = this.temp_data.old_decay ?? this.light_decay
-      if (this.temp_data.old_decay === undefined) this.temp_data.old_decay = this.light_decay
+      if (this.temp_data._decay_ref !== this.temp_data.old_size) {
+        this.temp_data._decay_ref = this.temp_data.old_size
+        this.temp_data.old_decay = this.light_decay
+      }
+      const decayBefore = this.temp_data.old_decay
       const delta = (newVal - before) * 0.1
       this.light_decay = Math.max(0, decayBefore - delta)
     } else {
