@@ -376,11 +376,9 @@ Plugin.register(id, {
         }
         if (mesh.outerCircle) {
           mesh.outerCircle.visible = element.selected && (element.light_distance > 0)
-          mesh.outerCircle.material.color.set(color)
         }
         if (mesh.innerCircle) {
           mesh.innerCircle.visible = element.selected && (element.light_distance > 0) && (element.light_decay > 0)
-          mesh.innerCircle.material.color.set(color)
         }
         this.dispatchEvent("update_selection", { element })
       },
@@ -458,7 +456,6 @@ Plugin.register(id, {
         }
         if (mesh.directionLine) {
           mesh.directionLine.visible = element.selected
-          mesh.directionLine.material.color.set(color)
         }
         this.dispatchEvent("update_selection", { element })
       },
@@ -552,11 +549,9 @@ Plugin.register(id, {
         }
         if (mesh.rect) {
           mesh.rect.visible = element.selected
-          mesh.rect.material.color.set(color)
         }
         if (mesh.arrow) {
           mesh.arrow.visible = element.selected
-          mesh.arrow.material.color.set(color)
         }
         this.dispatchEvent("update_selection", { element })
       },
