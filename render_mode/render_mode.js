@@ -140,14 +140,14 @@ class SpotLightElement extends LightElement {
     return this
   }
   size(axis) {
-    const d = this.light_distance
-    return axis !== undefined ? d : [d, d, d]
+    const s = [this.light_angle, this.light_distance, this.light_angle]
+    return axis !== undefined ? s[axis] : s
   }
   getSize(axis) {
     return this.size(axis)
   }
   resize(val, axis, negative, allow_negative, bidirectional) {
-    const before = this.temp_data.old_size?.[axis] ?? this.light_distance
+    const before = this.temp_data.old_size?.[axis] ?? this.size(axis)
     const modify = val instanceof Function ? val : n => n + val
     let newVal = modify(before)
     if (negative) newVal = before - (newVal - before)
@@ -160,8 +160,10 @@ class SpotLightElement extends LightElement {
       const decayBefore = this.temp_data.old_decay
       const delta = (newVal - before) * 0.25
       this.light_decay = Math.max(0, decayBefore - delta)
+    } else if (axis === 1) {
+      this.light_distance = Math.max(1, newVal)
     } else {
-      this.light_distance = Math.max(0, newVal)
+      this.light_angle = Math.min(90, Math.max(1, newVal))
     }
     this.preview_controller.updateTransform(this)
   }
