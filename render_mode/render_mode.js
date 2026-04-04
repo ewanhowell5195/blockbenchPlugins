@@ -294,6 +294,31 @@ Plugin.register(id, {
       new Property(Type, "boolean", "locked")
     }
 
+    function registerShadowProperties(Type) {
+      new Property(Type, "boolean", "cast_shadows", {
+        default: false,
+        inputs: {
+          element_panel: {
+            input: { label: "Cast Shadows", type: "checkbox" },
+            onChange() {
+              Canvas.updateView({ elements: Outliner.selected, element_aspects: { transform: true } })
+            }
+          }
+        }
+      })
+      new Property(Type, "number", "shadow_bias", {
+        default: -0.001,
+        inputs: {
+          element_panel: {
+            input: { label: "Shadow Bias", type: "number", max: 0, step: 0.0001 },
+            onChange() {
+              Canvas.updateView({ elements: Outliner.selected, element_aspects: { transform: true } })
+            }
+          }
+        }
+      })
+    }
+
     // Point light properties
     registerSharedProperties(PointLightElement)
     new Property(PointLightElement, "string", "name", { default: "point_light" })
@@ -319,11 +344,13 @@ Plugin.register(id, {
         }
       }
     })
+    registerShadowProperties(PointLightElement)
 
     // Sun light properties
     registerSharedProperties(SunLightElement)
     new Property(SunLightElement, "string", "name", { default: "sun_light" })
     new Property(SunLightElement, "vector", "rotation")
+    registerShadowProperties(SunLightElement)
 
     // Spot light properties
     registerSharedProperties(SpotLightElement)
@@ -373,6 +400,7 @@ Plugin.register(id, {
         }
       }
     })
+    registerShadowProperties(SpotLightElement)
 
     // Area light properties
     registerSharedProperties(AreaLightElement)
@@ -885,7 +913,7 @@ Plugin.register(id, {
       const mat = new THREE.MeshPhysicalMaterial({
         map: tex.getMaterial().map || null,
         alphaTest: 0.05,
-        side: THREE.FrontSide
+        side: THREE.DoubleSide
       })
       renderedMaterials.set(tex.uuid, mat)
       return mat
@@ -898,31 +926,80 @@ Plugin.register(id, {
       ambientLight.intensity = Project.render_ambient_intensity
       ambientLight.color.set(Project.render_ambient_color)
       scene.add(ambientLight)
+
+      // Enable shadows
+      Preview.all.forEach(p => {
+        p.renderer.shadowMap.enabled = true
+        p.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+      })
+
       Outliner.elements.forEach(el => {
-        if (!el.mesh || !el.faces) return
-        el.mesh._originalMaterial = el.mesh.material
-        if (Format.single_texture) {
-          el.mesh.material = getRenderedMaterial(Texture.getDefault())
-        } else if (el.mesh.material instanceof Array) {
-          el.mesh.material = el.mesh.material.map((mat, i) => {
-            const face = Canvas.face_order[i]
-            const tex = el.faces[face]?.getTexture()
-            return getRenderedMaterial(tex)
-          })
-        } else {
-          const tex = Object.values(el.faces).find(f => f.getTexture())?.getTexture()
-          el.mesh.material = getRenderedMaterial(tex)
+        if (!el.mesh) return
+        if (el.faces) {
+          el.mesh._originalMaterial = el.mesh.material
+          if (Format.single_texture) {
+            el.mesh.material = getRenderedMaterial(Texture.getDefault())
+          } else if (el.mesh.material instanceof Array) {
+            el.mesh.material = el.mesh.material.map((mat, i) => {
+              const face = Canvas.face_order[i]
+              const tex = el.faces[face]?.getTexture()
+              return getRenderedMaterial(tex)
+            })
+          } else {
+            const tex = Object.values(el.faces).find(f => f.getTexture())?.getTexture()
+            el.mesh.material = getRenderedMaterial(tex)
+          }
+          el.mesh.castShadow = true
+          el.mesh.receiveShadow = true
         }
       })
+
+      // Enable shadows on light elements
+      for (const element of PointLightElement.all) {
+        if (element.mesh?.light) {
+          element.mesh.light.castShadow = element.cast_shadows
+          element.mesh.light.shadow.mapSize.set(1024, 1024)
+          element.mesh.light.shadow.bias = element.shadow_bias
+        }
+      }
+      for (const element of SunLightElement.all) {
+        if (element.mesh?.light) {
+          element.mesh.light.castShadow = element.cast_shadows
+          element.mesh.light.shadow.mapSize.set(8192, 8192)
+          element.mesh.light.shadow.bias = element.shadow_bias
+          element.mesh.light.shadow.camera.left = -500
+          element.mesh.light.shadow.camera.right = 500
+          element.mesh.light.shadow.camera.top = 500
+          element.mesh.light.shadow.camera.bottom = -500
+          element.mesh.light.shadow.camera.near = 0.1
+          element.mesh.light.shadow.camera.far = 1000
+        }
+      }
+      for (const element of SpotLightElement.all) {
+        if (element.mesh?.light) {
+          element.mesh.light.castShadow = element.cast_shadows
+          element.mesh.light.shadow.mapSize.set(1024, 1024)
+          element.mesh.light.shadow.bias = element.shadow_bias
+        }
+      }
     }
 
     function exitRenderedMode() {
       scene.remove(ambientLight)
+
+      // Disable shadows
+      Preview.all.forEach(p => {
+        p.renderer.shadowMap.enabled = false
+      })
+
       Outliner.elements.forEach(el => {
-        if (el.mesh?._originalMaterial) {
+        if (!el.mesh) return
+        if (el.mesh._originalMaterial) {
           el.mesh.material = el.mesh._originalMaterial
           delete el.mesh._originalMaterial
         }
+        el.mesh.castShadow = false
+        el.mesh.receiveShadow = false
       })
       updateShading()
     }
