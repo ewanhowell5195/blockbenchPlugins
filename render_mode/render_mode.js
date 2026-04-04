@@ -270,28 +270,8 @@ Plugin.register(id, {
     registerSharedProperties(AreaLightElement)
     new Property(AreaLightElement, "string", "name", { default: "area_light" })
     new Property(AreaLightElement, "vector", "rotation")
-    new Property(AreaLightElement, "number", "light_width", {
-      default: 4,
-      inputs: {
-        element_panel: {
-          input: { label: "Width", type: "number", min: 0.1, step: 0.5 },
-          onChange() {
-            Canvas.updateView({ elements: AreaLightElement.selected, element_aspects: { transform: true } })
-          }
-        }
-      }
-    })
-    new Property(AreaLightElement, "number", "light_height", {
-      default: 4,
-      inputs: {
-        element_panel: {
-          input: { label: "Height", type: "number", min: 0.1, step: 0.5 },
-          onChange() {
-            Canvas.updateView({ elements: AreaLightElement.selected, element_aspects: { transform: true } })
-          }
-        }
-      }
-    })
+    new Property(AreaLightElement, "number", "light_width", { default: 4 })
+    new Property(AreaLightElement, "number", "light_height", { default: 4 })
 
     // ---- Point Light Preview Controller ----
     new NodePreviewController(PointLightElement, {
