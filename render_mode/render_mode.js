@@ -69,14 +69,19 @@ LightElement.prototype.buttons = [
 LightElement.prototype.menu = lightMenu
 
 class PointLightElement extends LightElement {
-  getSize(axis) {
+  size(axis) {
     const d = this.light_distance
     return axis !== undefined ? d : [d, d, d]
+  }
+  getSize(axis) {
+    return this.size(axis)
   }
   resize(val, axis, negative, allow_negative, bidirectional) {
     const before = this.temp_data.old_size?.[axis] ?? this.light_distance
     const modify = val instanceof Function ? val : n => n + val
-    this.light_distance = Math.max(0, modify(before))
+    let newSize = modify(before)
+    if (negative) newSize = before - (newSize - before)
+    this.light_distance = Math.max(0, newSize)
     this.preview_controller.updateTransform(this)
   }
   static behavior = {
