@@ -3,7 +3,7 @@
   const name = "Render Mode"
   const icon = "lightbulb"
 
-  let action, properties, styles, previewController, lightIconTexture, cameraListener, changeViewModeListener
+  let action, ambientAction, properties, projectProperties, styles, previewController, lightIconTexture, cameraListener, changeViewModeListener, ambientLight
 
   const lightTypes = {
     point: {
@@ -304,6 +304,55 @@
 
       OutlinerElement.registerType(LightElement, "light")
 
+      // Project-level ambient light properties
+      projectProperties = [
+        new Property(ModelProject, "number", "render_ambient_intensity", {
+          default: 0.5,
+          exposed: false
+        }),
+        new Property(ModelProject, "string", "render_ambient_color", {
+          default: "#ffffff",
+          exposed: false
+        })
+      ]
+
+      ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+
+      ambientAction = new Action("render_ambient_settings", {
+        icon: "wb_twilight",
+        name: "Ambient Light",
+        category: "view",
+        condition: () => Project,
+        click() {
+          const prevIntensity = Project.render_ambient_intensity
+          const prevColor = Project.render_ambient_color
+          new Dialog("render_ambient_settings", {
+            title: "Ambient Light",
+            form: {
+              intensity: { label: "Intensity", type: "number", value: prevIntensity, min: 0, step: 0.1 },
+              color: { label: "Color", type: "color", value: prevColor }
+            },
+            onFormChange(form) {
+              ambientLight.intensity = form.intensity
+              ambientLight.color.set(form.color.toHexString())
+            },
+            onConfirm(form) {
+              Undo.initEdit({ uv_mode: true })
+              Project.render_ambient_intensity = form.intensity
+              Project.render_ambient_color = form.color.toHexString()
+              Undo.finishEdit("Change ambient light")
+            },
+            onCancel() {
+              ambientLight.intensity = prevIntensity
+              ambientLight.color.set(prevColor)
+            }
+          }).show()
+        }
+      })
+
+      MenuBar.menus.view.addAction("_", "#view_mode")
+      MenuBar.menus.view.addAction(ambientAction, "#view_mode")
+
       // Add "Rendered" view mode
       BarItems.view_mode.options.rendered = {
         name: "Rendered",
@@ -348,6 +397,10 @@
           scene.remove(lights)
           scene.remove(Sun)
           if (Canvas.material_light) scene.remove(Canvas.material_light)
+          // Add ambient light
+          ambientLight.intensity = Project.render_ambient_intensity
+          ambientLight.color.set(Project.render_ambient_color)
+          scene.add(ambientLight)
           // Swap all element materials to MeshStandardMaterial
           Outliner.elements.forEach(el => {
             if (!el.mesh) return
@@ -369,6 +422,8 @@
             }
           })
         } else if (data.previous_view_mode === "rendered") {
+          // Remove ambient light
+          scene.remove(ambientLight)
           // Restore original materials
           Outliner.elements.forEach(el => {
             if (el.mesh?._originalMaterial) {
@@ -420,7 +475,10 @@
     },
     onunload() {
       action?.delete()
+      ambientAction?.delete()
+      projectProperties?.forEach(p => p.delete())
       styles?.delete()
+      scene.remove(ambientLight)
       if (cameraListener) {
         Blockbench.removeListener("update_camera_position", cameraListener)
         cameraListener = null
