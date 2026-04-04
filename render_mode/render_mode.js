@@ -445,7 +445,7 @@
           if (element.mesh?.innerCircle) element.mesh.innerCircle.quaternion.copy(quat)
         }
       }
-      Blockbench.on("update_camera_position", cameraListener)
+      Blockbench.on("render_frame", cameraListener)
 
       action = new Action("add_point_light", {
         icon: "lightbulb",
@@ -480,7 +480,7 @@
       styles?.delete()
       scene.remove(ambientLight)
       if (cameraListener) {
-        Blockbench.removeListener("update_camera_position", cameraListener)
+        Blockbench.removeListener("render_frame", cameraListener)
         cameraListener = null
       }
       if (changeViewModeListener) {
