@@ -120,7 +120,7 @@ class AreaLightElement extends LightElement {
 }
 AreaLightElement.prototype.title = "Area Light"
 AreaLightElement.prototype.type = "area_light"
-AreaLightElement.prototype.icon = "crop_din"
+AreaLightElement.prototype.icon = "fluorescent"
 
 Plugin.register(id, {
   title: name,
@@ -183,7 +183,7 @@ Plugin.register(id, {
     areaCtx.font = "48px 'Material Icons'"
     areaCtx.textAlign = "center"
     areaCtx.textBaseline = "middle"
-    areaCtx.fillText("crop_din", 24, 24)
+    areaCtx.fillText("fluorescent", 24, 24)
     const areaIconTexture = new THREE.CanvasTexture(areaCanvas)
     areaIconTexture.magFilter = THREE.LinearFilter
     areaIconTexture.minFilter = THREE.LinearFilter
@@ -745,7 +745,7 @@ Plugin.register(id, {
     })
 
     areaLightAction = new Action("add_area_light", {
-      icon: "crop_din",
+      icon: "fluorescent",
       category: "edit",
       name: "Add Area Light",
       condition: () => Modes.edit,
@@ -779,7 +779,7 @@ Plugin.register(id, {
     }, {
       id: "add_area_light",
       name: "Add Area Light",
-      icon: "crop_din",
+      icon: "fluorescent",
       condition: () => Format.id === "free",
       click: () => BarItems.add_area_light.click()
     })
