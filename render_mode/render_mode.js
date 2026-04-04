@@ -42,6 +42,11 @@ class LightElement extends OutlinerElement {
   flip(axis, center) {
     const offset = this.position[axis] - center
     this.position[axis] = center - offset
+    if (this.rotation) {
+      this.rotation.forEach((n, i) => {
+        if (i != axis) this.rotation[i] = -n
+      })
+    }
     flipNameOnAxis(this, axis)
     this.createUniqueName()
     this.preview_controller.updateTransform(this)
@@ -106,17 +111,6 @@ PointLightElement.prototype.type = "point_light"
 PointLightElement.prototype.icon = "lightbulb"
 
 class SunLightElement extends LightElement {
-  flip(axis, center) {
-    const offset = this.position[axis] - center
-    this.position[axis] = center - offset
-    this.rotation.forEach((n, i) => {
-      if (i != axis) this.rotation[i] = -n
-    })
-    flipNameOnAxis(this, axis)
-    this.createUniqueName()
-    this.preview_controller.updateTransform(this)
-    return this
-  }
   static behavior = {
     movable: true,
     rotatable: true,
@@ -128,17 +122,6 @@ SunLightElement.prototype.type = "sun_light"
 SunLightElement.prototype.icon = "wb_sunny"
 
 class SpotLightElement extends LightElement {
-  flip(axis, center) {
-    const offset = this.position[axis] - center
-    this.position[axis] = center - offset
-    this.rotation.forEach((n, i) => {
-      if (i != axis) this.rotation[i] = -n
-    })
-    flipNameOnAxis(this, axis)
-    this.createUniqueName()
-    this.preview_controller.updateTransform(this)
-    return this
-  }
   size(axis) {
     const s = [this.light_angle, this.light_distance, this.light_angle]
     return axis !== undefined ? s[axis] : s
@@ -188,17 +171,6 @@ SpotLightElement.prototype.type = "spot_light"
 SpotLightElement.prototype.icon = "highlight"
 
 class AreaLightElement extends LightElement {
-  flip(axis, center) {
-    const offset = this.position[axis] - center
-    this.position[axis] = center - offset
-    this.rotation.forEach((n, i) => {
-      if (i != axis) this.rotation[i] = -n
-    })
-    flipNameOnAxis(this, axis)
-    this.createUniqueName()
-    this.preview_controller.updateTransform(this)
-    return this
-  }
   size(axis) {
     const s = [this.light_width, this.light_height, 0]
     return axis !== undefined ? s[axis] : s
@@ -272,67 +244,26 @@ Plugin.register(id, {
       THREE.RectAreaLightUniformsLib.init()
     }
 
-    // Generate light icon texture using Material Icons
-    const canvas = document.createElement("canvas")
-    canvas.width = 48
-    canvas.height = 48
-    const ctx = canvas.getContext("2d")
-    ctx.clearRect(0, 0, 48, 48)
-    ctx.fillStyle = "#ffffff"
-    ctx.font = "48px 'Material Icons'"
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.fillText("lightbulb", 24, 24)
-    const lightIconTexture = new THREE.CanvasTexture(canvas)
-    lightIconTexture.magFilter = THREE.LinearFilter
-    lightIconTexture.minFilter = THREE.LinearFilter
+    function createIconTexture(iconName) {
+      const canvas = document.createElement("canvas")
+      canvas.width = 48
+      canvas.height = 48
+      const ctx = canvas.getContext("2d")
+      ctx.fillStyle = "#ffffff"
+      ctx.font = "48px 'Material Icons'"
+      ctx.textAlign = "center"
+      ctx.textBaseline = "middle"
+      ctx.fillText(iconName, 24, 24)
+      const texture = new THREE.CanvasTexture(canvas)
+      texture.magFilter = THREE.LinearFilter
+      texture.minFilter = THREE.LinearFilter
+      return texture
+    }
 
-    // Generate sun icon texture
-    const sunCanvas = document.createElement("canvas")
-    sunCanvas.width = 48
-    sunCanvas.height = 48
-    const sunCtx = sunCanvas.getContext("2d")
-    sunCtx.clearRect(0, 0, 48, 48)
-    sunCtx.fillStyle = "#ffffff"
-    sunCtx.font = "48px 'Material Icons'"
-    sunCtx.textAlign = "center"
-    sunCtx.textBaseline = "middle"
-    sunCtx.fillText("wb_sunny", 24, 24)
-    const sunIconTexture = new THREE.CanvasTexture(sunCanvas)
-    sunIconTexture.magFilter = THREE.LinearFilter
-    sunIconTexture.minFilter = THREE.LinearFilter
-
-    // Generate spot light icon texture
-    const spotCanvas = document.createElement("canvas")
-    spotCanvas.width = 48
-    spotCanvas.height = 48
-    const spotCtx = spotCanvas.getContext("2d")
-    spotCtx.clearRect(0, 0, 48, 48)
-    spotCtx.fillStyle = "#ffffff"
-    spotCtx.font = "48px 'Material Icons'"
-    spotCtx.textAlign = "center"
-    spotCtx.textBaseline = "middle"
-    spotCtx.fillText("highlight", 24, 24)
-    const spotIconTexture = new THREE.CanvasTexture(spotCanvas)
-    spotIconTexture.magFilter = THREE.LinearFilter
-    spotIconTexture.minFilter = THREE.LinearFilter
-
-    // Generate area light icon texture
-    const areaCanvas = document.createElement("canvas")
-    areaCanvas.width = 48
-    areaCanvas.height = 48
-    const areaCtx = areaCanvas.getContext("2d")
-    areaCtx.clearRect(0, 0, 48, 48)
-    areaCtx.fillStyle = "#ffffff"
-    areaCtx.font = "48px 'Material Icons'"
-    areaCtx.textAlign = "center"
-    areaCtx.textBaseline = "middle"
-    areaCtx.fillText("fluorescent", 24, 24)
-    const areaIconTexture = new THREE.CanvasTexture(areaCanvas)
-    areaIconTexture.magFilter = THREE.LinearFilter
-    areaIconTexture.minFilter = THREE.LinearFilter
-
-    // Initialize RectAreaLight uniforms
+    const lightIconTexture = createIconTexture("lightbulb")
+    const sunIconTexture = createIconTexture("wb_sunny")
+    const spotIconTexture = createIconTexture("highlight")
+    const areaIconTexture = createIconTexture("fluorescent")
 
     // Shared properties on each subclass
     function registerSharedProperties(Type) {
@@ -941,9 +872,16 @@ Plugin.register(id, {
     // Cache for rendered-mode MeshPhysicalMaterials per texture
     const renderedMaterials = new Map()
 
+    const defaultRenderedMaterial = new THREE.MeshPhysicalMaterial({ color: 0x808080 })
+
     function getRenderedMaterial(tex) {
-      if (!tex) return new THREE.MeshPhysicalMaterial({ color: 0x808080 })
-      if (renderedMaterials.has(tex.uuid)) return renderedMaterials.get(tex.uuid)
+      if (!tex) return defaultRenderedMaterial
+      if (renderedMaterials.has(tex.uuid)) {
+        const mat = renderedMaterials.get(tex.uuid)
+        mat.map = tex.getMaterial().map || null
+        mat.needsUpdate = true
+        return mat
+      }
       const mat = new THREE.MeshPhysicalMaterial({
         map: tex.getMaterial().map || null,
         alphaTest: 0.05,
@@ -1046,85 +984,32 @@ Plugin.register(id, {
     }
     Blockbench.on("render_frame", cameraListener)
 
-    pointLightAction = new Action("add_point_light", {
-      icon: "lightbulb",
-      category: "edit",
-      name: "Add Point Light",
-      condition: () => Modes.edit,
-      click() {
-        const objs = []
-        Undo.initEdit({ elements: objs, outliner: true })
-        const light = new PointLightElement().addTo(Group.first_selected || Outliner.selected[0]).init()
-        light.select().createUniqueName()
-        objs.push(light)
-        Undo.finishEdit("Add point light")
-        Vue.nextTick(() => {
-          if (settings.create_rename.value) {
-            light.rename()
-          }
-        })
-      }
-    })
+    function createAddLightAction(id, name, icon, ElementClass) {
+      return new Action(id, {
+        icon,
+        category: "edit",
+        name,
+        condition: () => Modes.edit,
+        click() {
+          const objs = []
+          Undo.initEdit({ elements: objs, outliner: true })
+          const light = new ElementClass().addTo(Group.first_selected || Outliner.selected[0]).init()
+          light.select().createUniqueName()
+          objs.push(light)
+          Undo.finishEdit(name)
+          Vue.nextTick(() => {
+            if (settings.create_rename.value) {
+              light.rename()
+            }
+          })
+        }
+      })
+    }
 
-    sunLightAction = new Action("add_sun_light", {
-      icon: "wb_sunny",
-      category: "edit",
-      name: "Add Sun Light",
-      condition: () => Modes.edit,
-      click() {
-        const objs = []
-        Undo.initEdit({ elements: objs, outliner: true })
-        const light = new SunLightElement().addTo(Group.first_selected || Outliner.selected[0]).init()
-        light.select().createUniqueName()
-        objs.push(light)
-        Undo.finishEdit("Add sun light")
-        Vue.nextTick(() => {
-          if (settings.create_rename.value) {
-            light.rename()
-          }
-        })
-      }
-    })
-
-    spotLightAction = new Action("add_spot_light", {
-      icon: "highlight",
-      category: "edit",
-      name: "Add Spot Light",
-      condition: () => Modes.edit,
-      click() {
-        const objs = []
-        Undo.initEdit({ elements: objs, outliner: true })
-        const light = new SpotLightElement().addTo(Group.first_selected || Outliner.selected[0]).init()
-        light.select().createUniqueName()
-        objs.push(light)
-        Undo.finishEdit("Add spot light")
-        Vue.nextTick(() => {
-          if (settings.create_rename.value) {
-            light.rename()
-          }
-        })
-      }
-    })
-
-    areaLightAction = new Action("add_area_light", {
-      icon: "fluorescent",
-      category: "edit",
-      name: "Add Area Light",
-      condition: () => Modes.edit,
-      click() {
-        const objs = []
-        Undo.initEdit({ elements: objs, outliner: true })
-        const light = new AreaLightElement().addTo(Group.first_selected || Outliner.selected[0]).init()
-        light.select().createUniqueName()
-        objs.push(light)
-        Undo.finishEdit("Add area light")
-        Vue.nextTick(() => {
-          if (settings.create_rename.value) {
-            light.rename()
-          }
-        })
-      }
-    })
+    pointLightAction = createAddLightAction("add_point_light", "Add Point Light", "lightbulb", PointLightElement)
+    sunLightAction = createAddLightAction("add_sun_light", "Add Sun Light", "wb_sunny", SunLightElement)
+    spotLightAction = createAddLightAction("add_spot_light", "Add Spot Light", "highlight", SpotLightElement)
+    areaLightAction = createAddLightAction("add_area_light", "Add Area Light", "fluorescent", AreaLightElement)
 
     BarItems.add_element.side_menu.structure.push({
       id: "add_point_light",
@@ -1164,13 +1049,8 @@ Plugin.register(id, {
     BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_spot_light"))
     BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_area_light"))
     scene.remove(ambientLight)
-    if (cameraListener) {
-      Blockbench.removeListener("render_frame", cameraListener)
-      cameraListener = null
-    }
-    if (changeViewModeListener) {
-      Blockbench.removeListener("change_view_mode", changeViewModeListener)
-    }
+    Blockbench.removeListener("render_frame", cameraListener)
+    Blockbench.removeListener("change_view_mode", changeViewModeListener)
     Blockbench.removeListener("update_view", reapplyListener)
     Blockbench.removeListener("finished_edit", reapplyListener)
     delete BarItems.view_mode.options.rendered
