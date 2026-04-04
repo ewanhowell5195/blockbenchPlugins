@@ -2,7 +2,7 @@ const id = "render_mode"
 const name = "Render Mode"
 const icon = "lightbulb"
 
-let pointLightAction, sunLightAction, areaLightAction, ambientAction, cameraListener, changeViewModeListener, reapplyListener, ambientLight
+let pointLightAction, sunLightAction, spotLightAction, areaLightAction, ambientAction, cameraListener, changeViewModeListener, reapplyListener, ambientLight
 
 const lightMenu = new Menu([
   ...Outliner.control_menu_group,
@@ -127,6 +127,55 @@ SunLightElement.prototype.title = "Sun Light"
 SunLightElement.prototype.type = "sun_light"
 SunLightElement.prototype.icon = "wb_sunny"
 
+class SpotLightElement extends LightElement {
+  flip(axis, center) {
+    const offset = this.position[axis] - center
+    this.position[axis] = center - offset
+    this.rotation.forEach((n, i) => {
+      if (i != axis) this.rotation[i] = -n
+    })
+    flipNameOnAxis(this, axis)
+    this.createUniqueName()
+    this.preview_controller.updateTransform(this)
+    return this
+  }
+  size(axis) {
+    const d = this.light_distance
+    return axis !== undefined ? d : [d, d, d]
+  }
+  getSize(axis) {
+    return this.size(axis)
+  }
+  resize(val, axis, negative, allow_negative, bidirectional) {
+    const before = this.temp_data.old_size?.[axis] ?? this.light_distance
+    const modify = val instanceof Function ? val : n => n + val
+    let newVal = modify(before)
+    if (negative) newVal = before - (newVal - before)
+    if (bidirectional) {
+      // Alt held: change decay
+      if (this.temp_data._decay_ref !== this.temp_data.old_size) {
+        this.temp_data._decay_ref = this.temp_data.old_size
+        this.temp_data.old_decay = this.light_decay
+      }
+      const decayBefore = this.temp_data.old_decay
+      const delta = (newVal - before) * 0.25
+      this.light_decay = Math.max(0, decayBefore - delta)
+    } else {
+      this.light_distance = Math.max(0, newVal)
+    }
+    this.preview_controller.updateTransform(this)
+  }
+  static behavior = {
+    movable: true,
+    rotatable: true,
+    resizable: true,
+    hide_in_screenshot: true
+  }
+}
+SpotLightElement.prototype.title = "Spot Light"
+SpotLightElement.prototype.type = "spot_light"
+SpotLightElement.prototype.icon = "highlight"
+
 class AreaLightElement extends LightElement {
   flip(axis, center) {
     const offset = this.position[axis] - center
@@ -242,6 +291,21 @@ Plugin.register(id, {
     sunIconTexture.magFilter = THREE.LinearFilter
     sunIconTexture.minFilter = THREE.LinearFilter
 
+    // Generate spot light icon texture
+    const spotCanvas = document.createElement("canvas")
+    spotCanvas.width = 48
+    spotCanvas.height = 48
+    const spotCtx = spotCanvas.getContext("2d")
+    spotCtx.clearRect(0, 0, 48, 48)
+    spotCtx.fillStyle = "#ffffff"
+    spotCtx.font = "48px 'Material Icons'"
+    spotCtx.textAlign = "center"
+    spotCtx.textBaseline = "middle"
+    spotCtx.fillText("highlight", 24, 24)
+    const spotIconTexture = new THREE.CanvasTexture(spotCanvas)
+    spotIconTexture.magFilter = THREE.LinearFilter
+    spotIconTexture.minFilter = THREE.LinearFilter
+
     // Generate area light icon texture
     const areaCanvas = document.createElement("canvas")
     areaCanvas.width = 48
@@ -318,6 +382,55 @@ Plugin.register(id, {
     registerSharedProperties(SunLightElement)
     new Property(SunLightElement, "string", "name", { default: "sun_light" })
     new Property(SunLightElement, "vector", "rotation")
+
+    // Spot light properties
+    registerSharedProperties(SpotLightElement)
+    new Property(SpotLightElement, "string", "name", { default: "spot_light" })
+    new Property(SpotLightElement, "vector", "rotation")
+    new Property(SpotLightElement, "number", "light_distance", {
+      default: 8,
+      inputs: {
+        element_panel: {
+          input: { label: "Distance", description: "Maximum range of the light. 0 = unlimited.", type: "number", min: 0, step: 1 },
+          onChange() {
+            Canvas.updateView({ elements: SpotLightElement.selected, element_aspects: { transform: true } })
+          }
+        }
+      }
+    })
+    new Property(SpotLightElement, "number", "light_decay", {
+      default: 2,
+      inputs: {
+        element_panel: {
+          input: { label: "Decay", description: "The amount the light dims along the distance.", type: "number", min: 0, step: 0.1 },
+          onChange() {
+            Canvas.updateView({ elements: SpotLightElement.selected, element_aspects: { transform: true } })
+          }
+        }
+      }
+    })
+    new Property(SpotLightElement, "number", "light_angle", {
+      default: 45,
+      inputs: {
+        element_panel: {
+          input: { label: "Angle", description: "Cone angle in degrees.", type: "number", min: 1, max: 90, step: 1 },
+          onChange() {
+            Canvas.updateView({ elements: SpotLightElement.selected, element_aspects: { transform: true } })
+          }
+        }
+      }
+    })
+    new Property(SpotLightElement, "number", "light_penumbra", {
+      default: 0.5,
+      inputs: {
+        element_panel: {
+          input: { label: "Penumbra", description: "Softness of the cone edge. 0 = hard, 1 = fully soft.", type: "number", min: 0, max: 1, step: 0.05 },
+          onChange() {
+            Canvas.updateView({ elements: SpotLightElement.selected, element_aspects: { transform: true } })
+          }
+        }
+      }
+    })
 
     // Area light properties
     registerSharedProperties(AreaLightElement)
@@ -514,6 +627,97 @@ Plugin.register(id, {
       }
     })
 
+    // ---- Spot Light Preview Controller ----
+    new NodePreviewController(SpotLightElement, {
+      setup(element) {
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 8, 6),
+          Canvas.transparentMaterial
+        )
+        Project.nodes_3d[element.uuid] = mesh
+        mesh.name = element.uuid
+        mesh.type = element.type
+        mesh.isElement = true
+        mesh.visible = element.visibility
+        mesh.rotation.order = Format.euler_order
+
+        const light = new THREE.SpotLight(
+          element.light_color,
+          element.light_intensity,
+          element.light_distance,
+          Math.degToRad(element.light_angle),
+          element.light_penumbra,
+          element.light_decay
+        )
+        light.target = new THREE.Object3D()
+        light.target.position.set(0, -1, 0)
+        light.add(light.target)
+        mesh.add(light)
+        mesh.light = light
+
+        const spriteMaterial = new THREE.SpriteMaterial({
+          map: spotIconTexture,
+          alphaTest: 0.1,
+          sizeAttenuation: false
+        })
+        const sprite = new THREE.Sprite(spriteMaterial)
+        sprite.name = element.uuid
+        sprite.type = element.type
+        sprite.isElement = true
+        mesh.add(sprite)
+        mesh.sprite = sprite
+
+        // Cone wireframe
+        const coneGeometry = new THREE.BufferGeometry()
+        const cone = new THREE.LineSegments(coneGeometry, new THREE.LineBasicMaterial({ color: gizmo_colors.outline, transparent: true, opacity: 0.5 }))
+        mesh.add(cone)
+        mesh.cone = cone
+
+
+        this.updateTransform(element)
+        this.dispatchEvent("setup", { element })
+      },
+      updateTransform(element) {
+        NodePreviewController.prototype.updateTransform.call(this, element)
+        const { mesh } = element
+        if (!mesh) return
+
+        mesh.light.color.set(element.light_color)
+        mesh.light.intensity = element.light_intensity
+        mesh.light.distance = element.light_distance
+        mesh.light.angle = Math.degToRad(element.light_angle)
+        mesh.light.penumbra = element.light_penumbra
+        mesh.light.decay = element.light_decay
+
+        // Store cone params for render_frame update
+        mesh.coneParams = {
+          d: element.light_distance || 8,
+          r: (element.light_distance || 8) * Math.tan(Math.degToRad(element.light_angle))
+        }
+
+
+        const size = 0.4 * Preview.selected.camera.fov / Preview.selected.height
+        mesh.sprite.scale.set(size, size, size)
+        this.dispatchEvent("update_transform", { element })
+      },
+      updateSelection(element) {
+        const { mesh } = element
+        if (!mesh) return
+        const color = element.selected ? gizmo_colors.outline : CustomTheme.data.colors.text
+        if (mesh.sprite) {
+          mesh.sprite.material.color.set(color)
+          mesh.sprite.material.depthTest = !element.selected
+          mesh.renderOrder = element.selected ? 100 : 0
+        }
+        if (mesh.cone) mesh.cone.visible = element.selected
+        this.dispatchEvent("update_selection", { element })
+      },
+      updateWindowSize(element) {
+        const size = 0.4 * Preview.selected.camera.fov / Preview.selected.height
+        element.mesh.sprite.scale.set(size, size, size)
+      }
+    })
+
     // ---- Area Light Preview Controller ----
     new NodePreviewController(AreaLightElement, {
       setup(element) {
@@ -612,6 +816,7 @@ Plugin.register(id, {
 
     OutlinerElement.registerType(PointLightElement, "point_light")
     OutlinerElement.registerType(SunLightElement, "sun_light")
+    OutlinerElement.registerType(SpotLightElement, "spot_light")
     OutlinerElement.registerType(AreaLightElement, "area_light")
 
     // Project-level ambient light properties
@@ -756,6 +961,37 @@ Plugin.register(id, {
         if (element.mesh?.outerCircle) element.mesh.outerCircle.quaternion.copy(quat)
         if (element.mesh?.innerCircle) element.mesh.innerCircle.quaternion.copy(quat)
       }
+      for (const element of SpotLightElement.all) {
+        const { mesh } = element
+        if (!mesh?.cone || !mesh.coneParams || !mesh.cone.visible) continue
+        const { d, r } = mesh.coneParams
+        // Get camera position in mesh local space
+        const camPos = Preview.selected.camera.getWorldPosition(new THREE.Vector3())
+        mesh.worldToLocal(camPos)
+        // Project onto XZ plane to find perpendicular angle
+        const viewAngle = -Math.atan2(camPos.x, camPos.z)
+        const points = []
+        // Two silhouette lines perpendicular to view
+        for (const side of [0, 1]) {
+          const a = viewAngle + side * Math.PI
+          points.push(0, 0, 0)
+          points.push(Math.cos(a) * r, -d, Math.sin(a) * r)
+        }
+        // Center line
+        points.push(0, 0, 0)
+        points.push(0, -d, 0)
+        // Circle at cone base
+        const segments = 32
+        for (let i = 0; i < segments; i++) {
+          const a1 = (i / segments) * Math.PI * 2
+          const a2 = ((i + 1) / segments) * Math.PI * 2
+          points.push(Math.cos(a1) * r, -d, Math.sin(a1) * r)
+          points.push(Math.cos(a2) * r, -d, Math.sin(a2) * r)
+        }
+        mesh.cone.geometry.dispose()
+        mesh.cone.geometry = new THREE.BufferGeometry()
+        mesh.cone.geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3))
+      }
     }
     Blockbench.on("render_frame", cameraListener)
 
@@ -799,6 +1035,26 @@ Plugin.register(id, {
       }
     })
 
+    spotLightAction = new Action("add_spot_light", {
+      icon: "highlight",
+      category: "edit",
+      name: "Add Spot Light",
+      condition: () => Modes.edit,
+      click() {
+        const objs = []
+        Undo.initEdit({ elements: objs, outliner: true })
+        const light = new SpotLightElement().addTo(Group.first_selected || Outliner.selected[0]).init()
+        light.select().createUniqueName()
+        objs.push(light)
+        Undo.finishEdit("Add spot light")
+        Vue.nextTick(() => {
+          if (settings.create_rename.value) {
+            light.rename()
+          }
+        })
+      }
+    })
+
     areaLightAction = new Action("add_area_light", {
       icon: "fluorescent",
       category: "edit",
@@ -832,6 +1088,12 @@ Plugin.register(id, {
       condition: () => Format.id === "free",
       click: () => BarItems.add_sun_light.click()
     }, {
+      id: "add_spot_light",
+      name: "Add Spot Light",
+      icon: "highlight",
+      condition: () => Format.id === "free",
+      click: () => BarItems.add_spot_light.click()
+    }, {
       id: "add_area_light",
       name: "Add Area Light",
       icon: "fluorescent",
@@ -843,10 +1105,12 @@ Plugin.register(id, {
   onunload() {
     pointLightAction?.delete()
     sunLightAction?.delete()
+    spotLightAction?.delete()
     areaLightAction?.delete()
     ambientAction?.delete()
     BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_point_light"))
     BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_sun_light"))
+    BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_spot_light"))
     BarItems.add_element.side_menu.structure.remove(BarItems.add_element.side_menu.structure.find(e => e?.id === "add_area_light"))
     scene.remove(ambientLight)
     if (cameraListener) {
