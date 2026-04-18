@@ -41,7 +41,7 @@
       author: "Ewan Howell",
       description: description + " Also includes an animation editor, so that you can create custom entity animations.",
       tags: ["Minecraft: Java Edition", "OptiFine", "Templates"],
-      version: "9.1.0",
+      version: "9.1.1",
       min_version: "5.0.0",
       variant: "both",
       creation_date: "2020-02-02",
@@ -78,14 +78,14 @@
       }
       return r
     } catch {
-      for (let x = connection.rootIndex + 1; x < connection.roots.length; x++) {
-        connection.rootIndex = x
+      for (let x = 0; x < connection.roots.length; x++) {
         try {
           const r = await fetch(`${connection.roots[x]}/${path}`)
           if (r.status !== 200) {
             throw new Error
           }
           root = connection.roots[x]
+          connection.rootIndex = x
           if (r.headers.get("Content-Type")?.startsWith("text/plain") || r.headers.get("Content-Type")?.startsWith("application/json")) {
             return r.json()
           }
