@@ -67,6 +67,7 @@
     //   const fs = require("fs")
     //   return JSON.parse(fs.readFileSync("E:/Programming/GitHub/wynem/src/assets/json/cem_template_models.json"))
     // }
+    const currentRoot = connection.rootIndex
     try {
       const r = await fetch(`${root}/${path}`)
       if (!r.ok) throw new Error
@@ -78,7 +79,7 @@
       }
       return r
     } catch {
-      for (let x = 0; x < connection.roots.length; x++) {
+      for (let x = currentRoot + 1; x < connection.roots.length; x++) {
         try {
           const r = await fetch(`${connection.roots[x]}/${path}`)
           if (r.status !== 200) {

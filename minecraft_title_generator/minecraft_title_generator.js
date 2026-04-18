@@ -3409,13 +3409,14 @@
   })
 
   async function fetchData(path, fallback) {
+    const currentRoot = connection.rootIndex
     try {
       const r = await fetch(`${root}/${path}`)
       if (r.status !== 200) throw new Error
       if (r.headers.get("Content-Type")?.startsWith("text/plain") || r.headers.get("Content-Type")?.startsWith("application/json")) return r.json()
       return r
     } catch {
-      for (let x = 0; x < connection.roots.length; x++) {
+      for (let x = currentRoot + 1; x < connection.roots.length; x++) {
         try {
           const r = await fetch(`${connection.roots[x]}/${path}`)
           if (r.status !== 200) throw new Error
