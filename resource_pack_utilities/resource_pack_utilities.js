@@ -2180,7 +2180,9 @@ const utilities = {
             <li>Removes the <code>groups</code> object</li>
             <li>For the <code>rotation</code> object:
               <ul>
-                <li>Removes the <code>rotation</code> object when <code>angle</code> is set to <code>0</code></li>
+                <li>Removes the <code>rotation</code> object when <code>angle</code> is set to <code>0</code> (single-axis format)</li>
+                <li>Removes <code>x</code>, <code>y</code>, and <code>z</code> properties when they are set to <code>0</code> (Euler format)</li>
+                <li>Removes the <code>rotation</code> object when <code>x</code>, <code>y</code>, and <code>z</code> are all <code>0</code> or absent (Euler format)</li>
                 <li>Removes the <code>rescale</code> property when it is set to <code>false</code></li>
               </ul>
             </li>
@@ -2351,9 +2353,19 @@ const utilities = {
                     if (!elementKeys.includes(key)) delete element[key]
                   }
                   if (element.rotation) {
-                    if (element.rotation.angle === 0) delete element.rotation
-                    else {
-                      if (element.rotation.rescale === false) delete element.rotation.rescale
+                    const rot = element.rotation
+                    if ("angle" in rot) {
+                      if (rot.angle === 0) delete element.rotation
+                      else if (rot.rescale === false) delete rot.rescale
+                    } else {
+                      if (rot.x === 0) delete rot.x
+                      if (rot.y === 0) delete rot.y
+                      if (rot.z === 0) delete rot.z
+                      if (rot.x === undefined && rot.y === undefined && rot.z === undefined) {
+                        delete element.rotation
+                      } else if (rot.rescale === false) {
+                        delete rot.rescale
+                      }
                     }
                   }
                   if (element.faces) {
