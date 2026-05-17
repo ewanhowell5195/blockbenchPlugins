@@ -2178,6 +2178,12 @@ const utilities = {
         <li>For block/item model <code>.json</code> files
           <ul>
             <li>Removes the <code>groups</code> object</li>
+            <li>For the <code>textures</code> object:
+              <ul>
+                <li>Removes the <code>force_translucent</code> property when it is set to <code>false</code></li>
+                <li>Collapses the object form to the string form when only <code>sprite</code> remains</li>
+              </ul>
+            </li>
             <li>For the <code>rotation</code> object:
               <ul>
                 <li>Removes the <code>rotation</code> object when <code>angle</code> is set to <code>0</code> (single-axis format)</li>
@@ -2347,6 +2353,14 @@ const utilities = {
             if (data.credit === "Made with Blockbench") delete data.credit
             if (this.types.json && file.endsWith(".json")) {
               delete data.groups
+              if (data.textures) {
+                for (const [key, value] of Object.entries(data.textures)) {
+                  if (value && typeof value === "object" && typeof value.sprite === "string") {
+                    if (value.force_translucent === false) delete value.force_translucent
+                    if (Object.keys(value).length === 1) data.textures[key] = value.sprite
+                  }
+                }
+              }
               if (data.elements) {
                 for (const element of data.elements) {
                   for (const key in element) {
