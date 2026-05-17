@@ -1774,6 +1774,7 @@ const components = {
           }
           data.content = buf
           data.path = file.path
+          data.name = file.name
           this.files.push(data)
         }
         this.$emit("input", Array.isArray(this.value) ? this.files : this.files[0])
@@ -4441,8 +4442,9 @@ const utilities = {
       },
       computed: {
         prefix() {
-          if (!this.file?.path) return ""
-          return PathModule.basename(this.file.path).replace(/\.[^.]+$/, "")
+          const name = this.file?.name ?? (this.file?.path && PathModule.basename(this.file.path))
+          if (!name) return ""
+          return name.replace(/\.[^.]+$/, "")
         }
       },
       methods: {
