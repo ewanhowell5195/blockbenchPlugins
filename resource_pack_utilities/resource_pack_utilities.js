@@ -266,13 +266,12 @@ const setupPlugin = () => Plugin.register(id, {
           }
 
           h3 {
-            font-weight: 700;
-            font-size: 28px;
+            font-weight: 600;
+            font-size: 22px;
             color: var(--color-light);
             line-height: 100%;
             margin: 0;
             display: flex;
-            align-items: center;
             gap: 6px;
             padding-right: 28px;
           }
@@ -289,6 +288,7 @@ const setupPlugin = () => Plugin.register(id, {
             display: flex;
             gap: 8px;
             align-items: center;
+            font-size: 28px;
 
             > i {
               font-size: 30px;
