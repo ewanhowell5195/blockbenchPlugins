@@ -2382,6 +2382,7 @@ const utilities = {
                   if (element.light_emission === 0) delete element.light_emission
                 }
                 data.elements = data.elements.filter(e => e.faces && Object.keys(e.faces).length)
+                if (!data.elements.length) delete data.elements
               }
             }
             if (this.types.mcmeta && file.endsWith(".mcmeta")) {
