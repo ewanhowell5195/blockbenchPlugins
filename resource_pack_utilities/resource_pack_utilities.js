@@ -4352,6 +4352,137 @@ const utilities = {
       `
     }
   },
+  bedConverter: {
+    name: "Bed Converter",
+    icon: "bed",
+    tagline: "Convert a bed entity texture into the block texture format.",
+    description: "Bed Converter is a tool that splits a bed entity texture into the per-face textures used by the new bed block model format.",
+    component: {
+      data: {
+        file: null,
+        outputs: [],
+        error: null
+      },
+      computed: {
+        prefix() {
+          if (!this.file?.path) return ""
+          return PathModule.basename(this.file.path).replace(/\.[^.]+$/, "")
+        }
+      },
+      methods: {
+        async execute() {
+          if (!this.file) {
+            this.outputs = []
+            this.error = null
+            return
+          }
+          const img = this.file.image
+          if (img.width !== img.height) {
+            this.outputs = []
+            this.error = "Invalid bed texture: must be square"
+            return
+          }
+          if (Math.log2(img.width) % 1 !== 0 || img.width < 64) {
+            this.outputs = []
+            this.error = "Invalid bed texture: must be a power-of-2 square at least 64x64"
+            return
+          }
+          this.error = null
+          const MATRIX = {
+            raw:    (dx, dy, sw, sh, m) => [ 1, 0,  0,  1,  dx        * m,  dy        * m],
+            hflip:  (dx, dy, sw, sh, m) => [-1, 0,  0,  1, (dx + sw)  * m,  dy        * m],
+            vflip:  (dx, dy, sw, sh, m) => [ 1, 0,  0, -1,  dx        * m, (dy + sh)  * m],
+            rot180: (dx, dy, sw, sh, m) => [-1, 0,  0, -1, (dx + sw)  * m, (dy + sh)  * m],
+            rotCW:  (dx, dy, sw, sh, m) => [ 0, 1, -1,  0, (dx + sh)  * m,  dy        * m],
+            rotCCW: (dx, dy, sw, sh, m) => [ 0,-1,  1,  0,  dx        * m, (dy + sw)  * m],
+            transp: (dx, dy, sw, sh, m) => [ 0, 1,  1,  0,  dx        * m,  dy        * m],
+            antitr: (dx, dy, sw, sh, m) => [ 0,-1, -1,  0, (dx + sh)  * m, (dy + sw)  * m]
+          }
+          const FACES = {
+            bed_down:       [["rot180", 28,  6, 16, 16,  0,  0]],
+            bed_head_up:    [["raw",     6,  6, 16, 16,  0,  0]],
+            bed_foot_up:    [["raw",     6, 28, 16, 16,  0,  0]],
+            bed_head_north: [
+              ["rot180",  6,  0, 16,  6,  0,  7],
+              ["raw",    53, 21,  3,  3,  0, 13],
+              ["raw",    56, 21,  3,  3,  3, 13],
+              ["raw",    59,  9,  3,  3, 10, 13],
+              ["raw",    50,  9,  3,  3, 13, 13]
+            ],
+            bed_foot_south: [
+              ["vflip",  22, 22, 16,  6,  0,  7],
+              ["raw",    53,  3,  3,  3,  0, 13],
+              ["raw",    56,  3,  3,  3,  3, 13],
+              ["raw",    59, 15,  3,  3, 10, 13],
+              ["raw",    50, 15,  3,  3, 13, 13]
+            ],
+            bed_head_east: [
+              ["rotCW",  22,  6,  6, 16,  0,  7],
+              ["hflip",  56, 18,  3,  3,  7, 13],
+              ["raw",    59, 21,  3,  3, 10, 13],
+              ["raw",    50, 21,  3,  3, 13, 13]
+            ],
+            bed_head_west: [
+              ["rotCCW",  0,  6,  6, 16,  0,  7],
+              ["raw",    53,  9,  3,  3,  0, 13],
+              ["raw",    56,  9,  3,  3,  3, 13],
+              ["antitr", 56,  6,  3,  3,  6, 13]
+            ],
+            bed_foot_east: [
+              ["rotCW",  22, 28,  6, 16,  0,  7],
+              ["raw",    53, 15,  3,  3,  0, 13],
+              ["raw",    56, 15,  3,  3,  3, 13],
+              ["transp", 56, 12,  3,  3,  6, 13]
+            ],
+            bed_foot_west: [
+              ["rotCCW",  0, 28,  6, 16,  0,  7],
+              ["vflip",  56,  0,  3,  3,  7, 13],
+              ["raw",    59,  3,  3,  3, 10, 13],
+              ["raw",    50,  3,  3,  3, 13, 13]
+            ]
+          }
+          const m = img.width / 64
+          const outputs = []
+          for (const [faceName, ops] of Object.entries(FACES)) {
+            const canvas = new Canvas(16 * m, 16 * m)
+            const ctx = canvas.ctx
+            ctx.imageSmoothingEnabled = false
+            for (const [tname, sx, sy, sw, sh, dx, dy] of ops) {
+              const [a, b, c, d, e, f] = MATRIX[tname](dx, dy, sw, sh, m)
+              ctx.save()
+              ctx.setTransform(a, b, c, d, e, f)
+              ctx.drawImage(img, sx * m, sy * m, sw * m, sh * m, 0, 0, sw * m, sh * m)
+              ctx.restore()
+            }
+            outputs.push({ name: faceName, canvas })
+          }
+          this.outputs = outputs
+        },
+        async saveAll() {
+          const dir = Blockbench.pickDirectory()
+          if (!dir) return
+          const prefix = this.prefix ? `${this.prefix}_` : ""
+          await Promise.all(this.outputs.map(async out => fs.promises.writeFile(
+            PathModule.join(dir, `${prefix}${out.name}.png`),
+            Buffer.from(await (await new Promise(fulfil => out.canvas.toBlob(fulfil))).arrayBuffer())
+          )))
+          Blockbench.showQuickMessage("Exported bed textures")
+        }
+      },
+      template: `
+        <h3>Input bed texture:</h3>
+        <file-input v-model="file" title="Select your bed texture" @input="execute" />
+        <h3 v-if="file || error">Output bed textures:</h3>
+        <div v-if="!outputs.length && (file || error)" style="display: flex;">
+          <canvas-output :error="error || 'No output yet…'" />
+        </div>
+        <div v-if="outputs.length" class="row" style="gap: 16px; flex-wrap: wrap;">
+          <canvas-output v-for="out in outputs" :key="out.name" v-model="out.canvas" :name="(prefix ? prefix + '_' : '') + out.name" :height="128" />
+        </div>
+        <button :disabled="!outputs.length" @click="saveAll">Save All</button>
+      `
+    }
+  },
   chestConverter: {
     name: "Chest Converter",
     icon: "package_2",
