@@ -27,7 +27,7 @@ const setupPlugin = () => Plugin.register(id, {
   author: "Ewan Howell",
   description,
   tags: ["Minecraft: Java Edition", "Resource Packs", "Utilities"],
-  version: "1.9.2",
+  version: "1.10.0",
   min_version: "5.0.2",
   variant: "desktop",
   website: `https://ewanhowell.com/plugins/${id.replace(/_/g, "-")}/`,
