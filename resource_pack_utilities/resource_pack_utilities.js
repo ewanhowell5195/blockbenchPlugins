@@ -631,6 +631,8 @@ const setupPlugin = () => Plugin.register(id, {
     MenuBar.addAction(action, "tools")
     MenuBar.addAction(action2, "tools")
     document.addEventListener("keydown", copyText)
+    document.addEventListener("dragover", blockOutsideDnd, true)
+    document.addEventListener("drop", blockOutsideDnd, true)
     const utility = Blockbench.argv.find(e => e.startsWith("--resource-pack-utility="))?.split("=")[1]
     if (utility && utilities[utility]) {
       dialog.show()
@@ -639,6 +641,8 @@ const setupPlugin = () => Plugin.register(id, {
   },
   onunload() {
     document.removeEventListener("keydown", copyText)
+    document.removeEventListener("dragover", blockOutsideDnd, true)
+    document.removeEventListener("drop", blockOutsideDnd, true)
     dialog?.close()
     action?.delete()
     action2?.delete()
@@ -649,6 +653,15 @@ const setupPlugin = () => Plugin.register(id, {
 })
 
 // Functions
+
+function blockOutsideDnd(event) {
+  const dialogEl = document.getElementById(id)
+  if (!dialogEl) return
+  if (document.getElementById("dialog_wrapper")?.lastElementChild !== dialogEl) return
+  if (event.target.closest?.(".component-fileInput, .folder-selector")) return
+  event.preventDefault()
+  event.stopPropagation()
+}
 
 function save() {
   localStorage.setItem(id, JSON.stringify(storage))
@@ -1731,7 +1744,7 @@ const components = {
       this.title ??= `Select ${ maxFiles ? "up to " + maxFiles : "" } ${ multipleFiles ? "files" : "a file" }`
       return {
         files: Array.isArray(this.value) ? this.value : this.value ? [this.value] : [],
-        message: `select ${ maxFiles ? "up to " + maxFiles : "" } ${ multipleFiles ? "files" : "a file" }`,
+        message: `select or drop ${ maxFiles ? "up to " + maxFiles : "" } ${ multipleFiles ? "files" : "a file" }`,
         maxFiles,
         multipleFiles,
         dragging: false
@@ -1799,7 +1812,7 @@ const components = {
         event.stopPropagation()
         this.files.splice(index, 1)
         this.$emit("input", Array.isArray(this.value) ? this.files : this.files[0])
-        if (!this.files.length) this.message = `select ${ this.maxFiles ? "up to " + this.maxFiles : "" } ${ this.multipleFiles ? "files" : "a file" }`
+        if (!this.files.length) this.message = `select or drop ${ this.maxFiles ? "up to " + this.maxFiles : "" } ${ this.multipleFiles ? "files" : "a file" }`
         else if (this.files.length === 1) this.message = "change file"
         else this.message = `${this.files.length} files selected`
       },
