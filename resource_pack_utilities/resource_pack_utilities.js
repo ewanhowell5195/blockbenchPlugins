@@ -1112,7 +1112,8 @@ const components = {
     },
     data() {
       return {
-        folder: this.value ?? ""
+        folder: this.value ?? "",
+        dragging: false
       }
     },
     watch: {
@@ -1134,6 +1135,32 @@ const components = {
       input() {
         this.$emit("input", this.folder)
       },
+      onDragOver(event) {
+        if (!event.dataTransfer?.types?.includes("Files")) return
+        event.preventDefault()
+        event.stopPropagation()
+        this.dragging = true
+      },
+      onDragLeave(event) {
+        event.stopPropagation()
+        if (event.currentTarget.contains(event.relatedTarget)) return
+        this.dragging = false
+      },
+      async onDrop(event) {
+        event.preventDefault()
+        event.stopPropagation()
+        this.dragging = false
+        const file = event.dataTransfer.files[0]
+        if (!file?.path) return
+        try {
+          const stat = await fs.promises.stat(file.path)
+          if (!stat.isDirectory()) return
+        } catch {
+          return
+        }
+        this.folder = file.path
+        this.$emit("input", this.folder)
+      },
       formatPath
     },
     computed: {
@@ -1147,6 +1174,11 @@ const components = {
         cursor: pointer;
       }
 
+      .folder-selector.dragging {
+        outline: 2px dashed var(--color-accent);
+        outline-offset: 2px;
+      }
+
       input {
         flex: 1;
         pointer-events: none;
@@ -1156,7 +1188,7 @@ const components = {
       }
     `,
     template: `
-      <div class="folder-selector" @click="selectFolder(buttonText)">
+      <div class="folder-selector" :class="{ dragging }" @click="selectFolder(buttonText)" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop">
         <input disabled type="text" :value="formatPath(folder)" :placeholder="'Select ' + placeholder">
         <button class="material-icons">folder_open</button>
       </div>
@@ -1701,10 +1733,38 @@ const components = {
         files: Array.isArray(this.value) ? this.value : this.value ? [this.value] : [],
         message: `select ${ maxFiles ? "up to " + maxFiles : "" } ${ multipleFiles ? "files" : "a file" }`,
         maxFiles,
-        multipleFiles
+        multipleFiles,
+        dragging: false
       }
     },
     methods: {
+      async ingestFiles(files) {
+        if (!files.length) return
+        if (files.length === 1 && this.type === "PNG") this.message = "change file"
+        else if (files.length === 1) this.message = files[0].name
+        else this.message = `${files.length} files selected`
+        this.files = []
+        for (const [i, file] of files.entries()) {
+          if (this.maxFiles && i >= this.maxFiles) {
+            continue
+          }
+          const buf = file.content instanceof Buffer
+            ? file.content
+            : Buffer.from(file.content ?? await file.arrayBuffer())
+          const data = {}
+          if (this.type === "PNG") {
+            const b64Image = buf.toString("base64")
+            const img = await loadImage(buf)
+            data.image = img
+            data.src = `data:image/png;base64,${b64Image}`
+            data.info = `${file.name}\n${img.width.toLocaleString()}x${img.height.toLocaleString()} - ${formatBytes(buf.byteLength)}`
+          }
+          data.content = buf
+          data.path = file.path
+          this.files.push(data)
+        }
+        this.$emit("input", Array.isArray(this.value) ? this.files : this.files[0])
+      },
       async changeFiles() {
         Blockbench.import({
           title: this.title,
@@ -1712,30 +1772,28 @@ const components = {
           type: this.type,
           multiple: this.multipleFiles,
           readtype: "buffer"
-        }, async files => {
-          if (files.length === 1 && this.type === "PNG") this.message = "change file"
-          else if (files.length === 1) this.message = files[0].name
-          else this.message = `${files.length} files selected`
-          this.files = []
-          for (const [i, file] of files.entries()) {
-            if (this.maxFiles && i >= this.maxFiles) {
-              continue
-            }
-            const buf = Buffer.from(file.content)
-            const data = {}
-            if (this.type === "PNG") {
-              const b64Image = buf.toString("base64")
-              const img = await loadImage(buf)
-              data.image = img
-              data.src = `data:image/png;base64,${b64Image}`
-              data.info = `${file.name}\n${img.width.toLocaleString()}x${img.height.toLocaleString()} - ${formatBytes(file.content.byteLength)}`
-            }
-            data.content = buf
-            data.path = file.path
-            this.files.push(data)
-          }
-          this.$emit("input", Array.isArray(this.value) ? this.files : this.files[0])
-        })
+        }, files => this.ingestFiles(files))
+      },
+      onDragOver(event) {
+        if (!event.dataTransfer?.types?.includes("Files")) return
+        event.preventDefault()
+        event.stopPropagation()
+        this.dragging = true
+      },
+      onDragLeave(event) {
+        event.stopPropagation()
+        if (event.currentTarget.contains(event.relatedTarget)) return
+        this.dragging = false
+      },
+      async onDrop(event) {
+        event.preventDefault()
+        event.stopPropagation()
+        this.dragging = false
+        const dropped = Array.from(event.dataTransfer.files)
+        const exts = this.extensions.map(e => e.toLowerCase())
+        const filtered = dropped.filter(f => exts.some(e => f.name.toLowerCase().endsWith("." + e)))
+        if (!filtered.length) return
+        await this.ingestFiles(this.multipleFiles ? filtered : filtered.slice(0, 1))
       },
       remove(index) {
         event.stopPropagation()
@@ -1761,6 +1819,11 @@ const components = {
     styles: `
       background-color: var(--color-back);
       border: 1px solid var(--color-border);
+
+      > div.dragging {
+        outline: 2px dashed var(--color-accent);
+        outline-offset: -4px;
+      }
 
       > div {
         padding: 16px;
@@ -1887,7 +1950,7 @@ const components = {
       }
     `,
     template: `
-      <div @click="changeFiles" tabindex="0">
+      <div @click="changeFiles" tabindex="0" :class="{ dragging }" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop">
         <div class="file-input-row">
           <button>
             <i class="material-icons icon">upload</i>
