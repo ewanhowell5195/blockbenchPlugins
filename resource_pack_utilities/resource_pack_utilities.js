@@ -2196,6 +2196,7 @@ const utilities = {
               <ul>
                 <li>Removes the <code>rotation</code> property when it is set to <code>0</code></li>
                 <li>Removes the <code>tintindex</code> property when it is set to <code>-1</code></li>
+                <li>Removes the <code>uv</code> property when it matches the auto-generated value from the element's <code>from</code>/<code>to</code> (only when <code>rotation</code> is unset)</li>
                 <li>Removes empty <code>face</code> objects</li>
               </ul>
             </li>
@@ -2383,12 +2384,30 @@ const utilities = {
                     }
                   }
                   if (element.faces) {
+                    let autoUv
+                    if (Array.isArray(element.from) && Array.isArray(element.to) && element.from.length === 3 && element.to.length === 3) {
+                      const [x1, y1, z1] = element.from
+                      const [x2, y2, z2] = element.to
+                      autoUv = {
+                        down:  [x1, 16 - z2, x2, 16 - z1],
+                        up:    [x1, z1, x2, z2],
+                        north: [16 - x2, 16 - y2, 16 - x1, 16 - y1],
+                        south: [x1, 16 - y2, x2, 16 - y1],
+                        west:  [z1, 16 - y2, z2, 16 - y1],
+                        east:  [16 - z2, 16 - y2, 16 - z1, 16 - y1]
+                      }
+                    }
                     for (const [key, face] of Object.entries(element.faces)) {
                       for (const key in face) {
                         if (!faceKeys.includes(key)) delete face[key]
                       }
                       if (face.rotation === 0) delete face.rotation
                       if (face.tintindex === -1) delete face.tintindex
+                      if (
+                        autoUv && autoUv[key] && !face.rotation &&
+                        Array.isArray(face.uv) && face.uv.length === 4 &&
+                        face.uv.every((v, i) => v === autoUv[key][i])
+                      ) delete face.uv
                       if (!Object.keys(face).length) delete element.faces[key]
                     }
                   }
