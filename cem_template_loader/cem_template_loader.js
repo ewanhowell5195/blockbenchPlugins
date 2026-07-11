@@ -107,7 +107,6 @@
     loading: true,
     categories: {},
     category: null,
-    loadTexture: true,
     entity: null,
     subentity: null,
     search: "",
@@ -319,18 +318,9 @@
         }
         #cem-footer {
           display: flex;
-          padding: 8px;
+          padding: 8px 8px 8px 16px;
           gap: 10px;
           flex-wrap: wrap;
-        }
-        #load-texture {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          cursor: pointer;
-        }
-        #load-texture * {
-          cursor: pointer;
         }
         #cem-buttons {
           display: flex;
@@ -464,7 +454,7 @@
         .cem-other-matches {
           flex: 1;
           align-self: center;
-          text-align: center;
+          text-align: left;
           font-size: 12px;
           color: var(--color-subtle_text);
         }
@@ -483,7 +473,7 @@
         methods: {
           async load() {
             this.loading = true
-            await loadModel(this.subentity ?? this.entity, this.loadTexture)
+            await loadModel(this.subentity ?? this.entity)
             loaderDialog.close()
           },
           reload() {
@@ -584,10 +574,6 @@
               <h3 v-if="!entities.filter(e => e[0] === category && searchMatches(e[1])).length">No results</h3>
             </div>
             <div id="cem-footer">
-              <label id="load-texture">
-                <input type="checkbox" :checked="loadTexture" v-model="loadTexture">
-                <div>Load vanilla texture</div>
-              </label>
               <div v-if="otherCategoryMatches.length" class="cem-other-matches">
                 {{ otherCategoryMatches[0].count }} {{ otherCategoryMatches[0].count === 1 ? "result" : "results" }} also found in<template v-for="(c, i) of otherCategoryMatches">{{ i === 0 ? " " : (i === otherCategoryMatches.length - 1 ? " and " : ", ") }}<template v-if="i">{{ c.count }} in </template><a @click="switchCategory(c.name)">{{ c.name }}</a></template>
               </div>
@@ -654,7 +640,7 @@
       if (params.get("plugins")?.split(",").includes(id) && params.get("model") !== "") {
         if (!await MinecraftEULA.promptUser(id)) return
         await loadCEMTemplateModels()
-        loadModel(params.get("model"), params.has("texture"))
+        loadModel(params.get("model"))
       }
     }
   }
@@ -775,7 +761,7 @@
     return (item.id + " " + (item.name ?? item.file ?? item.id)).replace(/_/g, " ").toLowerCase()
   }
 
-  async function loadModel(entity, loadTexture) {
+  async function loadModel(entity) {
     const data = modelData.entities.find(e => e.id === entity)
     if (!data) return Blockbench.showQuickMessage("Unknown CEM template model", 2000)
     const model = modelData.models[data.model ?? data.id]
@@ -784,7 +770,7 @@
     Blockbench.setStatusBarText(data.id)
     Formats.optifine_entity.codec.parse(JSON.parse(model.model), "")
     let textureLoaded
-    if (loadTexture && !data.textureless) {
+    if (!data.textureless) {
       try {
         const textures = Array.isArray(data.vanilla_textures) ? data.vanilla_textures : [data.vanilla_textures ?? data.id]
         for (const [i, name] of textures.entries()) {
@@ -802,30 +788,18 @@
       }
     }
     if (!textureLoaded && !data.textureless) {
-      const textureData = Array.isArray(model.texture_data) ? model.texture_data : [model.texture_data]
-      const textureNames = Array.isArray(data.texture) ? data.texture : [data.texture ?? data.id]
-      const length = Math.max(textureData.length, textureNames.length)
       for (const cube of Cube.all) {
         cube.markAsSelected()
       }
-      for (let i = 0; i < length; i++) {
-        if (textureData[i]) {
-          new Texture({ name: textureNames[i] ?? data.id }).fromDataURL("data:image/png;base64," + textureData[i]).add()
-        } else {
-          TextureGenerator.addBitmap({
-            name: textureNames[i] ?? data.id,
-            color: new tinycolor("#00000000"),
-            type: "template",
-            rearrange_uv: false,
-            resolution: "16"
-          })
-        }
-      }
+      TextureGenerator.addBitmap({
+        name: Array.isArray(data.texture) ? data.id : data.texture ?? data.id,
+        color: new tinycolor("#00000000"),
+        type: "template",
+        rearrange_uv: false,
+        resolution: "16"
+      })
       for (const cube of Cube.all) {
         cube.unselect()
-      }
-      if (length.length > 1) {
-        Texture.all.forEach(t => t.use_as_default = false)
       }
     }
     if (data.popup) {
