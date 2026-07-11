@@ -334,8 +334,7 @@
         }
         #cem-buttons {
           display: flex;
-          flex: 1;
-          justify-content: end;
+          margin-left: auto;
           gap: 4px;
         }
         #cem-buttons > :disabled {
@@ -461,6 +460,23 @@
           min-width: 100%;
           font-size: 24px;
         }
+
+        .cem-other-matches {
+          flex: 1;
+          align-self: center;
+          text-align: center;
+          font-size: 12px;
+          color: var(--color-subtle_text);
+        }
+
+        .cem-other-matches a {
+          color: var(--color-accent);
+          cursor: pointer;
+        }
+
+        .cem-other-matches a:hover {
+          text-decoration: underline;
+        }
       </style>`],
       component: {
         data: loaderData,
@@ -494,13 +510,35 @@
               this.subentity = null
             }
           },
+          searchMatches(text) {
+            if (!text) return false
+            return this.search.split(/[\s_]+/).filter(Boolean).every(t => text.includes(t))
+          },
+          switchCategory(name) {
+            this.category = name
+            loaderDialog.sidebar.page = name
+            loaderDialog.sidebar.build()
+            this.$refs.entry.focus()
+          },
+          matches(item) {
+            return this.searchMatches(entitySearchText(item))
+          },
           areAllNextItemsHidden(entities, heading) {
             const index = entities.indexOf(heading)
             for (let i = index + 1; i < entities.length; i++) {
               if (entities[i].type === "heading") break
-              if (entities[i].id.includes(this.search)) return false
+              if (this.matches(entities[i]) || (entities[i].variants ?? []).some(v => this.matches(v))) return false
             }
             return true
+          }
+        },
+        computed: {
+          otherCategoryMatches() {
+            if (!this.search) return []
+            return Object.keys(this.categories).map(name => {
+              const count = name === this.category ? 0 : this.entities.filter(e => e[0] === name && this.searchMatches(e[1])).length
+              return { name, count }
+            }).filter(c => c.count)
           }
         },
         template: `
@@ -529,13 +567,13 @@
               <template v-for="model of c.entities">
                 <div v-if="model.type === 'heading'" class="cem-model-heading" :class="{ hidden: areAllNextItemsHidden(c.entities, model) }">{{ model.text }}</div>
                 <template v-else>
-                  <div class="cem-model" :class="{ selected: entity === model.id && (!subentity || !search), 'child-selected': entity === model.id && subentity, hidden: !model.id.includes(search) }" @click="selectEntity(model)">
+                  <div class="cem-model" :class="{ selected: entity === model.id && (!subentity || !search), 'child-selected': entity === model.id && subentity, hidden: !matches(model) }" @click="selectEntity(model)">
                     <img :src="connection.roots[connection.rootIndex] + '/images/minecraft/renders/' + model.id + '.webp'" loading="lazy">
                     <i v-if="model.variants && entity !== model.id && !search" class="material-icons">add</i>
                     <i v-if="model.variants && entity === model.id && !search" class="material-icons">remove</i>
                     <div :style="{ textTransform: model.name ? null : 'capitalize' }">{{ model.name ?? (model.file ?? model.id).replace(/_/g, " ") }}</div>
                   </div>
-                  <div v-if="model.variants" v-for="submodel of model.variants" class="cem-model" :class="{ 'cem-variant': !search, selected: subentity === submodel.id, hidden: search ? !submodel.id.includes(search) : entity !== model.id }" @click="selectSubentity(model, submodel)">
+                  <div v-if="model.variants" v-for="submodel of model.variants" class="cem-model" :class="{ 'cem-variant': !search, selected: subentity === submodel.id, hidden: search ? !matches(submodel) : entity !== model.id }" @click="selectSubentity(model, submodel)">
                     <img :src="connection.roots[connection.rootIndex] + '/images/minecraft/renders/' + submodel.id + '.webp'" loading="lazy">
                     <div :style="{ textTransform: submodel.name ? null : 'capitalize' }">{{ submodel.name ?? (submodel.file ?? submodel.id).replace(/_/g, " ") }}</div>
                   </div>
@@ -543,13 +581,16 @@
               </template>
             </div>
             <div class="cem-spacer">
-              <h3 v-if="!entities.filter(e => e[0] === category && e[1]?.includes(search)).length">No results</h3>
+              <h3 v-if="!entities.filter(e => e[0] === category && searchMatches(e[1])).length">No results</h3>
             </div>
             <div id="cem-footer">
               <label id="load-texture">
                 <input type="checkbox" :checked="loadTexture" v-model="loadTexture">
                 <div>Load vanilla texture</div>
               </label>
+              <div v-if="otherCategoryMatches.length" class="cem-other-matches">
+                {{ otherCategoryMatches[0].count }} {{ otherCategoryMatches[0].count === 1 ? "result" : "results" }} also found in<template v-for="(c, i) of otherCategoryMatches">{{ i === 0 ? " " : (i === otherCategoryMatches.length - 1 ? " and " : ", ") }}<template v-if="i">{{ c.count }} in </template><a @click="switchCategory(c.name)">{{ c.name }}</a></template>
+              </div>
               <div id="cem-buttons">
                 <button :disabled="!entity" @click="load">Load</button>
                 <button @click="close">Cancel</button>
@@ -573,7 +614,7 @@
         }
         const categories = modelData.categories.filter(e => !e.type).map(e => [e.name, e])
         loaderData.categories = Object.fromEntries(categories)
-        loaderData.entities = categories.flatMap(c => c[1].entities.map(e => [c[0], e.id]))
+        loaderData.entities = categories.flatMap(c => c[1].entities.flatMap(e => [[c[0], entitySearchText(e)], ...(e.variants ?? []).map(v => [c[0], entitySearchText(v)])]))
         loaderData.loading = false
         loaderData.built = true
       },
@@ -728,6 +769,11 @@
     reader.onloadend = () => fulfil(reader.result)
     reader.readAsDataURL(blob)
   })
+
+  function entitySearchText(item) {
+    if (!item.id) return null
+    return (item.id + " " + (item.name ?? item.file ?? item.id)).replace(/_/g, " ").toLowerCase()
+  }
 
   async function loadModel(entity, loadTexture) {
     const data = modelData.entities.find(e => e.id === entity)
