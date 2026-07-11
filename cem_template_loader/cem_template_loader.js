@@ -513,13 +513,65 @@
           matches(item) {
             return this.searchMatches(entitySearchText(item))
           },
-          areAllNextItemsHidden(entities, heading) {
-            const index = entities.indexOf(heading)
-            for (let i = index + 1; i < entities.length; i++) {
-              if (entities[i].type === "heading") break
-              if (this.matches(entities[i]) || (entities[i].variants ?? []).some(v => this.matches(v))) return false
+          displayName(item) {
+            return item.name ?? (item.file ?? item.id).replace(/_/g, " ")
+          },
+          itemRank(item) {
+            const tokens = this.search.split(/[\s_]+/).filter(Boolean)
+            if (!tokens.length) return [0, 0]
+            const nameWords = this.displayName(item).toLowerCase().split(/\s+/)
+            const idWords = item.id.toLowerCase().split(/[\s_]+/)
+            let worstTier = 0
+            let positionSum = 0
+            for (const token of tokens) {
+              let best = null
+              const consider = (tier, position) => {
+                if (!best || tier < best[0] || (tier === best[0] && position < best[1])) best = [tier, position]
+              }
+              nameWords.forEach((word, i) => {
+                if (word.startsWith(token)) consider(0, i)
+                else if (word.includes(token)) consider(1, i)
+              })
+              idWords.forEach((word, i) => {
+                if (word.startsWith(token)) consider(2, i)
+                else if (word.includes(token)) consider(3, i)
+              })
+              if (!best) return null
+              worstTier = Math.max(worstTier, best[0])
+              positionSum += best[1]
             }
-            return true
+            return [worstTier, positionSum]
+          },
+          entityRank(model) {
+            const ranks = [this.itemRank(model), ...(model.variants ?? []).map(v => this.itemRank(v))].filter(Boolean)
+            if (!ranks.length) return null
+            ranks.sort((a, b) => a[0] - b[0] || a[1] - b[1])
+            return ranks[0]
+          },
+          categoryBlocks(c) {
+            const blocks = []
+            let current = { heading: null, items: [] }
+            blocks.push(current)
+            for (const item of c.entities) {
+              if (item.type === "heading") {
+                current = { heading: item, items: [] }
+                blocks.push(current)
+              } else {
+                current.items.push(item)
+              }
+            }
+            if (this.search) {
+              for (const block of blocks) {
+                block.items = block.items.map(m => [m, this.entityRank(m)]).sort((a, b) => {
+                  if (!a[1] || !b[1]) return (a[1] ? 0 : 1) - (b[1] ? 0 : 1)
+                  return a[1][0] - b[1][0] || a[1][1] - b[1][1] || this.displayName(a[0]).localeCompare(this.displayName(b[0]))
+                }).map(e => e[0])
+              }
+            }
+            return blocks.filter(b => b.heading || b.items.length)
+          },
+          blockHidden(block) {
+            return !block.items.some(m => this.matches(m) || (m.variants ?? []).some(v => this.matches(v)))
           }
         },
         computed: {
@@ -528,7 +580,7 @@
             return Object.keys(this.categories).map(name => {
               const count = name === this.category ? 0 : this.entities.filter(e => e[0] === name && this.searchMatches(e[1])).length
               return { name, count }
-            }).filter(c => c.count)
+            }).filter(c => c.count).sort((a, b) => b.count - a.count)
           }
         },
         template: `
@@ -554,9 +606,9 @@
               </div>
             </div>
             <div v-if="connection" v-for="[name, c] of Object.entries(categories)" class="cem-models" :class="{ hidden: category !== name }">
-              <template v-for="model of c.entities">
-                <div v-if="model.type === 'heading'" class="cem-model-heading" :class="{ hidden: areAllNextItemsHidden(c.entities, model) }">{{ model.text }}</div>
-                <template v-else>
+              <template v-for="block of categoryBlocks(c)">
+                <div v-if="block.heading" class="cem-model-heading" :class="{ hidden: blockHidden(block) }">{{ block.heading.text }}</div>
+                <template v-for="model of block.items">
                   <div class="cem-model" :class="{ selected: entity === model.id && (!subentity || !search), 'child-selected': entity === model.id && subentity, hidden: !matches(model) }" @click="selectEntity(model)">
                     <img :src="connection.roots[connection.rootIndex] + '/images/minecraft/renders/' + model.id + '.webp'" loading="lazy">
                     <i v-if="model.variants && entity !== model.id && !search" class="material-icons">add</i>
