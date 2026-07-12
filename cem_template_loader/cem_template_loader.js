@@ -194,6 +194,211 @@
           margin-bottom: auto !important;
         }
       }
+      #cem_template_loader > .dialog_wrapper {
+        grid-template-rows: auto 0px;
+        grid-template-columns: 160px auto;
+        overflow: hidden;
+        height: 512px;
+        display: grid;
+
+        &:not(.has_sidebar) {
+          grid-template-columns: auto;
+        }
+      }
+      #cem_template_loader .dialog_sidebar_pages {
+        margin-bottom: 66px;
+        overflow-y: auto;
+      }
+      #cem_template_loader .dialog_sidebar_pages::-webkit-scrollbar-track, .cem-models::-webkit-scrollbar-track {
+        background-color: var(--color-back);
+      }
+      #cem_template_loader .dialog_content {
+        margin: 0;
+        max-height: initial;
+      }
+      #cem_template_loader h1 {
+        margin: 0;
+      }
+      #cem_template_loader .hidden {
+        display: none !important;
+      }
+      #cem-report-issues {
+        position: absolute;
+        width: 160px;
+        left: 0;
+        bottom: 0;
+        padding: 12px 0;
+        border-top: 2px solid var(--color-border);
+        z-index: 1;
+        display: none;
+      }
+      #cem-report-issues * {
+        cursor: pointer
+      }
+      .has_sidebar #cem-report-issues {
+        display: initial;
+      }
+      #cem-report-issues > a {
+        display: flex;
+        text-decoration: none;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+      }
+      #cem-report-issues > a > div {
+        text-decoration: underline;
+      }
+      #cem-footer {
+        display: flex;
+        padding: 8px 8px 8px 16px;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      #cem-buttons {
+        display: flex;
+        margin-left: auto;
+        gap: 4px;
+      }
+      #cem-buttons > :disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: var(--color-button);
+        color: var(--color-text) !important;
+      }
+      #cem-buttons > :first-child:not(:disabled) {
+        background-color: var(--color-accent);
+      }
+      #cem-header {
+        padding: 0 8px 8px 16px;
+      }
+      #cem-details {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      #cem-search {
+        position: relative;
+        min-width: min(100%, 256px);
+        display: flex;
+        justify-content: end;
+        margin-left: auto;
+        height: 30px;
+
+        > input {
+          width: min(100%, 256px);
+          padding-right: 32px;
+        }
+
+        > i {
+          position: absolute;
+          right: 6px;
+          top: 50%;
+          transform: translateY(-50%);
+          pointer-events: none;
+
+          &.active {
+            cursor: pointer;
+            pointer-events: initial;
+          }
+        }
+      }
+      #cem-description {
+        min-width: min(100%, 256px);
+        flex: 1 1 0px;
+      }
+      .cem-models {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        overflow-y: auto;
+        padding: 0 8px 0 16px;
+        margin-right: 8px;
+        scrollbar-width: initial;
+        scrollbar-color: initial;
+      }
+      .cem-model {
+        min-width: 128px;
+        border: 2px solid transparent;
+        flex: 1;
+        background-color: var(--color-back);
+        cursor: pointer;
+        padding: 2px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+
+        &.cem-variant {
+          background-color: color-mix(in srgb, var(--color-back), black 15%);
+        }
+
+        &:hover {
+          background-color: var(--color-button);
+        }
+
+        &.selected {
+          border: 2px solid var(--color-accent);
+          background-color: var(--color-selected);
+        }
+
+        &.child-selected {
+          border: 2px solid transparent;
+        }
+
+        > img {
+          height: 66px;
+          width: 100%;
+          object-fit: contain;
+          pointer-events: none;
+        }
+
+        > div {
+          text-align: center;
+          flex: 1;
+          display: flex;
+          align-items: center;
+          max-height: 24px;
+          min-height: 24px;
+          line-height: 16px;
+          margin: -2px 0 2px;
+          pointer-events: none;
+        }
+
+        > i {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+        }
+      }
+
+      .cem-spacer {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex: 1;
+      }
+
+      .cem-model-heading {
+        min-width: 100%;
+        font-size: 24px;
+      }
+
+      .cem-other-matches {
+        flex: 1;
+        align-self: center;
+        text-align: left;
+        font-size: 12px;
+        color: var(--color-subtle_text);
+      }
+
+      .cem-other-matches a {
+        color: var(--color-accent);
+        cursor: pointer;
+      }
+
+      .cem-other-matches a:hover {
+        text-decoration: underline;
+      }
     `)
     loader = new ModelLoader(id, {
       name,
@@ -261,213 +466,6 @@
           loaderDialog.content_vue.$refs.entry.focus()
         }
       },
-      lines: [`<style>
-        #cem_template_loader > .dialog_wrapper {
-          grid-template-rows: auto 0px;
-          grid-template-columns: 160px auto;
-          overflow: hidden;
-          height: 512px;
-          display: grid;
-
-          &:not(.has_sidebar) {
-            grid-template-columns: auto;
-          }
-        }
-        #cem_template_loader .dialog_sidebar_pages {
-          margin-bottom: 66px;
-          overflow-y: auto;
-        }
-        #cem_template_loader .dialog_sidebar_pages::-webkit-scrollbar-track, .cem-models::-webkit-scrollbar-track {
-          background-color: var(--color-back);
-        }
-        #cem_template_loader .dialog_content {
-          margin: 0;
-          max-height: initial;
-        }
-        #cem_template_loader h1 {
-          margin: 0;
-        }
-        #cem_template_loader .hidden {
-          display: none !important;
-        }
-        #cem-report-issues {
-          position: absolute;
-          width: 160px;
-          left: 0;
-          bottom: 0;
-          padding: 12px 0;
-          border-top: 2px solid var(--color-border);
-          z-index: 1;
-          display: none;
-        }
-        #cem-report-issues * {
-          cursor: pointer
-        }
-        .has_sidebar #cem-report-issues {
-          display: initial;
-        }
-        #cem-report-issues > a {
-          display: flex;
-          text-decoration: none;
-          justify-content: center;
-          align-items: center;
-          gap: 10px;
-        }
-        #cem-report-issues > a > div {
-          text-decoration: underline;
-        }
-        #cem-footer {
-          display: flex;
-          padding: 8px 8px 8px 16px;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-        #cem-buttons {
-          display: flex;
-          margin-left: auto;
-          gap: 4px;
-        }
-        #cem-buttons > :disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          background: var(--color-button);
-          color: var(--color-text) !important;
-        }
-        #cem-buttons > :first-child:not(:disabled) {
-          background-color: var(--color-accent);
-        }
-        #cem-header {
-          padding: 0 8px 8px 16px;
-        }
-        #cem-details {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-        #cem-search {
-          position: relative;
-          min-width: min(100%, 256px);
-          display: flex;
-          justify-content: end;
-          margin-left: auto;
-          height: 30px;
-
-          > input {
-            width: min(100%, 256px);
-            padding-right: 32px;
-          }
-
-          > i {
-            position: absolute;
-            right: 6px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-
-            &.active {
-              cursor: pointer;
-              pointer-events: initial;
-            }
-          }
-        }
-        #cem-description {
-          min-width: min(100%, 256px);
-          flex: 1 1 0px;
-        }
-        .cem-models {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          overflow-y: auto;
-          padding: 0 8px 0 16px;
-          margin-right: 8px;
-          scrollbar-width: initial;
-          scrollbar-color: initial;
-        }
-        .cem-model {
-          min-width: 128px;
-          border: 2px solid transparent;
-          flex: 1;
-          background-color: var(--color-back);
-          cursor: pointer;
-          padding: 2px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          position: relative;
-
-          &.cem-variant {
-            background-color: color-mix(in srgb, var(--color-back), black 15%);
-          }
-
-          &:hover {
-            background-color: var(--color-button);
-          }
-
-          &.selected {
-            border: 2px solid var(--color-accent);
-            background-color: var(--color-selected);
-          }
-
-          &.child-selected {
-            border: 2px solid transparent;
-          }
-
-          > img {
-            height: 66px;
-            width: 100%;
-            object-fit: contain;
-            pointer-events: none;
-          }
-
-          > div {
-            text-align: center;
-            flex: 1;
-            display: flex;
-            align-items: center;
-            max-height: 24px;
-            min-height: 24px;
-            line-height: 16px;
-            margin: -2px 0 2px;
-            pointer-events: none;
-          }
-
-          > i {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-          }
-        }
-
-        .cem-spacer {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          flex: 1;
-        }
-
-        .cem-model-heading {
-          min-width: 100%;
-          font-size: 24px;
-        }
-
-        .cem-other-matches {
-          flex: 1;
-          align-self: center;
-          text-align: left;
-          font-size: 12px;
-          color: var(--color-subtle_text);
-        }
-
-        .cem-other-matches a {
-          color: var(--color-accent);
-          cursor: pointer;
-        }
-
-        .cem-other-matches a:hover {
-          text-decoration: underline;
-        }
-      </style>`],
       component: {
         data: loaderData,
         methods: {
@@ -872,6 +870,22 @@
       #format_page_optifine_entity h3.markdown {
         margin-bottom: -10px;
       }
+      #jem_restrictions_dialog label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        gap: 5px;
+      }
+      #jem_restrictions_dialog label * {
+        cursor: pointer;
+      }
+      #cem-buttons {
+        display: flex;
+        justify-content: space-between;
+      }
+      #jem_restrictions_dialog button:not(:hover) {
+        background-color: var(--color-selected);
+      }
     `)
     new Setting("jem_restrictions", {
       value: false,
@@ -889,24 +903,6 @@
       id: "jem_restrictions_dialog",
       title: "Unsupported Edit",
       buttons: [],
-      lines: [`<style>
-        #jem_restrictions_dialog label {
-          display: flex;
-          align-items: center;
-          cursor: pointer;
-          gap: 5px;
-        }
-        #jem_restrictions_dialog label * {
-          cursor: pointer;
-        }
-        #cem-buttons {
-          display: flex;
-          justify-content: space-between;
-        }
-        #jem_restrictions_dialog button:not(:hover) {
-          background-color: var(--color-selected);
-        }
-      </style>`],
       component: {
         data: {
           message: "",
@@ -1650,6 +1646,86 @@
         position: absolute;
         top: 12px;
         right: 12px;
+      }
+      #cem_animation_documentation {
+        .dialog_wrapper {
+          grid-template-rows: auto 0px;
+          min-height: min(100vh - 120px, 512px);
+          max-height: calc(100vh - 120px);
+        }
+
+        .dialog_content {
+          margin: 0;
+          max-height: initial;
+          overflow-x: hidden;
+          max-height: calc(100vh - 120px);
+        }
+
+        .page {
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 16px;
+          user-select: text;
+        }
+
+        h1 {
+          margin: 0;
+          line-height: 100%;
+          font-size: 30px;
+          padding-bottom: 8px;
+
+          &:not(:first-child) {
+            padding-top: 24px;
+          }
+        }
+
+        :is(code, pre) {
+          background-color: var(--color-back);
+          padding: 0 4px;
+          border: 1px solid var(--color-border);
+          cursor: text;
+          font-family: var(--font-code);
+        }
+
+        pre {
+          width: 100%;
+          text-wrap: initial;
+          word-break: break-word;
+        }
+
+        .cem-doc-table-list td:first-child {
+          font-weight: 600;
+          white-space: nowrap !important;
+          display: list-item;
+          list-style: inside;
+          font-family: var(--font-code);
+        }
+
+        .cem-doc-tab-link {
+          text-decoration: underline;
+          cursor: pointer;
+          color: var(--color-accent);
+        }
+
+        td:not(:last-child) {
+          padding-right: 16px;
+        }
+
+         img {
+          margin: 8px;
+          box-shadow: 0 3px 10px #0006;
+        }
+
+        p {
+          white-space: pre-wrap;
+        }
+
+        hr {
+          width: 100%;
+          margin-bottom: 0;
+        }
       }
     `)
     animationControlPanel = new Panel("cem_animation_controller", {
@@ -2553,88 +2629,6 @@
               optifineAnimationDocumentation.dialog.content_vue.scrollToTop()
             }
           },
-          lines: [`<style>
-            #cem_animation_documentation {
-              .dialog_wrapper {
-                grid-template-rows: auto 0px;
-                min-height: min(100vh - 120px, 512px);
-                max-height: calc(100vh - 120px);
-              }
-
-              .dialog_content {
-                margin: 0;
-                max-height: initial;
-                overflow-x: hidden;
-                max-height: calc(100vh - 120px);
-              }
-
-              .page {
-                padding: 16px;
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 16px;
-                user-select: text;
-              }
-
-              h1 {
-                margin: 0;
-                line-height: 100%;
-                font-size: 30px;
-                padding-bottom: 8px;
-
-                &:not(:first-child) {
-                  padding-top: 24px;
-                }
-              }
-
-              :is(code, pre) {
-                background-color: var(--color-back);
-                padding: 0 4px;
-                border: 1px solid var(--color-border);
-                cursor: text;
-                font-family: var(--font-code);
-              }
-
-              pre {
-                width: 100%;
-                text-wrap: initial;
-                word-break: break-word;
-              }
-
-              .cem-doc-table-list td:first-child {
-                font-weight: 600;
-                white-space: nowrap !important;
-                display: list-item;
-                list-style: inside;
-                font-family: var(--font-code);
-              }
-
-              .cem-doc-tab-link {
-                text-decoration: underline;
-                cursor: pointer;
-                color: var(--color-accent);
-              }
-
-              td:not(:last-child) {
-                padding-right: 16px;
-              }
-
-               img {
-                margin: 8px;
-                box-shadow: 0 3px 10px #0006;
-              }
-
-              p {
-                white-space: pre-wrap;
-              }
-
-              hr {
-                width: 100%;
-                margin-bottom: 0;
-              }
-            }
-          </style>`],
           component: {
             data: {
               version: optifineAnimationDocumentation.data.version,
