@@ -63,10 +63,10 @@
   }
 
   async function fetchData(path, fallback) {
-    // if (path === "json/cem_template_models.json") {
-    //   const fs = require("fs")
-    //   return JSON.parse(fs.readFileSync("E:/Programming/GitHub/wynem/src/assets/json/cem_template_models.json"))
-    // }
+    if (isApp && path === "json/cem_template_models.json" && Plugins.installed.some(e => e.id === id && e.path === "E:\\Programming\\Javascript\\Blockbench\\cem_template_loader\\cem_template_loader.js")) {
+      const fs = require("fs")
+      return JSON.parse(fs.readFileSync("E:/Programming/GitHub/wynem/src/assets/json/cem_template_models.json", "utf8"))
+    }
     const currentRoot = connection.rootIndex
     try {
       const r = await fetch(`${root}/${path}`)
@@ -667,8 +667,8 @@
       description,
       children: [
         new Action("cem_template_loader_placeholder", {
-          name: `All Entities`,
-          description: "All entities",
+          name: `All`,
+          description: "All",
           icon: "icon-player",
           click: () => openLoader()
         })
@@ -773,7 +773,7 @@
       }
       BarItems.cem_template_loader.children.push(new Action(`cem_template_loader_${e.name.replace(/ /g, "_")}`, {
         plugin: id,
-        name: `${e.name} Entities`,
+        name: e.name,
         description: e.description,
         icon: e.icon,
         click: () => openLoader(e.name)
