@@ -1051,7 +1051,6 @@
   // OPTIFINE ANIMATION EDITOR
 
   let animationStyles, groupObserver, animationEditorPanel, animationControlPanel, context, boolMap, rangeMap, specialMap, stopAnimations, updateSelection, docShown, documentation, editorKeybinds, tabChange, renameGroup
-  const E = s => $(document.createElement(s))
   let frameCount
   const constants = {
     pi: Math.PI,
@@ -1679,17 +1678,17 @@
       }
     })
     let timescaleTimeout
-    const timescaleSlider = $("#cem_animation_timescale_slider")
-    const timescaleText = $("#cem_animation_timescale_text")
-    timescaleSlider.on("input", () => {
-      timescaleText.val(timescaleSlider.val())
-      timescale = parseFloat(timescaleSlider.val())
+    const timescaleSlider = document.getElementById("cem_animation_timescale_slider")
+    const timescaleText = document.getElementById("cem_animation_timescale_text")
+    timescaleSlider.addEventListener("input", () => {
+      timescaleText.value = timescaleSlider.value
+      timescale = parseFloat(timescaleSlider.value)
     })
-    timescaleText.on("input", () => {
-      timescaleSlider.val(timescaleText.val())
-      const clamped = Math.min(4, Math.max(0, parseFloat(timescaleText.val())))
+    timescaleText.addEventListener("input", () => {
+      timescaleSlider.value = timescaleText.value
+      const clamped = Math.min(4, Math.max(0, parseFloat(timescaleText.value)))
       clearTimeout(timescaleTimeout)
-      timescaleTimeout = setTimeout(() => timescaleText.val(isNaN(clamped) ? 1 : clamped), 1000)
+      timescaleTimeout = setTimeout(() => timescaleText.value = isNaN(clamped) ? 1 : clamped, 1000)
       timescale = clamped
     })
     animationEditorPanel = new Panel("cem_animation", {
@@ -1722,11 +1721,11 @@
             if (parsed) group.cem_animations = parsed
           },
           format() {
-            if (formatButton.hasClass("cem_animation_button_disabled")) return
+            if (formatButton.classList.contains("cem_animation_button_disabled")) return
             this.text = JSON.stringify(JSON.parse(this.text), null, 2)
           },
           play() {
-            if (playButton.hasClass("cem_animation_button_disabled")) return
+            if (playButton.classList.contains("cem_animation_button_disabled")) return
             currentGroups = Group.all.filter(e => e.parent === "root")
             setupAnimations(currentGroups)
           },
@@ -1736,11 +1735,13 @@
               paused = false
               prevTime = Date.now()
               Blockbench.on("render_frame", playAnimations)
-              pauseButton.text("pause").attr("title", "Pause the animations")
+              pauseButton.textContent = "pause"
+              pauseButton.setAttribute("title", "Pause the animations")
             } else {
               paused = true
               Blockbench.removeListener("render_frame", playAnimations)
-              pauseButton.text("play_arrow").attr("title", "Resume the animations")
+              pauseButton.textContent = "play_arrow"
+              pauseButton.setAttribute("title", "Resume the animations")
             }
           },
           showDoc: () => showDocumentation(),
@@ -1820,25 +1821,24 @@
       if (blacklist) blacklist.forEach(black => result.remove(black))
       return result.map(text => ({text, label: labels && labels[text], overlap: match.length}))
     }
-    const partName = $("#cem_animation_part_name")
-    const statusSuccess = $("#cem_animation_status_success")
-    const statusError = $("#cem_animation_status_error")
-    const statusWarning = $("#cem_animation_status_warning")
-    const errorMessage = $("#cem_animation_error_message")
-    const playButton = $("#cem_animation_play_button")
-    const stopButton = $("#cem_animation_stop_button")
-    const pauseButton = $("#cem_animation_pause_button")
-    const formatButton = $("#cem_animation_format_button")
-    const editor = $("#cem_animation_editor code")
-    const controller = $("#cem_animation_controller_variables")
-    const editorWrapper = $("#cem_animation_editor")
+    const partName = document.getElementById("cem_animation_part_name")
+    const statusSuccess = document.getElementById("cem_animation_status_success")
+    const statusError = document.getElementById("cem_animation_status_error")
+    const statusWarning = document.getElementById("cem_animation_status_warning")
+    const errorMessage = document.getElementById("cem_animation_error_message")
+    const playButton = document.getElementById("cem_animation_play_button")
+    const stopButton = document.getElementById("cem_animation_stop_button")
+    const pauseButton = document.getElementById("cem_animation_pause_button")
+    const formatButton = document.getElementById("cem_animation_format_button")
+    const controller = document.getElementById("cem_animation_controller_variables")
+    const editorWrapper = document.getElementById("cem_animation_editor")
     let time = 0
     let prevTime
     const invertions = new Set(["tx", "rx", "ry"])
     function setupAnimations(groups, keepTime) {
       playing = true
-      playButton.css("display", "none")
-      stopButton.css("display", "flex")
+      playButton.style.display = "none"
+      stopButton.style.display = "flex"
       if (!keepTime) time = 0
       constants.id = Math.random()
       constants[Symbol.for("var")] = new Proxy({}, {
@@ -1929,37 +1929,51 @@
           })
         }
       }
-      controller.empty()
+      controller.replaceChildren()
       bools = new Map(boolMap)
       if (bools.size) {
         const boolsSorted = [...bools.entries()]
         boolsSorted.sort(((a, b) => b[0] - a[0]))
-        const boolContainer = E("div").attr("id", "cem_animation_bools").appendTo(controller)
+        const boolContainer = document.createElement("div")
+        boolContainer.id = "cem_animation_bools"
+        controller.append(boolContainer)
         for (const bool of boolsSorted) {
-          boolContainer.append(E("div").addClass("cem_animation_bool").append(
-            E("input").attr({
-              id: `cem_animation_${bool[0]}_bool`,
-              type: "checkbox",
-              name: bool[0],
-              checked: bool[1]
-            }).on("change", evt => bools.set(bool[0], evt.target.checked)),
-            E("label").attr("for", bool[0]).text(bool[0]),
-          ))
+          const checkbox = document.createElement("input")
+          checkbox.id = `cem_animation_${bool[0]}_bool`
+          checkbox.type = "checkbox"
+          checkbox.name = bool[0]
+          checkbox.checked = bool[1]
+          checkbox.addEventListener("change", evt => bools.set(bool[0], evt.target.checked))
+          const label = document.createElement("label")
+          label.setAttribute("for", bool[0])
+          label.textContent = bool[0]
+          const wrapper = document.createElement("div")
+          wrapper.classList.add("cem_animation_bool")
+          wrapper.append(checkbox, label)
+          boolContainer.append(wrapper)
         }
       }
       specials = new Map(specialMap)
       if (specials.has("limb_swing")) {
-        let container = $("#cem_animation_bools")
-        if (!container.length) container = E("div").attr("id", "cem_animation_bools").appendTo(controller)
+        let container = document.getElementById("cem_animation_bools")
+        if (!container) {
+          container = document.createElement("div")
+          container.id = "cem_animation_bools"
+          controller.append(container)
+        }
         specials.get("limb_swing")[0] = 0
-        container.prepend(E("div").addClass("cem_animation_bool").append(
-          E("input").attr({
-            type: "checkbox",
-            name: "limb_swing",
-            checked: specials.get("limb_swing")[1]
-          }).on("change", evt => specials.get("limb_swing")[1] = evt.target.checked),
-          E("label").attr("for", "limb_swing").text("limb_swing")
-        ))
+        const checkbox = document.createElement("input")
+        checkbox.type = "checkbox"
+        checkbox.name = "limb_swing"
+        checkbox.checked = specials.get("limb_swing")[1]
+        checkbox.addEventListener("change", evt => specials.get("limb_swing")[1] = evt.target.checked)
+        const label = document.createElement("label")
+        label.setAttribute("for", "limb_swing")
+        label.textContent = "limb_swing"
+        const wrapper = document.createElement("div")
+        wrapper.classList.add("cem_animation_bool")
+        wrapper.append(checkbox, label)
+        container.prepend(wrapper)
       }
       ranges = new Map(rangeMap)
       let rangesSorted
@@ -1967,134 +1981,146 @@
         if (ranges.has("health")) {
           const health = ranges.get("health")
           health[0][2] = num
-          const slider = $("#cem_animation_range_health_slider")
-          const number = $("#cem_animation_range_health_text")
-          const current = parseInt(slider.val())
+          const slider = document.getElementById("cem_animation_range_health_slider")
+          const number = document.getElementById("cem_animation_range_health_text")
+          const current = parseInt(slider.value)
           const val = current > num ? num : current
-          const attr = {
-            max: num,
-            value: val
-          }
-          slider.attr(attr)
-          number.attr(attr)
-          slider.val(val)
-          number.val(val)
+          slider.max = num
+          number.max = num
+          slider.value = val
+          number.value = val
         }
       }
       if (ranges.size) {
         rangesSorted = [...ranges.entries()]
         rangesSorted.sort(((a, b) => b[0] - a[0]))
-        const rangeContainer = E("div").attr("id", "cem_animation_ranges").append(E("div").attr("id", "cem_animation_range_labels"), E("div").attr("id", "cem_animation_range_sliders")).css({
-          display: "flex",
-          gap: "8px"
-        }).appendTo(controller)
+        const rangeLabels = document.createElement("div")
+        rangeLabels.id = "cem_animation_range_labels"
+        const rangeSliders = document.createElement("div")
+        rangeSliders.id = "cem_animation_range_sliders"
+        const rangeContainer = document.createElement("div")
+        rangeContainer.id = "cem_animation_ranges"
+        rangeContainer.style.display = "flex"
+        rangeContainer.style.gap = "8px"
+        rangeContainer.append(rangeLabels, rangeSliders)
+        controller.append(rangeContainer)
         for (const range of rangesSorted) {
-          rangeContainer.children().first().append(E("div").text(range[0]))
+          const label = document.createElement("div")
+          label.textContent = range[0]
+          rangeLabels.append(label)
           let timeout
-          rangeContainer.children().eq(1).append(E("div").addClass("cem_animation_range bar slider_input_combo").append(
-            E("input").attr({
-              id: `cem_animation_range_${range[0]}_slider`,
-              type: "range",
-              min: range[1][0][0],
-              max: range[1][0][2],
-              step: range[1][0][3] ?? 1,
-              value: range[1][1],
-            }).on("input", evt => {
-              const num = parseFloat(evt.target.value)
-              text.val(evt.target.value)
-              ranges.set(range[0], [range[1][0], num])
-              if (range[0] === "max_health") updateHealth(num)
-            }),
-            E("input").addClass("tool cem_animation_range_number").attr({
-              id: `cem_animation_range_${range[0]}_text`,
-              type: "number",
-              min: range[1][0][0],
-              max: range[1][0][2],
-              step: range[1][0][3] ?? 1,
-              value: range[1][1],
-            }).on("input", evt => {
-              slider.val(evt.target.value)
-              const clamped = Math.min(range[1][0][2], Math.max(range[1][0][0], parseFloat(evt.target.value)))
-              clearTimeout(timeout)
-              timeout = setTimeout(() => text.val(isNaN(clamped) ? range[1][1] : clamped), 1000)
-              const num = Math.max(range[1][0][0], clamped)
-              ranges.set(range[0], [range[1][0], num])
-              if (range[0] === "max_health") updateHealth(num)
-            })
-          ))
-          const slider = $(`#cem_animation_range_${range[0]}_slider`)
-          const text = $(`#cem_animation_range_${range[0]}_text`)
+          const slider = document.createElement("input")
+          slider.id = `cem_animation_range_${range[0]}_slider`
+          slider.type = "range"
+          slider.min = range[1][0][0]
+          slider.max = range[1][0][2]
+          slider.step = range[1][0][3] ?? 1
+          slider.value = range[1][1]
+          slider.addEventListener("input", evt => {
+            const num = parseFloat(evt.target.value)
+            text.value = evt.target.value
+            ranges.set(range[0], [range[1][0], num])
+            if (range[0] === "max_health") updateHealth(num)
+          })
+          const text = document.createElement("input")
+          text.classList.add("tool", "cem_animation_range_number")
+          text.id = `cem_animation_range_${range[0]}_text`
+          text.type = "number"
+          text.min = range[1][0][0]
+          text.max = range[1][0][2]
+          text.step = range[1][0][3] ?? 1
+          text.value = range[1][1]
+          text.addEventListener("input", evt => {
+            slider.value = evt.target.value
+            const clamped = Math.min(range[1][0][2], Math.max(range[1][0][0], parseFloat(evt.target.value)))
+            clearTimeout(timeout)
+            timeout = setTimeout(() => text.value = isNaN(clamped) ? range[1][1] : clamped, 1000)
+            const num = Math.max(range[1][0][0], clamped)
+            ranges.set(range[0], [range[1][0], num])
+            if (range[0] === "max_health") updateHealth(num)
+          })
+          const wrapper = document.createElement("div")
+          wrapper.classList.add("cem_animation_range", "bar", "slider_input_combo")
+          wrapper.append(slider, text)
+          rangeSliders.append(wrapper)
         }
       }
+      function specialButtonContainer() {
+        let container = document.getElementById("cem_animation_buttons")
+        if (!container) {
+          container = document.createElement("div")
+          container.id = "cem_animation_buttons"
+          controller.append(container)
+        }
+        return container
+      }
+      function addSpecialButton(container, button) {
+        const wrapper = document.createElement("div")
+        wrapper.classList.add("cem_animation_button")
+        wrapper.append(button)
+        container.append(wrapper)
+      }
       if (specials.has("hurt_time")) {
-        let container = $("#cem_animation_buttons")
-        if (!container.length) container = E("div").attr("id", "cem_animation_buttons").appendTo(controller)
-        const button = E("div").addClass("cem_animation_button").append(
-          E("button").attr({
-            id: "cem_animation_hurt_time_button",
-            title: 'Simulate the entity taking damage. Runs "hurt_time"'
-          }).text("Hurt entity").on("click", evt => {
-            if ($(evt.target).hasClass("cem_animation_button_disabled")) return
-            specials.set("hurt_time", [10, true])
-            button.children().first().addClass("cem_animation_button_disabled")
-            const hurtTimeBool = $("#cem_animation_is_hurt_bool")
-            if (hurtTimeBool) {
-              hurtTimeBool.prop("checked", true)
-              bools.set("is_hurt", true)
-            }
-          })
-        ).appendTo(container)
-        if (specials.get("hurt_time")[1] === true) button.children().first().addClass("cem_animation_button_disabled")
+        const button = document.createElement("button")
+        button.id = "cem_animation_hurt_time_button"
+        button.title = 'Simulate the entity taking damage. Runs "hurt_time"'
+        button.textContent = "Hurt entity"
+        button.addEventListener("click", evt => {
+          if (evt.target.classList.contains("cem_animation_button_disabled")) return
+          specials.set("hurt_time", [10, true])
+          button.classList.add("cem_animation_button_disabled")
+          const hurtTimeBool = document.getElementById("cem_animation_is_hurt_bool")
+          if (hurtTimeBool) {
+            hurtTimeBool.checked = true
+            bools.set("is_hurt", true)
+          }
+        })
+        addSpecialButton(specialButtonContainer(), button)
+        if (specials.get("hurt_time")[1] === true) button.classList.add("cem_animation_button_disabled")
       }
       if (specials.has("death_time")) {
-        let container = $("#cem_animation_buttons")
-        if (!container.length) container = E("div").attr("id", "cem_animation_buttons").appendTo(controller)
-        const button = E("div").addClass("cem_animation_button").append(
-          E("button").attr({
-            id: "cem_animation_death_time_button",
-            title: 'Simulate the entity getting killed. Runs "death_time"'
-          }).text("Kill entity").on("click", evt => {
-            if ($(evt.target).hasClass("cem_animation_button_disabled")) return
-            specials.set("death_time", [0, true])
-            button.children().first().addClass("cem_animation_button_disabled")
-          })
-        ).appendTo(container)
-        if (specials.get("death_time")[1] === true) button.children().first().addClass("cem_animation_button_disabled")
+        const button = document.createElement("button")
+        button.id = "cem_animation_death_time_button"
+        button.title = 'Simulate the entity getting killed. Runs "death_time"'
+        button.textContent = "Kill entity"
+        button.addEventListener("click", evt => {
+          if (evt.target.classList.contains("cem_animation_button_disabled")) return
+          specials.set("death_time", [0, true])
+          button.classList.add("cem_animation_button_disabled")
+        })
+        addSpecialButton(specialButtonContainer(), button)
+        if (specials.get("death_time")[1] === true) button.classList.add("cem_animation_button_disabled")
       }
       if (specials.has("swing_progress")) {
-        let container = $("#cem_animation_buttons")
-        if (!container.length) container = E("div").attr("id", "cem_animation_buttons").appendTo(controller)
-        const button = E("div").addClass("cem_animation_button").append(
-          E("button").attr({
-            id: "cem_animation_swing_progress_button",
-            title: 'Simulate the entity attacking. Runs "swing_progress"'
-          }).text("Perform attack").on("click", evt => {
-            if ($(evt.target).hasClass("cem_animation_button_disabled")) return
-            specials.set("swing_progress", [0, true])
-            button.children().first().addClass("cem_animation_button_disabled")
-          })
-        ).appendTo(container)
-        if (specials.get("swing_progress")[1] === true) button.children().first().addClass("cem_animation_button_disabled")
+        const button = document.createElement("button")
+        button.id = "cem_animation_swing_progress_button"
+        button.title = 'Simulate the entity attacking. Runs "swing_progress"'
+        button.textContent = "Perform attack"
+        button.addEventListener("click", evt => {
+          if (evt.target.classList.contains("cem_animation_button_disabled")) return
+          specials.set("swing_progress", [0, true])
+          button.classList.add("cem_animation_button_disabled")
+        })
+        addSpecialButton(specialButtonContainer(), button)
+        if (specials.get("swing_progress")[1] === true) button.classList.add("cem_animation_button_disabled")
       }
       if (specials.has("anger_time")) {
-        let container = $("#cem_animation_buttons")
-        if (!container.length) container = E("div").attr("id", "cem_animation_buttons").appendTo(controller)
-        const button = E("div").addClass("cem_animation_button").append(
-          E("button").attr({
-            id: "cem_animation_anger_time_button",
-            title: 'Simulate the entity becoming angry. Runs "anger_time"'
-          }).text("Anger entity").on("click", evt => {
-            const start = Math.floor(Math.random() * 381) + 400
-            const delay = (Math.random() * 2 + 1) * 20
-            specials.set("anger_time", [start, true, start, delay])
-            button.children().first().removeClass("cem_animation_button_disabled")
-            const aggressiveBool = $("#cem_animation_is_aggressive_bool")
-            if (aggressiveBool) {
-              aggressiveBool.prop("checked", true)
-              bools.set("is_aggressive", true)
-            }
-          })
-        ).appendTo(container)
+        const button = document.createElement("button")
+        button.id = "cem_animation_anger_time_button"
+        button.title = 'Simulate the entity becoming angry. Runs "anger_time"'
+        button.textContent = "Anger entity"
+        button.addEventListener("click", evt => {
+          const start = Math.floor(Math.random() * 381) + 400
+          const delay = (Math.random() * 2 + 1) * 20
+          specials.set("anger_time", [start, true, start, delay])
+          button.classList.remove("cem_animation_button_disabled")
+          const aggressiveBool = document.getElementById("cem_animation_is_aggressive_bool")
+          if (aggressiveBool) {
+            aggressiveBool.checked = true
+            bools.set("is_aggressive", true)
+          }
+        })
+        addSpecialButton(specialButtonContainer(), button)
       }
       prevTime = Date.now()
       Blockbench.on("render_frame", playAnimations)
@@ -2158,30 +2184,29 @@
       return animations
     }
     function animationErrorToggle(err, lineNum, warning) {
-      $(".cem_animation_error_line").removeClass("cem_animation_error_line")
+      document.querySelectorAll(".cem_animation_error_line").forEach(e => e.classList.remove("cem_animation_error_line"))
       if (err) {
-        errorMessage.html(err)
-        statusSuccess.css("display", "none")
+        errorMessage.innerHTML = err
+        statusSuccess.style.display = "none"
         if (!warning) {
-          statusWarning.css("display", "none")
-          statusError.css("display", "flex")
-          formatButton.addClass("cem_animation_button_disabled")
-          playButton.addClass("cem_animation_button_disabled")
+          statusWarning.style.display = "none"
+          statusError.style.display = "flex"
+          formatButton.classList.add("cem_animation_button_disabled")
+          playButton.classList.add("cem_animation_button_disabled")
         } else {
-          statusError.css("display", "none")
-          statusWarning.css("display", "flex")
+          statusError.style.display = "none"
+          statusWarning.style.display = "flex"
         }
         if (typeof lineNum === "number") {
-          const line = $(`.prism-editor__line-numbers>:nth-child(${lineNum + 1})`)
-          line.addClass("cem_animation_error_line")
+          document.querySelector(`.prism-editor__line-numbers>:nth-child(${lineNum + 1})`)?.classList.add("cem_animation_error_line")
         }
       } else {
-        statusSuccess.css("display", "flex")
-        statusError.css("display", "none")
-        statusWarning.css("display", "none")
-        errorMessage.text("")
-        formatButton.removeClass("cem_animation_button_disabled")
-        playButton.removeClass("cem_animation_button_disabled")
+        statusSuccess.style.display = "flex"
+        statusError.style.display = "none"
+        statusWarning.style.display = "none"
+        errorMessage.textContent = ""
+        formatButton.classList.remove("cem_animation_button_disabled")
+        playButton.classList.remove("cem_animation_button_disabled")
       }
     }
     let parents
@@ -2196,26 +2221,26 @@
         time += difference
         if (specials.get("hurt_time")?.[0] <= 0) {
           specials.set("hurt_time", [10, false])
-          $("#cem_animation_hurt_time_button").removeClass("cem_animation_button_disabled")
-          const hurtTimeBool = $("#cem_animation_is_hurt_bool")
+          document.getElementById("cem_animation_hurt_time_button")?.classList.remove("cem_animation_button_disabled")
+          const hurtTimeBool = document.getElementById("cem_animation_is_hurt_bool")
           if (hurtTimeBool) {
-            hurtTimeBool.prop("checked", false)
+            hurtTimeBool.checked = false
             bools.set("is_hurt", false)
           }
         }
         if (specials.get("death_time")?.[0] >= 20) {
           specials.set("death_time", [0, false])
-          $("#cem_animation_death_time_button").removeClass("cem_animation_button_disabled")
+          document.getElementById("cem_animation_death_time_button")?.classList.remove("cem_animation_button_disabled")
         }
         if (specials.get("swing_progress")?.[0] >= 1) {
           specials.set("swing_progress", [0, false])
-          $("#cem_animation_swing_progress_button").removeClass("cem_animation_button_disabled")
+          document.getElementById("cem_animation_swing_progress_button")?.classList.remove("cem_animation_button_disabled")
         }
         if (specials.get("anger_time")?.[1] && specials.get("anger_time")[0] <= 0) {
           specials.set("anger_time", [0, false, 0])
-          const aggressiveBool = $("#cem_animation_is_aggressive_bool")
+          const aggressiveBool = document.getElementById("cem_animation_is_aggressive_bool")
           if (aggressiveBool) {
-            aggressiveBool.prop("checked", false)
+            aggressiveBool.checked = false
             bools.set("is_aggressive", false)
           }
         }
@@ -2349,25 +2374,38 @@
         }
       }
       Canvas.updateView({groups: Group.all})
-      playButton.css("display", "flex")
-      stopButton.css("display", "none")
-      pauseButton.text("pause").attr("title", "Pause the animations")
+      playButton.style.display = "flex"
+      stopButton.style.display = "none"
+      pauseButton.textContent = "pause"
+      pauseButton.setAttribute("title", "Pause the animations")
       if (specials.has("hurt_time")) specials.set("hurt_time", [10, false])
       if (specials.has("death_time")) specials.set("death_time", [0, false])
       if (specials.has("swing_progress")) specials.set("swing_progress", [0, false])
       if (specials.has("anger_time")) specials.set("anger_time", [0, false, 0])
-      $("#cem_animation_hurt_time_button").removeClass("cem_animation_button_disabled").css("--progress", "100%")
-      $("#cem_animation_death_time_button").removeClass("cem_animation_button_disabled").css("--progress", "100%")
-      $("#cem_animation_swing_progress_button").removeClass("cem_animation_button_disabled").css("--progress", "100%")
-      $("#cem_animation_anger_time_button").css("--progress", "100%")
-      const aggressiveBool = $("#cem_animation_is_aggressive_bool")
-      if (aggressiveBool.length) {
-        aggressiveBool.prop("checked", false)
+      const hurtButton = document.getElementById("cem_animation_hurt_time_button")
+      if (hurtButton) {
+        hurtButton.classList.remove("cem_animation_button_disabled")
+        hurtButton.style.setProperty("--progress", "100%")
+      }
+      const deathButton = document.getElementById("cem_animation_death_time_button")
+      if (deathButton) {
+        deathButton.classList.remove("cem_animation_button_disabled")
+        deathButton.style.setProperty("--progress", "100%")
+      }
+      const swingButton = document.getElementById("cem_animation_swing_progress_button")
+      if (swingButton) {
+        swingButton.classList.remove("cem_animation_button_disabled")
+        swingButton.style.setProperty("--progress", "100%")
+      }
+      document.getElementById("cem_animation_anger_time_button")?.style.setProperty("--progress", "100%")
+      const aggressiveBool = document.getElementById("cem_animation_is_aggressive_bool")
+      if (aggressiveBool) {
+        aggressiveBool.checked = false
         bools.set("is_aggressive", false)
       }
-      const hurtBool = $("#cem_animation_is_hurt_bool")
-      if (hurtBool.length) {
-        hurtBool.prop("checked", false)
+      const hurtBool = document.getElementById("cem_animation_is_hurt_bool")
+      if (hurtBool) {
+        hurtBool.checked = false
         bools.set("is_hurt", false)
       }
       playing = false
@@ -2375,13 +2413,13 @@
     }
     let group
     function selectGroup(parse = true) {
-      partName.text(group.name)
+      partName.textContent = group.name
       const animation = JSON.stringify(group.cem_animations?.length === 0 ? [{}] : group.cem_animations, null, 2)
       if (animation) {
         if (parse) parseAnimations(animation)
         animationEditorPanel.vue.text = animation
-        editorWrapper[0].__vue__._data.undoStack = [{ plain: animation }]
-        editorWrapper[0].__vue__._data.undoOffset = 0
+        editorWrapper.__vue__._data.undoStack = [{ plain: animation }]
+        editorWrapper.__vue__._data.undoOffset = 0
       }
     }
     renameGroup = evt => {
@@ -2436,38 +2474,39 @@
     resizeWindow()
     function addAnimationToggles() {
       if (Project.format?.id === "optifine_entity") {
-        const toggle = $("[toolbar_id='outliner'] > div > [toolbar_item='outliner_toggle']")
-        if (toggle.hasClass("enabled")) {
-          const toggles = $("#cubes_list .group [toggle='autouv']")
+        const outlinerToggle = document.querySelector("[toolbar_id='outliner'] > div > [toolbar_item='outliner_toggle']")
+        if (outlinerToggle?.classList.contains("enabled")) {
+          const toggles = document.querySelectorAll("#cubes_list .group [toggle='autouv']")
           if (toggles.length) {
             groupObserver.disconnect()
-            toggles.each((i, e) => {
-              const toggle = $(e)
-              const partName = toggle.parent().find("input").val()
+            toggles.forEach(toggle => {
+              const partName = toggle.parentElement.querySelector("input").value
               const part = Project.groups.find(e => e.name === partName)
               if (!part) return
-              if (!toggle.parent().find("[toggle='cem_animation_disable_rotations']").length) {
-                const rotateToggle = E("i").attr({
-                  title: "Disable this group rotating while playing animations",
-                  toggle: "cem_animation_disable_rotations"
-                }).addClass("outliner_toggle material-icons icon_off").text("sync_disabled").on("click", evt => {
+              if (!toggle.parentElement.querySelector("[toggle='cem_animation_disable_rotations']")) {
+                const rotateToggle = document.createElement("i")
+                rotateToggle.title = "Disable this group rotating while playing animations"
+                rotateToggle.setAttribute("toggle", "cem_animation_disable_rotations")
+                rotateToggle.classList.add("outliner_toggle", "material-icons", "icon_off")
+                rotateToggle.textContent = "sync_disabled"
+                rotateToggle.addEventListener("click", evt => {
                   evt.stopPropagation()
-                  const partName = toggle.parent().find("input").val()
+                  const partName = toggle.parentElement.querySelector("input").value
                   const part = Project.groups.find(e => e.name === partName)
-                  const rotateToggle = $(evt.target)
-                  if (rotateToggle.hasClass("icon_off")) {
-                    rotateToggle.removeClass("icon_off")
+                  if (evt.target.classList.contains("icon_off")) {
+                    evt.target.classList.remove("icon_off")
                     part.cemAnimationDisableRotation = true
                   } else {
-                    rotateToggle.addClass("icon_off")
+                    evt.target.classList.add("icon_off")
                     part.cemAnimationDisableRotation = false
                   }
                   if (playing) {
                     stopAnimations()
                     setupAnimations(currentGroups, true)
                   }
-                }).insertBefore(toggle)
-                if (part.cemAnimationDisableRotation) rotateToggle.removeClass("icon_off")
+                })
+                toggle.before(rotateToggle)
+                if (part.cemAnimationDisableRotation) rotateToggle.classList.remove("icon_off")
               }
             })
             groupObserver.observe(document.body, {
@@ -2475,7 +2514,7 @@
               subtree: true
             })
           }
-        } else $("[toggle='cem_animation_disable_rotations']").remove()
+        } else document.querySelectorAll("[toggle='cem_animation_disable_rotations']").forEach(e => e.remove())
       }
     }
     groupObserver = new MutationObserver(() => {
@@ -2672,7 +2711,7 @@
     Blockbench.removeListener("finished_edit", renameGroup)
     animationEditorPanel.node.querySelector("#cem_animation_editor_container > div").removeEventListener("keydown", editorKeybinds)
     groupObserver.disconnect()
-    $("[toggle='cem_animation_disable_rotations']").remove()
+    document.querySelectorAll("[toggle='cem_animation_disable_rotations']").forEach(e => e.remove())
     animationEditorPanel.delete()
     animationControlPanel.delete()
     animationStyles.delete()
