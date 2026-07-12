@@ -879,7 +879,7 @@
       #jem_restrictions_dialog label * {
         cursor: pointer;
       }
-      #cem-buttons {
+      #cem-restrictions-buttons {
         display: flex;
         justify-content: space-between;
       }
@@ -945,7 +945,7 @@
             <p><strong>WARNING:</strong> It is highly recommended to leave restrictions enabled. This setting can be changed later in settings.</p>
             <br>
             <div id="jem-restrictions-footer">
-              <div id="cem-buttons">
+              <div id="cem-restrictions-buttons">
                 <label>
                   <input type="checkbox" :checked="dontShowAgain" v-model="dontShowAgain">
                   <div>Don't Show Again</div>
