@@ -1,15 +1,10 @@
 let action
 
-const id = "mesh_to_cube_converter"
-const name = "Mesh to Cube Converter"
-const icon = "fa-cube"
-const description = "Detect cuboids within meshes and convert them into real cubes."
-
-Plugin.register(id, {
-  title: name,
-  icon,
+Plugin.register("mesh_to_cube_converter", {
+  title: "Mesh to Cube Converter",
+  icon: "icon.svg",
   author: "Ewan Howell",
-  description,
+  description: "Detect cuboids within meshes and convert them into real cubes.",
   tags: ["Meshes", "Cubes", "Utility"],
   version: "1.0.0",
   min_version: "5.0.0",
@@ -23,7 +18,7 @@ Plugin.register(id, {
     action = new Action("convert_mesh_to_cubes", {
       name: "Convert Mesh to Cubes",
       description: "Detect cuboids within meshes and convert them into cubes",
-      icon,
+      icon: "fa-cube",
       condition: { modes: ["edit"], features: ["meshes"], method: () => Mesh.all.length > 0 },
       click() {
         const meshes = (Mesh.selected.length ? Mesh.selected : Mesh.all).filter(mesh => !mesh.locked)
