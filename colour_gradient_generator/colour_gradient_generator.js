@@ -7,7 +7,7 @@ const defaults = {
   smallRanges: true,
   brightnessRange: 90,
   brightnessOffset: 0,
-  curve: 33,
+  curve: -12,
   saturation: 33,
   previewMode: "simple"
 }
@@ -105,7 +105,7 @@ Plugin.register(id, {
           .header-bar {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
+            align-items: center;
 
             > i {
               cursor: pointer;
@@ -217,7 +217,7 @@ Plugin.register(id, {
             const cv = this.$refs.graph
             if (!cv || this.data.previewMode !== "advanced") return
             const { points: pts, primaryHex } = this.result
-            const W = cv.clientWidth || 700, H = 200, dpr = window.devicePixelRatio || 1
+            const W = cv.clientWidth || 700, H = cv.clientHeight || 160, dpr = window.devicePixelRatio || 1
             cv.width = W * dpr
             cv.height = H * dpr
             const ctx = cv.getContext("2d")
@@ -350,7 +350,7 @@ Plugin.register(id, {
 
             const sat = this.data.saturation / 100
             const satSpan = Math.max(darker, lighter)
-            const satRef = darker >= lighter ? hsl.l - minLightness : maxLightness - hsl.l
+            const satRef = Math.max(hsl.l - minLightness, maxLightness - hsl.l)
             const satAt = (steps, l) => {
               const d = satRef > 0
                 ? Math.min(1, Math.abs(l - hsl.l) / satRef)
@@ -468,7 +468,7 @@ Plugin.register(id, {
                   <h2>Colour Offset</h2>
                   <i title="Reset" class="material-icons" @click="data.brightnessOffset = defaults.brightnessOffset">replay</i>
                 </div>
-                <p>Adjust the position of the selected colour within the gradient spectrum</p>
+                <p>Adjust the position of the colour in the gradient</p>
                 <div class="bar slider_input_combo">
                   <input type="range" class="tool disp_range" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" step="1" />
                   <numeric-input class="tool disp_text" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" :step="1" />
