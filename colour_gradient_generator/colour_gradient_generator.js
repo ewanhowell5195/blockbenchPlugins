@@ -45,11 +45,13 @@ Plugin.register(id, {
       buttons: ["Generate", "Cancel"],
       lines: [`<style>
         #colour-gradient-preview {
-          filter: drop-shadow(0 3px 10px #0006);
+          border-radius: 5px;
+          overflow: hidden;
+          margin-bottom: 12px;
 
           canvas {
             width: 100%;
-            height: 200px;
+            height: 160px;
             display: block;
           }
 
@@ -60,7 +62,7 @@ Plugin.register(id, {
             > div {
               background-color: red;
               flex: 1;
-              height: 80px;
+              height: 64px;
               position: relative;
 
               &.primary::before {
@@ -81,6 +83,25 @@ Plugin.register(id, {
         }
 
         #colour_gradient_generator {
+          h2 {
+            font-size: 1.1em;
+            margin: 0;
+            color: var(--color-light);
+          }
+
+          p {
+            color: var(--color-subtle_text);
+            font-size: 0.92em;
+            margin: 0;
+          }
+
+          .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 24px;
+            margin: 24px 0;
+          }
+
           .header-bar {
             display: flex;
             justify-content: space-between;
@@ -98,9 +119,26 @@ Plugin.register(id, {
           .sp-replacer {
             width: 100%;
             display: flex;
+            padding: 0;
+            border-radius: 5px;
+            height: initial;
+            margin-top: 4px;
+            align-items: center;
+            background: var(--color-selected);
 
             .sp-preview {
               flex: 1;
+              height: 32px;
+              margin-right: 0;
+            }
+
+            .sp-dd {
+              width: 32px;
+              padding: 0;
+              align-items: center;
+              justify-content: center;
+              display: flex;
+              translate: 0 2px;
             }
           }
 
@@ -369,71 +407,74 @@ Plugin.register(id, {
             <div title="Reset values back to their defaults" class="dialog_close_button" style="right: 33px; z-index: 3; border-radius: 6px;" @click="reset"><i class="material-icons">replay</i></div>
             <h2>Colour</h2>
             <input ref="colour" />
-            <br>
-            <div class="header-bar">
-              <h2>Colour Count</h2>
-              <i title="Reset" class="material-icons" @click="data.steps = defaults.steps">replay</i>
-            </div>
-            <p>The number of colours to include in the gradient</p>
-            <div class="bar slider_input_combo">
-              <input type="range" class="tool disp_range" v-model.number="data.steps" min="3" :max="data.smallRanges ? 32 : 256" step="1" />
-              <numeric-input class="tool disp_text" v-model.number="data.steps" :min="3" :max="data.smallRanges ? 32 : 256" :step="1" />
-            </div>
-            <br>
-            <div class="header-bar">
-              <h2>Hue Shifting Angle</h2>
-              <i title="Reset" class="material-icons" @click="data.angle = defaults.angle">replay</i>
-            </div>
-            <p>The amount of degrees over which the hue shifting occurs</p>
-            <div class="bar slider_input_combo">
-              <input type="range" class="tool disp_range" v-model.number="data.angle" :min="data.smallRanges ? -120 : -360" :max="data.smallRanges ? 120 : 360" step="1" />
-              <numeric-input class="tool disp_text" v-model.number="data.angle" :min="data.smallRanges ? -120 : -360" :max="data.smallRanges ? 120 : 360" :step="1" />
-            </div>
-            <br>
-            <div class="header-bar">
-              <h2>Brightness Range</h2>
-              <i title="Reset" class="material-icons" @click="data.brightnessRange = defaults.brightnessRange">replay</i>
-            </div>
-            <p>The range of the brightness included in the gradient</p>
-            <div class="bar slider_input_combo">
-              <input type="range" class="tool disp_range" v-model.number="data.brightnessRange" min="0" max="100" step="1" />
-              <numeric-input class="tool disp_text" v-model.number="data.brightnessRange" :min="0" :max="100" :step="1" />
-            </div>
-            <br>
-            <div :class="{ disabled: data.brightnessRange <= 0 }">
-              <div class="header-bar">
-                <h2>Curve</h2>
-                <i title="Reset" class="material-icons" @click="data.curve = defaults.curve">replay</i>
+            <div class="settings-grid">
+              <div>
+                <div class="header-bar">
+                  <h2>Colour Count</h2>
+                  <i title="Reset" class="material-icons" @click="data.steps = defaults.steps">replay</i>
+                </div>
+                <p>The number of colours to include in the gradient</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="data.steps" min="3" :max="data.smallRanges ? 32 : 256" step="1" />
+                  <numeric-input class="tool disp_text" v-model.number="data.steps" :min="3" :max="data.smallRanges ? 32 : 256" :step="1" />
+                </div>
               </div>
-              <p>Bias the gradient towards lighter or darker tones</p>
-              <div class="bar slider_input_combo">
-                <input type="range" class="tool disp_range" v-model.number="data.curve" min="-100" max="100" step="1" />
-                <numeric-input class="tool disp_text" v-model.number="data.curve" :min="-100" :max="100" :step="1" />
+              <div>
+                <div class="header-bar">
+                  <h2>Hue Shifting Angle</h2>
+                  <i title="Reset" class="material-icons" @click="data.angle = defaults.angle">replay</i>
+                </div>
+                <p>The amount of degrees over which the hue shifting occurs</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="data.angle" :min="data.smallRanges ? -120 : -360" :max="data.smallRanges ? 120 : 360" step="1" />
+                  <numeric-input class="tool disp_text" v-model.number="data.angle" :min="data.smallRanges ? -120 : -360" :max="data.smallRanges ? 120 : 360" :step="1" />
+                </div>
+              </div>
+              <div>
+                <div class="header-bar">
+                  <h2>Brightness Range</h2>
+                  <i title="Reset" class="material-icons" @click="data.brightnessRange = defaults.brightnessRange">replay</i>
+                </div>
+                <p>The range of the brightness included in the gradient</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="data.brightnessRange" min="0" max="100" step="1" />
+                  <numeric-input class="tool disp_text" v-model.number="data.brightnessRange" :min="0" :max="100" :step="1" />
+                </div>
+              </div>
+              <div :class="{ disabled: data.brightnessRange <= 0 }">
+                <div class="header-bar">
+                  <h2>Curve</h2>
+                  <i title="Reset" class="material-icons" @click="data.curve = defaults.curve">replay</i>
+                </div>
+                <p>Bias the gradient towards lighter or darker tones</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="data.curve" min="-100" max="100" step="1" />
+                  <numeric-input class="tool disp_text" v-model.number="data.curve" :min="-100" :max="100" :step="1" />
+                </div>
+              </div>
+              <div>
+                <div class="header-bar">
+                  <h2>Saturation Falloff</h2>
+                  <i title="Reset" class="material-icons" @click="data.saturation = defaults.saturation">replay</i>
+                </div>
+                <p>Reduce saturation toward the lightest and darkest colours</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="data.saturation" min="0" max="100" step="1" />
+                  <numeric-input class="tool disp_text" v-model.number="data.saturation" :min="0" :max="100" :step="1" />
+                </div>
+              </div>
+              <div :class="{ disabled: !minBrightnessOffset && !maxBrightnessOffset }">
+                <div class="header-bar">
+                  <h2>Colour Offset</h2>
+                  <i title="Reset" class="material-icons" @click="data.brightnessOffset = defaults.brightnessOffset">replay</i>
+                </div>
+                <p>Adjust the position of the selected colour within the gradient spectrum</p>
+                <div class="bar slider_input_combo">
+                  <input type="range" class="tool disp_range" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" step="1" />
+                  <numeric-input class="tool disp_text" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" :step="1" />
+                </div>
               </div>
             </div>
-            <br>
-            <div class="header-bar">
-              <h2>Saturation Falloff</h2>
-              <i title="Reset" class="material-icons" @click="data.saturation = defaults.saturation">replay</i>
-            </div>
-            <p>Reduce saturation toward the lightest and darkest colours</p>
-            <div class="bar slider_input_combo">
-              <input type="range" class="tool disp_range" v-model.number="data.saturation" min="0" max="100" step="1" />
-              <numeric-input class="tool disp_text" v-model.number="data.saturation" :min="0" :max="100" :step="1" />
-            </div>
-            <br>
-            <div :class="{ disabled: !minBrightnessOffset && !maxBrightnessOffset }">
-              <div class="header-bar">
-                <h2>Colour Offset</h2>
-                <i title="Reset" class="material-icons" @click="data.brightnessOffset = defaults.brightnessOffset">replay</i>
-              </div>
-              <p>Adjust the position of the selected colour within the gradient spectrum</p>
-              <div class="bar slider_input_combo">
-                <input type="range" class="tool disp_range" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" step="1" />
-                <numeric-input class="tool disp_text" v-model.number="data.brightnessOffset" :min="minBrightnessOffset" :max="maxBrightnessOffset" :step="1" />
-              </div>
-            </div>
-            <br>
             <div class="tab_bar">
               <div :class="{ open: data.previewMode === 'simple' }" @click="setPreviewMode('simple')">Simple</div>
               <div :class="{ open: data.previewMode === 'advanced' }" @click="setPreviewMode('advanced')">Advanced</div>
