@@ -102,6 +102,7 @@
       {
         "title": "Changes",
         "list": [
+          "Redesigned the dialog with a more compact two column layout",
           "Reworked the palette maths so the lightness follows one smooth curve with no kink at the base colour",
           "The colour offset now repositions the base colour without changing the gradient curve",
           "The brightness range is now a percentage"
