@@ -1720,25 +1720,25 @@ Plugin.register(id, {
             return typeof data.blockbenchImportable === "function" ? data.blockbenchImportable() : data.blockbenchImportable
           },
           async openExternally(file) {
-            const { exec } = require("child_process")
-            if (exec) {
+            const { execFile } = require("child_process")
+            if (execFile) {
               const extension = PathModule.extname(file)
               const tempPath = PathModule.join(SystemInfo.temp_directory, `${PathModule.basename(file, extension)}_${Date.now()}${extension}`)
               fs.writeFileSync(tempPath, await this.getFileContent(file))
               if (extension) {
                 if (SystemInfo.platform === "win32") {
-                  exec(`"${tempPath}"`)
+                  execFile(tempPath, [])
                 } else if (SystemInfo.platform === "darwin") {
-                  exec(`open "${tempPath}"`)
+                  execFile("open", [tempPath])
                 } else {
-                  exec(`xdg-open "${tempPath}"`)
+                  execFile("xdg-open", [tempPath])
                 }
               } else if (SystemInfo.platform === "win32") {
-                exec(`notepad.exe "${tempPath}"`)
+                execFile("notepad.exe", [tempPath])
               } else if (SystemInfo.platform === "darwin") {
-                exec(`open -a "TextEdit" "${tempPath}"`)
+                execFile("open", ["-a", "TextEdit", tempPath])
               } else {
-                exec(`xdg-open "${tempPath}"`)
+                execFile("xdg-open", [tempPath])
               }
             }
           },
