@@ -133,8 +133,7 @@ function normalizePlacement(cols, authoredHalf, W) {
   }
 
   const axis = norm([quat.x, quat.y, quat.z])
-  const seed = Math.abs(axis[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]
-  const e1 = norm(cross(axis, seed))
+  const e1 = norm(cross(axis, Math.abs(axis[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]))
   const e2 = cross(axis, e1)
   const col1 = sub(e1, applyInverse(e1))
   const col2 = sub(e2, applyInverse(e2))
@@ -175,8 +174,7 @@ function normalizePlacement(cols, authoredHalf, W) {
           if (o.some((v, i) => Math.abs(oSnapped[i] - v) > 0.001)) continue
           const distance = len(sub(oSnapped, W))
           if (distance > maxPivotDistance) continue
-          const local = applyInverse(sub(W, oSnapped))
-          const c = [local[0] + oSnapped[0], local[1] + oSnapped[1], local[2] + oSnapped[2]]
+          const c = applyInverse(sub(W, oSnapped)).map((v, i) => v + oSnapped[i])
           const cSnap = c.map((v, comp) => snap(v - offsets[comp], g) + offsets[comp])
           if (len(sub(cSnap, c)) > NORMALIZE_TOL) continue
           if (best && distance >= best.distance) continue
@@ -294,11 +292,7 @@ function convertMesh(mesh) {
       const uvB = b.uv[b.vkeys[b.corners.indexOf(pid)]]
       if (Math.abs(uvA[0] - uvB[0]) > UV_EPS || Math.abs(uvA[1] - uvB[1]) > UV_EPS) return null
     }
-    const pA = pidPositions[a.corners[aUnique]]
-    const pB = pidPositions[b.corners[bUnique]]
-    const s1 = pidPositions[sharedPids[0]]
-    const s2 = pidPositions[sharedPids[1]]
-    const frame = rectangleAxes(pA, s1, s2, pB)
+    const frame = rectangleAxes(pidPositions[a.corners[aUnique]], pidPositions[sharedPids[0]], pidPositions[sharedPids[1]], pidPositions[b.corners[bUnique]])
     if (!frame) return null
     let { u, v } = frame
     const vA = a.vkeys[aUnique]
@@ -348,7 +342,6 @@ function convertMesh(mesh) {
 
   function assembleBox(axes, bounds, facesByCorners) {
     const cornerPids = {}
-    const flatAxis = bounds.map(b => b[1] - b[0] < EPS)
     for (let corner = 0; corner < 8; corner++) {
       const f = [corner >> 2 & 1, corner >> 1 & 1, corner & 1]
       cornerPids[f.join("")] = findPid(combine(axes, f.map((side, axis) => bounds[axis][side])), EPS * 3)
@@ -356,7 +349,7 @@ function convertMesh(mesh) {
     const faces = {}
     let count = 0
     for (let axis = 0; axis < 3; axis++) {
-      if (flatAxis.some((flat, i) => flat && i !== axis)) continue
+      if (bounds.some((b, i) => i !== axis && b[1] - b[0] < EPS)) continue
       for (let side = 0; side <= 1; side++) {
         const pids = []
         for (let fa = 0; fa <= 1; fa++) {
@@ -380,7 +373,6 @@ function convertMesh(mesh) {
     }
     if (!count) return null
     if (bounds[2][1] - bounds[2][0] > EPS && Object.keys(faces).every(key => key === "2,1")) return null
-    const allCornerPids = new Set(Object.values(faces).flatMap(rec => rec.corners))
     const signature = Object.values(faces).map(rec => rec.fkeys.join("+")).sort().join("|")
       + "@" + bounds.map(b => b.map(v => Math.roundTo(v, 3)).join(":")).join(";")
       + "@" + axes.map(a => a.map(v => Math.roundTo(v, 3)).join(":")).join(";")
@@ -389,7 +381,7 @@ function convertMesh(mesh) {
       bounds,
       faces,
       count,
-      cornerPids: allCornerPids,
+      cornerPids: new Set(Object.values(faces).flatMap(rec => rec.corners)),
       signature,
       volume: (bounds[0][1] - bounds[0][0]) * (bounds[1][1] - bounds[1][0]) * (bounds[2][1] - bounds[2][0])
     }
@@ -542,9 +534,7 @@ function convertMesh(mesh) {
 
       const observed = [null, null, null, null]
       for (const vkey of rec.sorted) {
-        const p = positions[vkey]
-        const f = cols.map((col, i) => dot(p, col) > centerLocal[i] ? 1 : 0)
-        const [lx, ly] = faceCoords(direction, f[0], f[1], f[2])
+        const [lx, ly] = faceCoords(direction, ...cols.map((col, i) => dot(positions[vkey], col) > centerLocal[i] ? 1 : 0))
         const slot = ly === 0 ? lx : 3 - lx
         if (observed[slot]) return null
         observed[slot] = rec.uv[vkey].slice()
