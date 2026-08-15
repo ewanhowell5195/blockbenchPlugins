@@ -104,6 +104,13 @@ Plugin.register(id, {
             }
           }
 
+          .checkbox-bar {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-right: auto;
+          }
+
           .checkbox-row {
             display: flex;
             cursor: pointer;
@@ -117,26 +124,11 @@ Plugin.register(id, {
             }
           }
 
-          .seg {
-            display: inline-flex;
+          .tab_bar {
             margin-bottom: 8px;
 
-            button {
-              padding: 2px 16px;
-              min-width: 0;
-              background-color: var(--color-button);
-              color: var(--color-text);
+            > div {
               cursor: pointer;
-              border: none;
-
-              &:hover {
-                background-color: var(--color-selected);
-              }
-
-              &.active {
-                background-color: var(--color-accent);
-                color: var(--color-accent_text);
-              }
             }
           }
 
@@ -442,9 +434,9 @@ Plugin.register(id, {
               </div>
             </div>
             <br>
-            <div class="seg">
-              <button :class="{ active: data.previewMode === 'simple' }" @click="setPreviewMode('simple')">Simple</button>
-              <button :class="{ active: data.previewMode === 'advanced' }" @click="setPreviewMode('advanced')">Advanced</button>
+            <div class="tab_bar">
+              <div :class="{ open: data.previewMode === 'simple' }" @click="setPreviewMode('simple')">Simple</div>
+              <div :class="{ open: data.previewMode === 'advanced' }" @click="setPreviewMode('advanced')">Advanced</div>
             </div>
             <div id="colour-gradient-preview">
               <canvas ref="graph" v-show="data.previewMode === 'advanced'"></canvas>
@@ -452,17 +444,21 @@ Plugin.register(id, {
                 <div v-for="col in result.colours" :class="{ primary: col === result.primaryHex, 'light-marker': col === result.primaryHex && markerLight }" :style="{ backgroundColor: col }"></div>
               </div>
             </div>
-            <br>
-            <label class="checkbox-row">
-              <input type="checkbox" :checked="data.smallRanges" v-model="data.smallRanges" @input="clamp(); save()">
-              <div>Use smaller ranges</div>
-            </label>
-            <label class="checkbox-row">
-              <input type="checkbox" :checked="data.replace" v-model="data.replace" @input="save">
-              <div>Replace existing palette</div>
-            </label>
+            <div class="checkbox-bar" ref="checkboxBar">
+              <label class="checkbox-row">
+                <input type="checkbox" :checked="data.smallRanges" v-model="data.smallRanges" @input="clamp(); save()">
+                <div>Use smaller ranges</div>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" :checked="data.replace" v-model="data.replace" @input="save">
+                <div>Replace existing palette</div>
+              </label>
+            </div>
           </div>
         `
+      },
+      onBuild() {
+        this.object.querySelector(".dialog_bar.button_bar").prepend(this.content_vue.$refs.checkboxBar)
       },
       onOpen() {
         this.content_vue.colour = ColorPanel.get()
