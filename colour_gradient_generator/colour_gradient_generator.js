@@ -46,7 +46,6 @@ Plugin.register(id, {
       lines: [`<style>
         #colour-gradient-preview {
           filter: drop-shadow(0 3px 10px #0006);
-          padding: 0 20px 8px;
 
           canvas {
             width: 100%;
@@ -67,7 +66,7 @@ Plugin.register(id, {
               &.primary::before {
                 content: "";
                 position: absolute;
-                bottom: -8px;
+                bottom: 0;
                 height: 4px;
                 left: 0;
                 right: 0;
