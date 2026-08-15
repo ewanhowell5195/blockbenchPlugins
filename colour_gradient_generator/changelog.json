@@ -85,5 +85,28 @@
         ]
       }
     ]
+  },
+  "3.0.0": {
+    "title": "3.0.0",
+    "date": "2026-08-15",
+    "author": "Ewan Howell",
+    "categories": [
+      {
+        "title": "New Features",
+        "list": [
+          "Added a new \"Curve\" slider to bias the gradient towards lighter or darker tones",
+          "Added a new \"Saturation Falloff\" slider to reduce saturation toward the lightest and darkest colours",
+          "Added an advanced preview mode that graphs the palette in the saturation/lightness plane"
+        ]
+      },
+      {
+        "title": "Changes",
+        "list": [
+          "Reworked the palette maths so the lightness follows one smooth curve with no kink at the base colour",
+          "The colour offset now repositions the base colour without changing the gradient curve",
+          "The brightness range is now a percentage"
+        ]
+      }
+    ]
   }
 }
