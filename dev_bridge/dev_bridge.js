@@ -1,4 +1,4 @@
-let net, nodeTimers, server, sockets, actions, running, queue
+let net, nodeTimers, server, sockets, bridgeSettings, running, queue, logBuffer, logIndex, originalConsole, errorListener, rejectionListener
 
 const id = "dev_bridge"
 const name = "Dev Bridge"
@@ -7,6 +7,7 @@ const description = "Control Blockbench from external tools by running JavaScrip
 const defaultPort = 8797
 const maxRequestSize = 32 * 1024 * 1024
 const evalTimeout = 120000
+const maxLogEntries = 1000
 
 Plugin.register(id, {
   title: name,
@@ -23,71 +24,142 @@ Plugin.register(id, {
   creation_date: "2026-07-10",
   has_changelog: true,
   onload() {
-    net = require("net", {
-      message: "This permission is required to run the local server that external dev tools connect to.",
-      optional: false
-    })
-    if (!net) {
-      throw new Error("net access denied")
+    if (localStorage.getItem("dev_bridge_accepted")) {
+      setup()
+      return
     }
-    // Node timers keep running while the window is minimised, unlike DOM
-    // timers which Chromium throttles; used so a stalled script cannot
-    // lock the eval queue permanently
-    nodeTimers = require("timers")
-    queue = Promise.resolve()
-    sockets = new Set()
-    actions = [
-      new Action("dev_bridge_start", {
-        plugin: id,
-        name: "Start Dev Bridge server",
-        icon: "play_arrow",
-        condition: () => !running,
-        click: () => start()
-      }),
-      new Action("dev_bridge_stop", {
-        plugin: id,
-        name: "Stop Dev Bridge server",
-        icon: "stop",
-        condition: () => running,
-        click: () => stop(true)
-      }),
-      new Action("dev_bridge_port", {
-        plugin: id,
-        name: "Set Dev Bridge port",
-        icon: "settings_ethernet",
-        click() {
-          Blockbench.textPrompt("Dev Bridge Port", getPort().toString(), value => {
-            const port = parseInt(value)
-            if (!(port > 0 && port < 65536)) {
-              Blockbench.showQuickMessage("Invalid port")
-              return
-            }
-            localStorage.setItem("dev_bridge_port", port)
-            if (running) {
-              stop()
-              start()
-            }
-          })
-        }
-      })
-    ]
-    MenuBar.addAction({
-      name,
-      id,
-      children: actions,
-      icon
-    }, "help.developer.1")
-    start()
+    Blockbench.showMessageBox({
+      title: "Dev Bridge",
+      message: "Dev Bridge is a developer tool. It runs a local server that allows external tools to execute arbitrary JavaScript inside Blockbench, and it requests access to every native module that plugins can use. This makes Blockbench less secure while it is installed.\n\nOnly use this plugin if you are a developer and you accept these risks.",
+      buttons: ["Accept Risks", "Cancel"],
+      confirm: 0,
+      cancel: 1
+    }, button => {
+      if (button === 0) {
+        localStorage.setItem("dev_bridge_accepted", "true")
+        setup()
+      } else {
+        Plugins.all.find(plugin => plugin.id === id)?.uninstall()
+      }
+    })
+  },
+  onuninstall() {
+    localStorage.removeItem("dev_bridge_accepted")
+    localStorage.removeItem("dev_bridge_port")
   },
   onunload() {
+    if (!bridgeSettings) return
     stop()
-    actions.forEach(action => action.delete())
-    MenuBar.removeAction(`help.developer.${id}`)
+    for (const level in originalConsole) console[level] = originalConsole[level]
+    window.removeEventListener("error", errorListener)
+    window.removeEventListener("unhandledrejection", rejectionListener)
+    bridgeSettings.forEach(setting => setting.delete())
   }
 })
 
+function setup() {
+  net = require("net", {
+    message: "This permission is required to run the local server that external dev tools connect to.",
+    optional: false
+  })
+  if (!net) {
+    throw new Error("net access denied")
+  }
+  const message = "Requested up front so scripts run through the Dev Bridge can use any module without interruption."
+  const fsModule = require("fs", { message, optional: true })
+  let modules = ["process", "child_process", "https", "tls", "util", "os", "v8", "dialog", "clipboard", "shell"]
+  try {
+    const dir = decodeURIComponent(location.pathname.replace(/^\/(?=[A-Za-z]:)/, "").replace(/index\.html$/, ""))
+    const found = fsModule.readFileSync(dir + "dist/bundle.js", "utf8").match(/\[\s*(?:["'][a-z_0-9]+["']\s*,\s*)*["']child_process["'](?:\s*,\s*["'][a-z_0-9]+["'])*\s*,?\s*\]/g)
+    if (found?.length === 1) modules = [...found[0].matchAll(/["']([a-z_0-9]+)["']/g)].map(m => m[1])
+  } catch {}
+  for (const module of modules) {
+    if (module !== "net" && module !== "fs") require(module, { message, optional: true })
+  }
+  nodeTimers = require("timers")
+  queue = Promise.resolve()
+  sockets = new Set()
+  logBuffer = []
+  logIndex = 0
+  originalConsole = {}
+  for (const level of ["log", "info", "warn", "error", "debug"]) {
+    originalConsole[level] = console[level]
+    console[level] = (...args) => {
+      recordLog(level, args.map(stringifyArg).join(" "))
+      originalConsole[level].apply(console, args)
+    }
+  }
+  errorListener = e => recordLog("uncaught", `${e.message} @ ${e.filename}:${e.lineno}`)
+  rejectionListener = e => recordLog("unhandledrejection", String(e.reason?.stack ?? e.reason))
+  window.addEventListener("error", errorListener)
+  window.addEventListener("unhandledrejection", rejectionListener)
+  bridgeSettings = [
+    new Setting("dev_bridge_enabled", {
+      category: "general",
+      value: true,
+      name: "Dev Bridge Server",
+      description: "Run the Dev Bridge server that external dev tools connect to",
+      plugin: id,
+      onChange(value) {
+        if (value) start()
+        else stop(true)
+      }
+    }),
+    new Setting("dev_bridge_port", {
+      category: "general",
+      value: parseInt(localStorage.getItem("dev_bridge_port")) || defaultPort,
+      type: "number",
+      min: 1,
+      max: 65535,
+      name: "Dev Bridge Port",
+      description: "The port the Dev Bridge server listens on",
+      plugin: id,
+      onChange() {
+        if (running) {
+          stop()
+          start()
+        }
+      }
+    })
+  ]
+  if (settings.dev_bridge_enabled.value) start()
+}
+
+function stringifyArg(arg) {
+  return typeof arg === "string" ? arg : JSON.stringify(safeClone(arg))
+}
+
+function bridgeSleep(ms) {
+  return new Promise(resolve => nodeTimers.setTimeout(resolve, ms))
+}
+
+async function bridgeWaitFor(condition, timeout = 10000, interval = 50) {
+  const deadline = Date.now() + timeout
+  let value
+  while (!(value = await condition())) {
+    if (Date.now() > deadline) throw new Error(`waitFor timed out after ${timeout}ms`)
+    await bridgeSleep(interval)
+  }
+  return value
+}
+
+async function bridgeSandbox(fn, format = "free") {
+  newProject(Formats[format] ?? Formats.free)
+  const project = Project
+  try {
+    return await fn(project)
+  } finally {
+    await project.close(true)
+  }
+}
+
+function recordLog(level, text) {
+  logBuffer.push({ i: logIndex++, time: Date.now(), level, text })
+  if (logBuffer.length > maxLogEntries) logBuffer.splice(0, logBuffer.length - maxLogEntries)
+}
+
 function getPort() {
-  return parseInt(localStorage.getItem("dev_bridge_port")) || defaultPort
+  return parseInt(settings.dev_bridge_port.value) || defaultPort
 }
 
 function start() {
@@ -115,8 +187,6 @@ function stop(announce) {
   running = false
 }
 
-// Minimal HTTP/1.1 handling over a raw TCP socket, since Blockbench
-// plugins can require "net" but not "http"
 function handleSocket(socket) {
   sockets.add(socket)
   socket.on("close", () => sockets.delete(socket))
@@ -170,7 +240,8 @@ function respond(socket, status, data) {
 }
 
 function handleRequest(socket, method, url, body) {
-  if (method === "GET" && url === "/ping") {
+  const [route, query] = url.split("?")
+  if (method === "GET" && route === "/ping") {
     respond(socket, 200, {
       ok: true,
       app: "blockbench",
@@ -179,19 +250,48 @@ function handleRequest(socket, method, url, body) {
       project: typeof Project === "object" && Project ? {
         name: Project.name,
         format: Format?.id ?? null
-      } : null
+      } : null,
+      mode: typeof Mode === "object" ? Mode.selected?.id ?? null : null,
+      dialog: Dialog.open?.id ?? null
     })
     return
   }
-  if (method === "POST" && url === "/eval") {
-    // queue runs so parallel requests cannot interleave console capture,
-    // with a timeout so one stalled script cannot block the queue forever
+  if (method === "GET" && route === "/logs") {
+    const since = parseInt(new URLSearchParams(query).get("since")) || 0
+    respond(socket, 200, { ok: true, entries: logBuffer.filter(entry => entry.i >= since), next: logIndex })
+    return
+  }
+  if (method === "POST" && route === "/screenshot") {
+    let selector
+    try {
+      selector = body ? JSON.parse(body).selector : null
+    } catch {
+      respond(socket, 200, { ok: false, error: "Invalid JSON body" })
+      return
+    }
+    takeScreenshot(selector).then(
+      result => respond(socket, 200, { ok: true, ...result }),
+      err => respond(socket, 200, { ok: false, error: err?.message ?? String(err) })
+    )
+    return
+  }
+  if (method === "POST" && (route === "/eval" || route === "/reload")) {
+    let code = body
+    if (route === "/reload") {
+      try {
+        const request = JSON.parse(body)
+        code = `Plugins.all.find(plugin => plugin.id === ${JSON.stringify(request.id)})?.unload()\n${request.code}\nreturn "reloaded ${request.id}"`
+      } catch {
+        respond(socket, 200, { ok: false, error: "Invalid JSON body. Expected { id, code }" })
+        return
+      }
+    }
     const run = queue.then(() => new Promise(resolve => {
       const timer = nodeTimers.setTimeout(() => resolve({
         ok: false,
         error: `Evaluation timed out after ${evalTimeout / 1000}s. The script may still be pending, for example on DOM timers that pause while Blockbench is minimised.`
       }), evalTimeout)
-      runCode(body).then(result => {
+      runCode(code).then(result => {
         nodeTimers.clearTimeout(timer)
         resolve(result)
       })
@@ -200,7 +300,35 @@ function handleRequest(socket, method, url, body) {
     run.then(result => respond(socket, 200, result))
     return
   }
-  respond(socket, 404, { ok: false, error: "Not found. Endpoints: GET /ping, POST /eval" })
+  respond(socket, 404, { ok: false, error: "Not found. Endpoints: GET /ping, GET /logs, POST /eval, POST /reload, POST /screenshot" })
+}
+
+async function takeScreenshot(selector) {
+  const capture = () => new Promise(resolve => Screencam.fullScreen(0, resolve))
+  let dataUrl = await capture()
+  for (let i = 0; i < 5; i++) {
+    await bridgeSleep(150)
+    const next = await capture()
+    if (next === dataUrl) break
+    dataUrl = next
+  }
+  const img = new Image()
+  img.src = dataUrl
+  await new Promise((resolve, reject) => {
+    img.onload = resolve
+    img.onerror = () => reject(new Error("Failed to decode screenshot"))
+  })
+  if (!selector) return { width: img.width, height: img.height, data: dataUrl.split(",")[1] }
+  const el = document.querySelector(selector)
+  if (!el) throw new Error(`No element matches selector: ${selector}`)
+  const rect = el.getBoundingClientRect()
+  if (!rect.width || !rect.height) throw new Error(`Element has no visible area: ${selector}`)
+  const scale = img.width / window.innerWidth
+  const canvas = document.createElement("canvas")
+  canvas.width = Math.round(rect.width * scale)
+  canvas.height = Math.round(rect.height * scale)
+  canvas.getContext("2d").drawImage(img, rect.x * scale, rect.y * scale, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height)
+  return { width: canvas.width, height: canvas.height, data: canvas.toDataURL().split(",")[1] }
 }
 
 async function runCode(code) {
@@ -215,8 +343,8 @@ async function runCode(code) {
   }
   try {
     const AsyncFunction = Object.getPrototypeOf(async function() {}).constructor
-    const fn = new AsyncFunction(code)
-    const result = await fn.call(globalThis)
+    const fn = new AsyncFunction("require", "sleep", "waitFor", "sandbox", code)
+    const result = await fn.call(globalThis, require, bridgeSleep, bridgeWaitFor, bridgeSandbox)
     return { ok: true, result: safeClone(result), logs }
   } catch (err) {
     return { ok: false, error: err?.stack ?? String(err), logs }
@@ -225,8 +353,6 @@ async function runCode(code) {
   }
 }
 
-// Convert any value into something JSON-serialisable, guarding against
-// circular references and enormous objects like THREE scenes
 function safeClone(value, depth = 0, seen = new WeakSet()) {
   if (value === null || value === undefined) return value
   const type = typeof value
