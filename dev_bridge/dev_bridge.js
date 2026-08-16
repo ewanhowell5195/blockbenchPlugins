@@ -1,19 +1,16 @@
 let net, nodeTimers, server, sockets, bridgeSettings, running, queue, logBuffer, logIndex, originalConsole, errorListener, rejectionListener
 
 const id = "dev_bridge"
-const name = "Dev Bridge"
-const icon = "terminal"
-const description = "Control Blockbench from external tools by running JavaScript over a local HTTP bridge."
 const defaultPort = 8797
 const maxRequestSize = 32 * 1024 * 1024
 const evalTimeout = 120000
 const maxLogEntries = 1000
 
 Plugin.register(id, {
-  title: name,
-  icon,
+  title: "Dev Bridge",
+  icon: "terminal",
   author: "Ewan Howell",
-  description,
+  description: "Control Blockbench from external tools by running JavaScript over a local HTTP bridge.",
   tags: ["Development", "Testing", "Utility"],
   version: "1.0.0",
   min_version: "5.0.0",
@@ -50,7 +47,7 @@ Plugin.register(id, {
   onunload() {
     if (!bridgeSettings) return
     stop()
-    for (const level in originalConsole) console[level] = originalConsole[level]
+    restoreConsole(originalConsole)
     window.removeEventListener("error", errorListener)
     window.removeEventListener("unhandledrejection", rejectionListener)
     bridgeSettings.forEach(setting => setting.delete())
@@ -66,11 +63,11 @@ function setup() {
     throw new Error("net access denied")
   }
   const message = "Requested up front so scripts run through the Dev Bridge can use any module without interruption."
-  const fsModule = require("fs", { message, optional: true })
   let modules = ["process", "child_process", "https", "tls", "util", "os", "v8", "dialog", "clipboard", "shell"]
   try {
-    const dir = decodeURIComponent(location.pathname.replace(/^\/(?=[A-Za-z]:)/, "").replace(/index\.html$/, ""))
-    const found = fsModule.readFileSync(dir + "dist/bundle.js", "utf8").match(/\[\s*(?:["'][a-z_0-9]+["']\s*,\s*)*["']child_process["'](?:\s*,\s*["'][a-z_0-9]+["'])*\s*,?\s*\]/g)
+    const found = require("fs", { message, optional: true })
+      .readFileSync(decodeURIComponent(location.pathname.replace(/^\/(?=[A-Za-z]:)/, "").replace(/index\.html$/, "")) + "dist/bundle.js", "utf8")
+      .match(/\[\s*(?:["'][a-z_0-9]+["']\s*,\s*)*["']child_process["'](?:\s*,\s*["'][a-z_0-9]+["'])*\s*,?\s*\]/g)
     if (found?.length === 1) modules = [...found[0].matchAll(/["']([a-z_0-9]+)["']/g)].map(m => m[1])
   } catch {}
   for (const module of modules) {
@@ -81,14 +78,7 @@ function setup() {
   sockets = new Set()
   logBuffer = []
   logIndex = 0
-  originalConsole = {}
-  for (const level of ["log", "info", "warn", "error", "debug"]) {
-    originalConsole[level] = console[level]
-    console[level] = (...args) => {
-      recordLog(level, args.map(stringifyArg).join(" "))
-      originalConsole[level].apply(console, args)
-    }
-  }
+  originalConsole = wrapConsole(recordLog)
   errorListener = e => recordLog("uncaught", `${e.message} @ ${e.filename}:${e.lineno}`)
   rejectionListener = e => recordLog("unhandledrejection", String(e.reason?.stack ?? e.reason))
   window.addEventListener("error", errorListener)
@@ -125,8 +115,22 @@ function setup() {
   if (settings.dev_bridge_enabled.value) start()
 }
 
-function stringifyArg(arg) {
-  return typeof arg === "string" ? arg : JSON.stringify(safeClone(arg))
+function wrapConsole(handler) {
+  const wrap = { original: {}, wrappers: {} }
+  for (const level of ["log", "info", "warn", "error", "debug"]) {
+    wrap.original[level] = console[level]
+    wrap.wrappers[level] = console[level] = (...args) => {
+      handler(level, args.map(arg => typeof arg === "string" ? arg : JSON.stringify(safeClone(arg))).join(" "))
+      wrap.original[level].apply(console, args)
+    }
+  }
+  return wrap
+}
+
+function restoreConsole(wrap) {
+  for (const level in wrap.original) {
+    if (console[level] === wrap.wrappers[level]) console[level] = wrap.original[level]
+  }
 }
 
 function bridgeSleep(ms) {
@@ -206,16 +210,11 @@ function handleSocket(socket) {
       if (headerEnd === -1) return
       const lines = buffer.subarray(0, headerEnd).toString().split("\r\n")
       const [method, url] = lines[0].split(" ")
-      const headers = {}
-      for (const line of lines.slice(1)) {
-        const colon = line.indexOf(":")
-        if (colon !== -1) headers[line.slice(0, colon).trim().toLowerCase()] = line.slice(colon + 1).trim()
-      }
       head = {
         method,
         url,
         bodyStart: headerEnd + 4,
-        contentLength: parseInt(headers["content-length"]) || 0
+        contentLength: parseInt(lines.find(line => /^content-length:/i.test(line))?.split(":")[1]) || 0
       }
     }
     if (buffer.length - head.bodyStart >= head.contentLength) {
@@ -227,10 +226,9 @@ function handleSocket(socket) {
 
 function respond(socket, status, data) {
   const body = Buffer.from(JSON.stringify(data))
-  const statusText = { 200: "OK", 404: "Not Found", 413: "Payload Too Large" }[status] ?? "Error"
   socket.end(Buffer.concat([
     Buffer.from(
-      `HTTP/1.1 ${status} ${statusText}\r\n` +
+      `HTTP/1.1 ${status} ${{ 200: "OK", 404: "Not Found", 413: "Payload Too Large" }[status] ?? "Error"}\r\n` +
       `Content-Type: application/json\r\n` +
       `Content-Length: ${body.length}\r\n` +
       `Connection: close\r\n\r\n`
@@ -333,23 +331,14 @@ async function takeScreenshot(selector) {
 
 async function runCode(code) {
   const logs = []
-  const original = {}
-  for (const level of ["log", "info", "warn", "error", "debug"]) {
-    original[level] = console[level]
-    console[level] = (...args) => {
-      logs.push((level === "log" ? "" : `[${level}] `) + args.map(arg => typeof arg === "string" ? arg : JSON.stringify(safeClone(arg))).join(" "))
-      original[level].apply(console, args)
-    }
-  }
+  const original = wrapConsole((level, text) => logs.push((level === "log" ? "" : `[${level}] `) + text))
   try {
-    const AsyncFunction = Object.getPrototypeOf(async function() {}).constructor
-    const fn = new AsyncFunction("require", "sleep", "waitFor", "sandbox", code)
-    const result = await fn.call(globalThis, require, bridgeSleep, bridgeWaitFor, bridgeSandbox)
-    return { ok: true, result: safeClone(result), logs }
+    const fn = new (Object.getPrototypeOf(async function() {}).constructor)("require", "sleep", "waitFor", "sandbox", code)
+    return { ok: true, result: safeClone(await fn.call(globalThis, require, bridgeSleep, bridgeWaitFor, bridgeSandbox)), logs }
   } catch (err) {
     return { ok: false, error: err?.stack ?? String(err), logs }
   } finally {
-    for (const level in original) console[level] = original[level]
+    restoreConsole(original)
   }
 }
 
