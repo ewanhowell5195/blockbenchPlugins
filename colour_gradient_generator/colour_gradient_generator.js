@@ -216,196 +216,29 @@ Plugin.register(id, {
             const picker = $(this.$refs[ref])
             if (picker.length && picker.spectrum("get")?.toHexString?.() !== value) picker.spectrum("set", value)
           },
-          drawGraph() {
-            const cv = this.$refs.graph
-            if (!cv || this.data.previewMode !== "advanced") return
-            const { points: pts, primaryHex } = this.result
-            const W = cv.clientWidth || 700, H = cv.clientHeight || 160, dpr = window.devicePixelRatio || 1
-            cv.width = W * dpr
-            cv.height = H * dpr
-            const ctx = cv.getContext("2d")
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-            ctx.clearRect(0, 0, W, H)
-            const pad = 7
-            const plotW = this.data.colourMode === "double" ? W - H : W
-            const N = pts.length
-            const lo = Math.min(...pts.map(p => p.l)), hi = Math.max(...pts.map(p => p.l))
-            const lerpHue = (a, b, t) => a + (((b - a + 540) % 360) - 180) * t
-            const byL = [...pts].sort((a, b) => a.l - b.l)
-            const alongL = (L, get, mix) => {
-              if (L <= byL[0].l) return get(byL[0])
-              if (L >= byL[N - 1].l) return get(byL[N - 1])
-              for (let i = 1; i < N; i++) {
-                if (L <= byL[i].l) return mix(get(byL[i - 1]), get(byL[i]), (L - byL[i - 1].l) / ((byL[i].l - byL[i - 1].l) || 1))
-              }
-              return get(byL[N - 1])
+          doubleResult() {
+            const N = this.data.steps
+            const a = tinycolor(this.colour).toHsl(), b = tinycolor(this.colour2).toHsl()
+            const ca = chromaOf(a), cb = chromaOf(b)
+            if (ca < 0.001) a.h = b.h
+            if (cb < 0.001) b.h = a.h
+            const d = ((b.h - a.h + 540) % 360) - 180
+            const v = this.data.huePath / 100
+            const points = []
+            for (let i = 0; i < N; i++) {
+              let t = N > 1 ? i / (N - 1) : 0
+              t += this.data.bias / 167 * t * (1 - t)
+              const l = Math.clamp(Math.lerp(a.l, b.l, t) + this.data.lightnessCurve / 100 * 1.6 * t * (1 - t), 0, 1)
+              const hs = (a.h + d * t) * Math.PI / 180, hl = (a.h + (d - 360 * Math.sign(d || 1)) * t) * Math.PI / 180
+              const ux = Math.lerp(Math.cos(hs), Math.cos(hl), v)
+              const uy = Math.lerp(Math.sin(hs), Math.sin(hl), v)
+              const s = lightSpan(l) > 0.001 ? Math.min(1, Math.hypot(ux, uy) * Math.lerp(ca, cb, t) / lightSpan(l)) : 0
+              const h = toPositiveAngle(Math.atan2(uy, ux) * 180 / Math.PI)
+              points.push({ hex: hex(h, s, l), h, l, s })
             }
-
-            let dir = 0, monotonic = true
-            for (let i = 1; i < N; i++) {
-              const step = Math.sign(pts[i].l - pts[i - 1].l)
-              if (!step) continue
-              if (!dir) dir = step
-              else if (step !== dir) {
-                monotonic = false
-                break
-              }
-            }
-
-            let xs, hueAtFrac, lightAtFrac
-            if (!monotonic || hi - lo < 1e-6) {
-              xs = pts.map((_, i) => pad + (N > 1 ? i / (N - 1) : 0.5) * (plotW - 2 * pad))
-              const along = (f, get, mix) => {
-                const idx = f * (N - 1), i0 = Math.clamp(Math.floor(idx), 0, N - 1)
-                return mix(get(pts[i0]), get(pts[Math.min(N - 1, i0 + 1)]), idx - i0)
-              }
-              hueAtFrac = f => along(f, p => p.h, lerpHue)
-              lightAtFrac = f => along(f, p => p.l, Math.lerp)
-            } else {
-              const axisSpan = Math.min(1, 2 * (hi - lo))
-              const aMin = Math.clamp((lo + hi) / 2 - axisSpan / 2, 0, 1 - axisSpan)
-              const lRange = axisSpan || 1
-              xs = pts.map(p => pad + ((p.l - aMin) / lRange) * (plotW - 2 * pad))
-              hueAtFrac = f => alongL(aMin + f * lRange, p => p.h, lerpHue)
-              lightAtFrac = f => aMin + f * lRange
-            }
-
-            const cell = 4
-            for (let px = 0; px < plotW; px += cell) {
-              const f = px / plotW, hue = hueAtFrac(f), L = lightAtFrac(f)
-              for (let py = 0; py < H; py += cell) {
-                ctx.fillStyle = `hsl(${hue} ${(1 - py / H) * 100}% ${L * 100}%)`
-                ctx.fillRect(px, py, cell + 1, cell + 1)
-              }
-            }
-
-            const Y = s => pad + (1 - s) * (H - 2 * pad)
-            const span = i => 1 - Math.abs(2 * pts[i].l - 1)
-            const plotS = i => {
-              if (span(i) >= 0.005) return pts[i].s
-              for (let o = 1; o < N; o++) {
-                if (i - o >= 0 && span(i - o) >= 0.005) return pts[i - o].s
-                if (i + o < N && span(i + o) >= 0.005) return pts[i + o].s
-              }
-              return pts[i].s
-            }
-            const dot = (x, y, r, fill) => {
-              ctx.beginPath()
-              ctx.arc(x, y, r, 0, 7)
-              ctx.fillStyle = fill
-              ctx.fill()
-            }
-            ctx.beginPath()
-            pts.forEach((p, i) => i ? ctx.lineTo(xs[i], Y(plotS(i))) : ctx.moveTo(xs[i], Y(plotS(i))))
-            ctx.lineWidth = 2
-            ctx.strokeStyle = "#111"
-            ctx.stroke()
-            pts.forEach((p, i) => {
-              const r = p.hex === primaryHex ? 5 : 3.5
-              dot(xs[i], Y(plotS(i)), r + 1.5, "#fff")
-              dot(xs[i], Y(plotS(i)), r, p.hex)
-              ctx.lineWidth = 1
-              ctx.strokeStyle = "rgba(0,0,0,.4)"
-              ctx.stroke()
-            })
-
-            if (plotW < W) {
-              const cx = plotW + (W - plotW) / 2, cy = H / 2, R = Math.min((W - plotW) / 2, H / 2) - pad
-              const chroma = p => p.s * (1 - Math.abs(2 * p.l - 1))
-              const radial = hi - lo >= 0.05
-              const centreL = pts.reduce((min, p) => chroma(p) < chroma(min) ? p : min).l
-              ctx.save()
-              ctx.beginPath()
-              ctx.arc(cx, cy, R, 0, 7)
-              ctx.clip()
-              for (let px = plotW; px < W; px += cell) {
-                for (let py = 0; py < H; py += cell) {
-                  const dx = px + cell / 2 - cx, dy = py + cell / 2 - cy, r = Math.hypot(dx, dy)
-                  if (r > R + cell) continue
-                  const f = Math.min(1, r / R)
-                  const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360
-                  if (radial) {
-                    const L = Math.lerp(lo, hi, f)
-                    ctx.fillStyle = `hsl(${hue} ${alongL(L, p => p.s, Math.lerp) * 100}% ${L * 100}%)`
-                  } else {
-                    ctx.fillStyle = `hsl(${hue} ${f * 100}% ${Math.lerp(centreL, 0.5, f) * 100}%)`
-                  }
-                  ctx.fillRect(px, py, cell + 1, cell + 1)
-                }
-              }
-              ctx.restore()
-              const at = p => {
-                const angle = (p.h - 90) * Math.PI / 180
-                const r = radial ? (p.l - lo) / (hi - lo) * (R - 6) : R * chroma(p)
-                return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r]
-              }
-              ctx.beginPath()
-              pts.forEach((p, i) => {
-                const [x, y] = at(p)
-                i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)
-              })
-              ctx.lineWidth = 2
-              ctx.strokeStyle = "#111"
-              ctx.stroke()
-              for (const p of pts) {
-                const [x, y] = at(p)
-                dot(x, y, 5, "#fff")
-                dot(x, y, 3.5, p.hex)
-                ctx.lineWidth = 1
-                ctx.strokeStyle = "rgba(0,0,0,.4)"
-                ctx.stroke()
-              }
-            }
-          }
-        },
-        computed: {
-          sliders() {
-            const maxAngle = this.data.smallRanges ? 120 : 360
-            const steps = { key: "steps", title: "Colour Count", desc: "The number of colours to include in the gradient", min: 3, max: this.data.smallRanges ? 32 : 256 }
-            if (this.data.colourMode === "double") return [
-              steps,
-              { key: "huePath", title: "Hue Path", desc: "The route the blend takes around or across the wheel", min: 0, max: 100 },
-              { key: "bias", title: "Bias", desc: "Bias the spacing to prefer one colour or the other", min: -150, max: 150 },
-              { key: "lightnessCurve", title: "Lightness Curve", desc: "Bow the middle of the blend darker or lighter", min: -100, max: 100 }
-            ]
-            return [
-              steps,
-              { key: "angle", title: "Hue Shifting Angle", desc: "The amount of degrees over which the hue shifting occurs", min: -maxAngle, max: maxAngle },
-              { key: "brightnessRange", title: "Brightness Range", desc: "The range of the brightness included in the gradient", min: 0, max: 100 },
-              { key: "curve", title: "Curve", desc: "Bias the gradient towards lighter or darker tones", min: -100, max: 100, disabled: this.data.brightnessRange <= 0 },
-              { key: "saturation", title: "Saturation Falloff", desc: "Reduce saturation toward the lightest and darkest colours", min: 0, max: 100 },
-              { key: "brightnessOffset", title: "Colour Offset", desc: "Adjust the position of the colour in the gradient", min: this.minBrightnessOffset, max: this.maxBrightnessOffset, disabled: !this.minBrightnessOffset && !this.maxBrightnessOffset }
-            ]
+            return { points }
           },
-          result() {
-            if (this.data.colourMode === "double") {
-              const N = this.data.steps
-              const a = tinycolor(this.colour).toHsl(), b = tinycolor(this.colour2).toHsl()
-              const chromaOf = c => c.s * (1 - Math.abs(2 * c.l - 1))
-              const ca = chromaOf(a), cb = chromaOf(b)
-              if (ca < 0.001) a.h = b.h
-              if (cb < 0.001) b.h = a.h
-              const d = ((b.h - a.h + 540) % 360) - 180
-              const dl = d - 360 * Math.sign(d || 1)
-              const v = this.data.huePath / 100
-              const points = []
-              for (let i = 0; i < N; i++) {
-                let t = N > 1 ? i / (N - 1) : 0
-                t += this.data.bias / 167 * t * (1 - t)
-                const c0 = Math.lerp(ca, cb, t)
-                const l = Math.clamp(Math.lerp(a.l, b.l, t) + this.data.lightnessCurve / 100 * 1.6 * t * (1 - t), 0, 1)
-                const hs = (a.h + d * t) * Math.PI / 180, hl = (a.h + dl * t) * Math.PI / 180
-                const ux = Math.lerp(Math.cos(hs), Math.cos(hl), v)
-                const uy = Math.lerp(Math.sin(hs), Math.sin(hl), v)
-                const chroma = Math.min(1, Math.hypot(ux, uy) * c0)
-                const span = 1 - Math.abs(2 * l - 1)
-                const s = span > 0.001 ? Math.min(1, chroma / span) : 0
-                const h = toPositiveAngle(Math.atan2(uy, ux) * 180 / Math.PI)
-                points.push({ hex: hex(h, s, l), h, l, s })
-              }
-              this.save()
-              return { colours: [...new Set(points.map(p => p.hex))], primaryHex: null, points }
-            }
+          singleResult() {
             const hsl = tinycolor(this.colour).toHsl()
             let angle = this.data.angle
             if (hsl.h >= 100 && hsl.h < 260) angle *= -1
@@ -465,13 +298,147 @@ Plugin.register(id, {
               points.push({ hex: hex(h, s, l), h, l, s })
             }
 
-            this.save()
-
-            return {
-              colours: [...new Set(points.map(p => p.hex))],
-              primaryHex: hex(hsl.h, hsl.s, hsl.l),
-              points
+            return { points, primaryHex: hex(hsl.h, hsl.s, hsl.l) }
+          },
+          drawGraph() {
+            const cv = this.$refs.graph
+            if (!cv || this.data.previewMode !== "advanced") return
+            const { points: pts, primaryHex } = this.result
+            const W = cv.clientWidth || 700, H = cv.clientHeight || 160, dpr = window.devicePixelRatio || 1
+            cv.width = W * dpr
+            cv.height = H * dpr
+            const ctx = cv.getContext("2d")
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+            ctx.clearRect(0, 0, W, H)
+            const pad = 7
+            const plotW = this.data.colourMode === "double" ? W - H : W
+            const N = pts.length
+            const lo = Math.min(...pts.map(p => p.l)), hi = Math.max(...pts.map(p => p.l))
+            const lerpHue = (a, b, t) => a + (((b - a + 540) % 360) - 180) * t
+            const byL = [...pts].sort((a, b) => a.l - b.l)
+            const alongL = (L, get, mix) => {
+              if (L <= byL[0].l) return get(byL[0])
+              if (L >= byL[N - 1].l) return get(byL[N - 1])
+              for (let i = 1; i < N; i++) {
+                if (L <= byL[i].l) return mix(get(byL[i - 1]), get(byL[i]), (L - byL[i - 1].l) / ((byL[i].l - byL[i - 1].l) || 1))
+              }
+              return get(byL[N - 1])
             }
+
+            const slopes = new Set(pts.slice(1).map((p, i) => Math.sign(p.l - pts[i].l)).filter(Boolean))
+
+            let xs, hueAtFrac, lightAtFrac
+            if (slopes.size > 1 || hi - lo < 1e-6) {
+              xs = pts.map((_, i) => pad + (N > 1 ? i / (N - 1) : 0.5) * (plotW - 2 * pad))
+              const along = (f, get, mix) => {
+                const idx = f * (N - 1), i0 = Math.clamp(Math.floor(idx), 0, N - 1)
+                return mix(get(pts[i0]), get(pts[Math.min(N - 1, i0 + 1)]), idx - i0)
+              }
+              hueAtFrac = f => along(f, p => p.h, lerpHue)
+              lightAtFrac = f => along(f, p => p.l, Math.lerp)
+            } else {
+              const axisSpan = Math.min(1, 2 * (hi - lo))
+              const aMin = Math.clamp((lo + hi) / 2 - axisSpan / 2, 0, 1 - axisSpan)
+              xs = pts.map(p => pad + ((p.l - aMin) / axisSpan) * (plotW - 2 * pad))
+              hueAtFrac = f => alongL(aMin + f * axisSpan, p => p.h, lerpHue)
+              lightAtFrac = f => aMin + f * axisSpan
+            }
+
+            const cell = 4
+            const fillCell = (px, py, h, s, l) => {
+              ctx.fillStyle = `hsl(${h} ${s * 100}% ${l * 100}%)`
+              ctx.fillRect(px, py, cell + 1, cell + 1)
+            }
+            for (let px = 0; px < plotW; px += cell) {
+              const f = px / plotW, hue = hueAtFrac(f), L = lightAtFrac(f)
+              for (let py = 0; py < H; py += cell) fillCell(px, py, hue, 1 - py / H, L)
+            }
+
+            const Y = s => pad + (1 - s) * (H - 2 * pad)
+            const plotS = i => {
+              if (lightSpan(pts[i].l) >= 0.005) return pts[i].s
+              for (let o = 1; o < N; o++) {
+                if (i - o >= 0 && lightSpan(pts[i - o].l) >= 0.005) return pts[i - o].s
+                if (i + o < N && lightSpan(pts[i + o].l) >= 0.005) return pts[i + o].s
+              }
+              return pts[i].s
+            }
+            const drawPath = at => {
+              ctx.beginPath()
+              pts.forEach((p, i) => {
+                const [x, y] = at(p, i)
+                i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)
+              })
+              ctx.lineWidth = 2
+              ctx.strokeStyle = "#111"
+              ctx.stroke()
+              pts.forEach((p, i) => {
+                const [x, y, r] = at(p, i)
+                for (const [radius, fill] of [[r + 1.5, "#fff"], [r, p.hex]]) {
+                  ctx.beginPath()
+                  ctx.arc(x, y, radius, 0, 7)
+                  ctx.fillStyle = fill
+                  ctx.fill()
+                }
+                ctx.lineWidth = 1
+                ctx.strokeStyle = "rgba(0,0,0,.4)"
+                ctx.stroke()
+              })
+            }
+            drawPath((p, i) => [xs[i], Y(plotS(i)), p.hex === primaryHex ? 5 : 3.5])
+
+            if (plotW < W) {
+              const cx = plotW + (W - plotW) / 2, cy = H / 2, R = Math.min((W - plotW) / 2, H / 2) - pad
+              const radial = hi - lo >= 0.05
+              const centreL = pts.reduce((min, p) => chromaOf(p) < chromaOf(min) ? p : min).l
+              ctx.save()
+              ctx.beginPath()
+              ctx.arc(cx, cy, R, 0, 7)
+              ctx.clip()
+              for (let px = plotW; px < W; px += cell) {
+                for (let py = 0; py < H; py += cell) {
+                  const dx = px + cell / 2 - cx, dy = py + cell / 2 - cy, r = Math.hypot(dx, dy)
+                  if (r > R + cell) continue
+                  const f = Math.min(1, r / R)
+                  const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360
+                  if (radial) {
+                    const L = Math.lerp(lo, hi, f)
+                    fillCell(px, py, hue, alongL(L, p => p.s, Math.lerp), L)
+                  } else fillCell(px, py, hue, f, Math.lerp(centreL, 0.5, f))
+                }
+              }
+              ctx.restore()
+              drawPath(p => {
+                const angle = (p.h - 90) * Math.PI / 180
+                const r = radial ? (p.l - lo) / (hi - lo) * (R - 6) : R * chromaOf(p)
+                return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r, 3.5]
+              })
+            }
+          }
+        },
+        computed: {
+          sliders() {
+            const maxAngle = this.data.smallRanges ? 120 : 360
+            const steps = { key: "steps", title: "Colour Count", desc: "The number of colours to include in the gradient", min: 3, max: this.data.smallRanges ? 32 : 256 }
+            if (this.data.colourMode === "double") return [
+              steps,
+              { key: "huePath", title: "Hue Path", desc: "The route the blend takes around or across the wheel", min: 0, max: 100 },
+              { key: "bias", title: "Bias", desc: "Bias the spacing to prefer one colour or the other", min: -150, max: 150 },
+              { key: "lightnessCurve", title: "Lightness Curve", desc: "Bow the middle of the blend darker or lighter", min: -100, max: 100 }
+            ]
+            return [
+              steps,
+              { key: "angle", title: "Hue Shifting Angle", desc: "The amount of degrees over which the hue shifting occurs", min: -maxAngle, max: maxAngle },
+              { key: "brightnessRange", title: "Brightness Range", desc: "The range of the brightness included in the gradient", min: 0, max: 100 },
+              { key: "curve", title: "Curve", desc: "Bias the gradient towards lighter or darker tones", min: -100, max: 100, disabled: this.data.brightnessRange <= 0 },
+              { key: "saturation", title: "Saturation Falloff", desc: "Reduce saturation toward the lightest and darkest colours", min: 0, max: 100 },
+              { key: "brightnessOffset", title: "Colour Offset", desc: "Adjust the position of the colour in the gradient", min: this.minBrightnessOffset, max: this.maxBrightnessOffset, disabled: !this.minBrightnessOffset && !this.maxBrightnessOffset }
+            ]
+          },
+          result() {
+            const { points, primaryHex = null } = this.data.colourMode === "double" ? this.doubleResult() : this.singleResult()
+            this.save()
+            return { colours: [...new Set(points.map(p => p.hex))], primaryHex, points }
           },
           markerLight() {
             if (!this.result.primaryHex) return false
@@ -588,4 +555,12 @@ function toPositiveAngle(angle) {
 
 function hex(h, s, l) {
   return tinycolor({ h, s, l }).toHexString()
+}
+
+function lightSpan(l) {
+  return 1 - Math.abs(2 * l - 1)
+}
+
+function chromaOf(colour) {
+  return colour.s * lightSpan(colour.l)
 }
