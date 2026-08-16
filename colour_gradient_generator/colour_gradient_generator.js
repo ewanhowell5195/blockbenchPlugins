@@ -9,7 +9,11 @@ const defaults = {
   brightnessOffset: 0,
   curve: -12,
   saturation: 33,
-  previewMode: "simple"
+  huePath: 0,
+  bias: 0,
+  lightnessCurve: 0,
+  previewMode: "simple",
+  colourMode: "single"
 }
 Plugin.register(id, {
   title: "Colour Gradient Generator",
@@ -132,6 +136,15 @@ Plugin.register(id, {
             }
           }
 
+          .colour-pickers {
+            display: flex;
+            gap: 12px;
+
+            > div {
+              flex: 1;
+            }
+          }
+
           .checkbox-bar {
             display: flex;
             align-items: center;
@@ -177,6 +190,7 @@ Plugin.register(id, {
           data,
           defaults,
           colour: ColorPanel.get(),
+          colour2: "#ffffff",
           minBrightnessOffset: Math.min(0, data.brightnessOffset),
           maxBrightnessOffset: Math.max(0, data.brightnessOffset),
           accent: "#3e90ff"
@@ -192,11 +206,15 @@ Plugin.register(id, {
           },
           reset() {
             for (const k in defaults) {
-              if (k !== "previewMode") this.data[k] = defaults[k]
+              if (k !== "previewMode" && k !== "colourMode") this.data[k] = defaults[k]
             }
           },
           queueDraw() {
             this.$nextTick(() => this.drawGraph())
+          },
+          syncPicker(ref, value) {
+            const picker = $(this.$refs[ref])
+            if (picker.length && picker.spectrum("get")?.toHexString?.() !== value) picker.spectrum("set", value)
           },
           drawGraph() {
             const cv = this.$refs.graph
@@ -209,41 +227,52 @@ Plugin.register(id, {
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
             ctx.clearRect(0, 0, W, H)
             const pad = 7
+            const plotW = this.data.colourMode === "double" ? W - H : W
             const N = pts.length
             const lo = Math.min(...pts.map(p => p.l)), hi = Math.max(...pts.map(p => p.l))
             const lerpHue = (a, b, t) => a + (((b - a + 540) % 360) - 180) * t
+            const byL = [...pts].sort((a, b) => a.l - b.l)
+            const alongL = (L, get, mix) => {
+              if (L <= byL[0].l) return get(byL[0])
+              if (L >= byL[N - 1].l) return get(byL[N - 1])
+              for (let i = 1; i < N; i++) {
+                if (L <= byL[i].l) return mix(get(byL[i - 1]), get(byL[i]), (L - byL[i - 1].l) / ((byL[i].l - byL[i - 1].l) || 1))
+              }
+              return get(byL[N - 1])
+            }
+
+            let dir = 0, monotonic = true
+            for (let i = 1; i < N; i++) {
+              const step = Math.sign(pts[i].l - pts[i - 1].l)
+              if (!step) continue
+              if (!dir) dir = step
+              else if (step !== dir) {
+                monotonic = false
+                break
+              }
+            }
 
             let xs, hueAtFrac, lightAtFrac
-            if (hi - lo < 1e-6) {
-              xs = pts.map((_, i) => pad + (N > 1 ? i / (N - 1) : 0.5) * (W - 2 * pad))
-              hueAtFrac = f => {
+            if (!monotonic || hi - lo < 1e-6) {
+              xs = pts.map((_, i) => pad + (N > 1 ? i / (N - 1) : 0.5) * (plotW - 2 * pad))
+              const along = (f, get, mix) => {
                 const idx = f * (N - 1), i0 = Math.clamp(Math.floor(idx), 0, N - 1)
-                return lerpHue(pts[i0].h, pts[Math.min(N - 1, i0 + 1)].h, idx - i0)
+                return mix(get(pts[i0]), get(pts[Math.min(N - 1, i0 + 1)]), idx - i0)
               }
-              lightAtFrac = () => pts[0].l
+              hueAtFrac = f => along(f, p => p.h, lerpHue)
+              lightAtFrac = f => along(f, p => p.l, Math.lerp)
             } else {
               const axisSpan = Math.min(1, 2 * (hi - lo))
               const aMin = Math.clamp((lo + hi) / 2 - axisSpan / 2, 0, 1 - axisSpan)
               const lRange = axisSpan || 1
-              xs = pts.map(p => pad + ((p.l - aMin) / lRange) * (W - 2 * pad))
-              const hueAtL = L => {
-                if (L <= pts[0].l) return pts[0].h
-                if (L >= pts[N - 1].l) return pts[N - 1].h
-                for (let i = 1; i < N; i++) {
-                  if (L <= pts[i].l) {
-                    const a = pts[i - 1], b = pts[i]
-                    return lerpHue(a.h, b.h, (L - a.l) / ((b.l - a.l) || 1))
-                  }
-                }
-                return pts[N - 1].h
-              }
-              hueAtFrac = f => hueAtL(aMin + f * lRange)
+              xs = pts.map(p => pad + ((p.l - aMin) / lRange) * (plotW - 2 * pad))
+              hueAtFrac = f => alongL(aMin + f * lRange, p => p.h, lerpHue)
               lightAtFrac = f => aMin + f * lRange
             }
 
             const cell = 4
-            for (let px = 0; px < W; px += cell) {
-              const f = px / W, hue = hueAtFrac(f), L = lightAtFrac(f)
+            for (let px = 0; px < plotW; px += cell) {
+              const f = px / plotW, hue = hueAtFrac(f), L = lightAtFrac(f)
               for (let py = 0; py < H; py += cell) {
                 ctx.fillStyle = `hsl(${hue} ${(1 - py / H) * 100}% ${L * 100}%)`
                 ctx.fillRect(px, py, cell + 1, cell + 1)
@@ -251,6 +280,15 @@ Plugin.register(id, {
             }
 
             const Y = s => pad + (1 - s) * (H - 2 * pad)
+            const span = i => 1 - Math.abs(2 * pts[i].l - 1)
+            const plotS = i => {
+              if (span(i) >= 0.005) return pts[i].s
+              for (let o = 1; o < N; o++) {
+                if (i - o >= 0 && span(i - o) >= 0.005) return pts[i - o].s
+                if (i + o < N && span(i + o) >= 0.005) return pts[i + o].s
+              }
+              return pts[i].s
+            }
             const dot = (x, y, r, fill) => {
               ctx.beginPath()
               ctx.arc(x, y, r, 0, 7)
@@ -258,25 +296,80 @@ Plugin.register(id, {
               ctx.fill()
             }
             ctx.beginPath()
-            pts.forEach((p, i) => i ? ctx.lineTo(xs[i], Y(p.s)) : ctx.moveTo(xs[i], Y(p.s)))
+            pts.forEach((p, i) => i ? ctx.lineTo(xs[i], Y(plotS(i))) : ctx.moveTo(xs[i], Y(plotS(i))))
             ctx.lineWidth = 2
             ctx.strokeStyle = "#111"
             ctx.stroke()
             pts.forEach((p, i) => {
               const r = p.hex === primaryHex ? 5 : 3.5
-              dot(xs[i], Y(p.s), r + 1.5, "#fff")
-              dot(xs[i], Y(p.s), r, p.hex)
+              dot(xs[i], Y(plotS(i)), r + 1.5, "#fff")
+              dot(xs[i], Y(plotS(i)), r, p.hex)
               ctx.lineWidth = 1
               ctx.strokeStyle = "rgba(0,0,0,.4)"
               ctx.stroke()
             })
+
+            if (plotW < W) {
+              const cx = plotW + (W - plotW) / 2, cy = H / 2, R = Math.min((W - plotW) / 2, H / 2) - pad
+              const chroma = p => p.s * (1 - Math.abs(2 * p.l - 1))
+              const radial = hi - lo >= 0.05
+              const centreL = pts.reduce((min, p) => chroma(p) < chroma(min) ? p : min).l
+              ctx.save()
+              ctx.beginPath()
+              ctx.arc(cx, cy, R, 0, 7)
+              ctx.clip()
+              for (let px = plotW; px < W; px += cell) {
+                for (let py = 0; py < H; py += cell) {
+                  const dx = px + cell / 2 - cx, dy = py + cell / 2 - cy, r = Math.hypot(dx, dy)
+                  if (r > R + cell) continue
+                  const f = Math.min(1, r / R)
+                  const hue = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360
+                  if (radial) {
+                    const L = Math.lerp(lo, hi, f)
+                    ctx.fillStyle = `hsl(${hue} ${alongL(L, p => p.s, Math.lerp) * 100}% ${L * 100}%)`
+                  } else {
+                    ctx.fillStyle = `hsl(${hue} ${f * 100}% ${Math.lerp(centreL, 0.5, f) * 100}%)`
+                  }
+                  ctx.fillRect(px, py, cell + 1, cell + 1)
+                }
+              }
+              ctx.restore()
+              const at = p => {
+                const angle = (p.h - 90) * Math.PI / 180
+                const r = radial ? (p.l - lo) / (hi - lo) * (R - 6) : R * chroma(p)
+                return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r]
+              }
+              ctx.beginPath()
+              pts.forEach((p, i) => {
+                const [x, y] = at(p)
+                i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)
+              })
+              ctx.lineWidth = 2
+              ctx.strokeStyle = "#111"
+              ctx.stroke()
+              for (const p of pts) {
+                const [x, y] = at(p)
+                dot(x, y, 5, "#fff")
+                dot(x, y, 3.5, p.hex)
+                ctx.lineWidth = 1
+                ctx.strokeStyle = "rgba(0,0,0,.4)"
+                ctx.stroke()
+              }
+            }
           }
         },
         computed: {
           sliders() {
             const maxAngle = this.data.smallRanges ? 120 : 360
+            const steps = { key: "steps", title: "Colour Count", desc: "The number of colours to include in the gradient", min: 3, max: this.data.smallRanges ? 32 : 256 }
+            if (this.data.colourMode === "double") return [
+              steps,
+              { key: "huePath", title: "Hue Path", desc: "The route the blend takes around or across the wheel", min: 0, max: 100 },
+              { key: "bias", title: "Bias", desc: "Bias the spacing to prefer one colour or the other", min: -150, max: 150 },
+              { key: "lightnessCurve", title: "Lightness Curve", desc: "Bow the middle of the blend darker or lighter", min: -100, max: 100 }
+            ]
             return [
-              { key: "steps", title: "Colour Count", desc: "The number of colours to include in the gradient", min: 3, max: this.data.smallRanges ? 32 : 256 },
+              steps,
               { key: "angle", title: "Hue Shifting Angle", desc: "The amount of degrees over which the hue shifting occurs", min: -maxAngle, max: maxAngle },
               { key: "brightnessRange", title: "Brightness Range", desc: "The range of the brightness included in the gradient", min: 0, max: 100 },
               { key: "curve", title: "Curve", desc: "Bias the gradient towards lighter or darker tones", min: -100, max: 100, disabled: this.data.brightnessRange <= 0 },
@@ -285,6 +378,34 @@ Plugin.register(id, {
             ]
           },
           result() {
+            if (this.data.colourMode === "double") {
+              const N = this.data.steps
+              const a = tinycolor(this.colour).toHsl(), b = tinycolor(this.colour2).toHsl()
+              const chromaOf = c => c.s * (1 - Math.abs(2 * c.l - 1))
+              const ca = chromaOf(a), cb = chromaOf(b)
+              if (ca < 0.001) a.h = b.h
+              if (cb < 0.001) b.h = a.h
+              const d = ((b.h - a.h + 540) % 360) - 180
+              const dl = d - 360 * Math.sign(d || 1)
+              const v = this.data.huePath / 100
+              const points = []
+              for (let i = 0; i < N; i++) {
+                let t = N > 1 ? i / (N - 1) : 0
+                t += this.data.bias / 167 * t * (1 - t)
+                const c0 = Math.lerp(ca, cb, t)
+                const l = Math.clamp(Math.lerp(a.l, b.l, t) + this.data.lightnessCurve / 100 * 1.6 * t * (1 - t), 0, 1)
+                const hs = (a.h + d * t) * Math.PI / 180, hl = (a.h + dl * t) * Math.PI / 180
+                const ux = Math.lerp(Math.cos(hs), Math.cos(hl), v)
+                const uy = Math.lerp(Math.sin(hs), Math.sin(hl), v)
+                const chroma = Math.min(1, Math.hypot(ux, uy) * c0)
+                const span = 1 - Math.abs(2 * l - 1)
+                const s = span > 0.001 ? Math.min(1, chroma / span) : 0
+                const h = toPositiveAngle(Math.atan2(uy, ux) * 180 / Math.PI)
+                points.push({ hex: hex(h, s, l), h, l, s })
+              }
+              this.save()
+              return { colours: [...new Set(points.map(p => p.hex))], primaryHex: null, points }
+            }
             const hsl = tinycolor(this.colour).toHsl()
             let angle = this.data.angle
             if (hsl.h >= 100 && hsl.h < 260) angle *= -1
@@ -353,33 +474,48 @@ Plugin.register(id, {
             }
           },
           markerLight() {
+            if (!this.result.primaryHex) return false
             const a = tinycolor(this.result.primaryHex).toRgb(), b = tinycolor(this.accent).toRgb()
             return Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b) < 150
           }
         },
         watch: {
           result: "queueDraw",
-          "data.previewMode": "queueDraw"
+          "data.previewMode": "queueDraw",
+          colour(value) {
+            this.syncPicker("colour", value)
+          },
+          colour2(value) {
+            this.syncPicker("colour2", value)
+          }
         },
         mounted() {
           this.accent = tinycolor(getComputedStyle(document.body).getPropertyValue("--color-accent").trim() || this.accent).toHexString()
-          const setColour = c => this.colour = c.toHexString()
-          $(this.$refs.colour).spectrum({
-            preferredFormat: "hex",
-            color: this.colour,
-            showAlpha: false,
-            showInput: true,
-            move: setColour,
-            change: setColour,
-            hide: setColour
-          })
+          for (const key of ["colour", "colour2"]) {
+            const setColour = c => this[key] = c.toHexString()
+            $(this.$refs[key]).spectrum({
+              preferredFormat: "hex",
+              color: this[key],
+              showAlpha: false,
+              showInput: true,
+              move: setColour,
+              change: setColour,
+              hide: setColour
+            })
+          }
           this.queueDraw()
         },
         template: `
           <div>
             <div title="Reset values back to their defaults" class="dialog_close_button" style="right: 33px; z-index: 3; border-radius: 6px;" @click="reset"><i class="material-icons">replay</i></div>
-            <h2>Colour</h2>
-            <input ref="colour" />
+            <div class="tab_bar">
+              <div v-for="(label, mode) in { single: 'Single Colour', double: 'Two Colours' }" :class="{ open: data.colourMode === mode }" @click="data.colourMode = mode; save()">{{ label }}</div>
+            </div>
+            <h2>{{ data.colourMode === 'double' ? 'Colours' : 'Colour' }}</h2>
+            <div class="colour-pickers">
+              <div><input ref="colour" /></div>
+              <div v-show="data.colourMode === 'double'"><input ref="colour2" /></div>
+            </div>
             <div class="settings-grid">
               <div v-for="s in sliders" :key="s.key" :class="{ disabled: s.disabled }">
                 <div class="header-bar">
@@ -420,7 +556,6 @@ Plugin.register(id, {
       },
       onOpen() {
         this.content_vue.colour = ColorPanel.get()
-        $(this.content_vue.$refs.colour).spectrum("set", this.content_vue.colour)
       },
       onConfirm() {
         if (data.replace) ColorPanel.palette.empty()

@@ -94,9 +94,14 @@
       {
         "title": "New Features",
         "list": [
+          "Added a two colour mode that generates the gradient between two selected colours",
+          "Added a \"Hue Path\" slider to the two colour mode to control the route the blend takes around or across the colour wheel",
+          "Added a \"Bias\" slider to the two colour mode to cluster the shades towards one colour or the other",
+          "Added a \"Lightness Curve\" slider to the two colour mode to bow the blend through darker or lighter midtones",
           "Added a new \"Curve\" slider to bias the gradient towards lighter or darker tones",
           "Added a new \"Saturation Falloff\" slider to reduce saturation toward the lightest and darkest colours",
-          "Added an advanced preview mode that graphs the palette in the saturation/lightness plane"
+          "Added an advanced preview mode that graphs the palette in the saturation/lightness plane",
+          "The two colour advanced preview also shows the blend's route on a colour wheel"
         ]
       },
       {
