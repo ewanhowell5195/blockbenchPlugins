@@ -11,6 +11,11 @@
   <p><code>node cli.js --watch path/to/plugin.js</code> does the same, then keeps watching the file and reloads on every save.</p>
   <p><code>node cli.js --screenshot out.png --selector "dialog"</code> saves a screenshot of the window, or of a single element when a CSS selector is given.</p>
   <p><code>node cli.js --logs</code> prints the console and error history.</p>
+  <h2 class="markdown">Using an AI agent?</h2>
+  <p>The Dev Bridge works well with AI coding agents. With Blockbench open, set your agent up once with this prompt:</p>
+  <p><code>Fetch http://127.0.0.1:8797/skill and follow its instructions to set up the blockbench-dev-bridge skill for yourself. Then tell me what you set up.</code></p>
+  <p>After that, just ask for what you need:</p>
+  <p><code>Use the Blockbench Dev Bridge to help me test [thing].</code></p>
   <h2 class="markdown">Endpoints:</h2>
   <p><code>GET /ping</code> returns Blockbench, project, and open dialog status.</p>
   <p><code>POST /eval</code> with JavaScript as the request body runs it and returns <code>{ ok, result, logs }</code>. Scripts have access to a <code>require</code> scoped to this plugin's permissions, plus three async helpers: <code>sleep(ms)</code> and <code>waitFor(condition, timeout, interval)</code> on node timers that keep ticking while the window is minimised, and <code>sandbox(fn, format)</code> which runs the callback inside a scratch project that is always force-closed afterwards, so tests never touch open work.</p>
